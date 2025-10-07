@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      students: {
+        Row: {
+          branch: string
+          class_type: string
+          course_level: string | null
+          created_at: string
+          email: string
+          full_name_ar: string
+          full_name_en: string
+          id: string
+          national_id: string
+          next_payment_date: string | null
+          payment_method: string
+          phone1: string
+          phone2: string | null
+          program: string
+          subscription_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch: string
+          class_type: string
+          course_level?: string | null
+          created_at?: string
+          email: string
+          full_name_ar: string
+          full_name_en: string
+          id?: string
+          national_id: string
+          next_payment_date?: string | null
+          payment_method: string
+          phone1: string
+          phone2?: string | null
+          program: string
+          subscription_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch?: string
+          class_type?: string
+          course_level?: string | null
+          created_at?: string
+          email?: string
+          full_name_ar?: string
+          full_name_en?: string
+          id?: string
+          national_id?: string
+          next_payment_date?: string | null
+          payment_method?: string
+          phone1?: string
+          phone2?: string | null
+          program?: string
+          subscription_status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teachers: {
+        Row: {
+          courses_assigned: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          password_hash: string | null
+          phone: string | null
+          student_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          courses_assigned?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          password_hash?: string | null
+          phone?: string | null
+          student_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          courses_assigned?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          password_hash?: string | null
+          phone?: string | null
+          student_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

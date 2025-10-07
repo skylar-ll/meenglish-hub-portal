@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,72 +15,56 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [students, setStudents] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch students
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (studentsError) throw studentsError;
+      setStudents(studentsData || []);
+
+      // Fetch teachers
+      const { data: teachersData, error: teachersError } = await supabase
+        .from('teachers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (teachersError) throw teachersError;
+      setTeachers(teachersData || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminSession");
     navigate("/");
   };
 
-  // Mock data
   const stats = [
-    { label: "Total Students", value: "245", icon: Users, change: "+12%", color: "from-primary to-secondary" },
-    { label: "Active Teachers", value: "18", icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
+    { label: "Total Students", value: students.length.toString(), icon: Users, change: "+12%", color: "from-primary to-secondary" },
+    { label: "Active Teachers", value: teachers.length.toString(), icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
     { label: "Revenue (SAR)", value: "125,400", icon: CreditCard, change: "+8%", color: "from-accent to-primary" },
     { label: "Course Completion", value: "78%", icon: GraduationCap, change: "+5%", color: "from-primary to-accent" },
-  ];
-
-  const students = [
-    { 
-      id: 1, 
-      nameAr: "أحمد الراشد", 
-      nameEn: "Ahmed Al-Rashid", 
-      phone1: "+966501234567",
-      phone2: "+966502234567",
-      email: "ahmed@example.com",
-      nationalId: "1234567890",
-      course: "Level 5",
-      branch: "Dammam",
-      payment: "Tamara",
-      status: "active",
-      progress: 5,
-    },
-    { 
-      id: 2, 
-      nameAr: "فاطمة حسن", 
-      nameEn: "Fatima Hassan", 
-      phone1: "+966503234567",
-      phone2: "-",
-      email: "fatima@example.com",
-      nationalId: "2234567890",
-      course: "Level 3",
-      branch: "Online",
-      payment: "Card",
-      status: "active",
-      progress: 2,
-    },
-    { 
-      id: 3, 
-      nameAr: "محمد علي", 
-      nameEn: "Mohammed Ali", 
-      phone1: "+966504234567",
-      phone2: "+966505234567",
-      email: "mohammed@example.com",
-      nationalId: "3234567890",
-      course: "Level 7",
-      branch: "Khobar",
-      payment: "Cash",
-      status: "active",
-      progress: 6,
-    },
-  ];
-
-  const teachers = [
-    { id: 1, name: "John Smith", email: "john@me-english.com", courses: "Level 1-4", students: 28 },
-    { id: 2, name: "Sarah Johnson", email: "sarah@me-english.com", courses: "Level 5-8", students: 32 },
-    { id: 3, name: "Michael Brown", email: "michael@me-english.com", courses: "Speaking Classes", students: 25 },
   ];
 
   const payments = [
@@ -180,28 +165,35 @@ const AdminDashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.nameEn}</TableCell>
-                        <TableCell dir="rtl">{student.nameAr}</TableCell>
-                        <TableCell className="text-sm">{student.phone1}</TableCell>
-                        <TableCell className="text-sm">{student.email}</TableCell>
-                        <TableCell>{student.course}</TableCell>
-                        <TableCell>{student.branch}</TableCell>
-                        <TableCell>{student.payment}</TableCell>
-                        <TableCell>
-                          <Badge variant={student.status === "active" ? "default" : "secondary"}>
-                            {student.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={(student.progress / 8) * 100} className="w-20 h-2" />
-                            <span className="text-sm">{student.progress}/8</span>
-                          </div>
-                        </TableCell>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : students.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center">No students registered yet</TableCell>
+                      </TableRow>
+                    ) : (
+                      students.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{student.full_name_en}</TableCell>
+                          <TableCell dir="rtl">{student.full_name_ar}</TableCell>
+                          <TableCell className="text-sm">{student.phone1}</TableCell>
+                          <TableCell className="text-sm">{student.email}</TableCell>
+                          <TableCell>{student.course_level || student.program}</TableCell>
+                          <TableCell className="capitalize">{student.branch}</TableCell>
+                          <TableCell className="capitalize">{student.payment_method}</TableCell>
+                          <TableCell>
+                            <Badge variant={student.subscription_status === "active" ? "default" : "secondary"}>
+                              {student.subscription_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">0/8</span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -210,20 +202,26 @@ const AdminDashboard = () => {
             {/* Teachers Tab */}
             <TabsContent value="teachers" className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">Teachers Management</h2>
-              <div className="grid gap-4">
-                {teachers.map((teacher) => (
-                  <Card key={teacher.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-semibold">{teacher.name}</h3>
-                        <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                        <p className="text-sm mt-2">Assigned Courses: {teacher.courses}</p>
+              {loading ? (
+                <Card className="p-8 text-center">Loading...</Card>
+              ) : teachers.length === 0 ? (
+                <Card className="p-8 text-center">No teachers registered yet</Card>
+              ) : (
+                <div className="grid gap-4">
+                  {teachers.map((teacher) => (
+                    <Card key={teacher.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-semibold">{teacher.full_name}</h3>
+                          <p className="text-sm text-muted-foreground">{teacher.email}</p>
+                          <p className="text-sm mt-2">Courses: {teacher.courses_assigned || 'Not assigned yet'}</p>
+                        </div>
+                        <Badge variant="secondary">{teacher.student_count} Students</Badge>
                       </div>
-                      <Badge variant="secondary">{teacher.students} Students</Badge>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* Payments Tab */}
