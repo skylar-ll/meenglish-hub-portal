@@ -1,6 +1,7 @@
 import { GraduationCap, Users, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import logo from "@/assets/logo.jpeg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -42,6 +43,11 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10" />
         <div className="relative container mx-auto px-4 py-16 text-center">
           <div className="mb-8 animate-fade-in">
+            <img 
+              src={logo} 
+              alt="M.E. English - Modern Education Institute of Languages" 
+              className="w-64 md:w-80 mx-auto mb-6"
+            />
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               M.E. English
             </h1>
