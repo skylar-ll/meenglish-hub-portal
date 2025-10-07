@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminSession");
@@ -25,10 +27,10 @@ const AdminDashboard = () => {
 
   // Mock data
   const stats = [
-    { label: "Total Students", value: "245", icon: Users, change: "+12%", color: "from-primary to-secondary" },
-    { label: "Active Teachers", value: "18", icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
-    { label: "Revenue (SAR)", value: "125,400", icon: CreditCard, change: "+8%", color: "from-accent to-primary" },
-    { label: "Course Completion", value: "78%", icon: GraduationCap, change: "+5%", color: "from-primary to-accent" },
+    { labelKey: "admin.totalStudents", value: "245", icon: Users, change: "+12%", color: "from-primary to-secondary" },
+    { labelKey: "admin.totalTeachers", value: "18", icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
+    { labelKey: "admin.revenue", value: "125,400", icon: CreditCard, change: "+8%", color: "from-accent to-primary" },
+    { labelKey: "admin.activeClasses", value: "78%", icon: GraduationCap, change: "+5%", color: "from-primary to-accent" },
   ];
 
   const students = [
@@ -112,25 +114,22 @@ const AdminDashboard = () => {
           <div>
             <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              {t('admin.backHome')}
             </Button>
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-              Admin Dashboard
+              {t('admin.dashboard')}
             </h1>
-            <p className="text-xl text-muted-foreground" dir="rtl">
-              لوحة الإدارة
-            </p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            {t('admin.logout')}
           </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <Card key={stat.label} className="p-6 animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+            <Card key={stat.labelKey} className="p-6 animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}>
                   <stat.icon className="w-6 h-6 text-white" />
@@ -140,7 +139,7 @@ const AdminDashboard = () => {
                 </Badge>
               </div>
               <p className="text-3xl font-bold mb-1">{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="text-sm text-muted-foreground">{t(stat.labelKey)}</p>
             </Card>
           ))}
         </div>
@@ -149,34 +148,34 @@ const AdminDashboard = () => {
         <Card className="p-6">
           <Tabs defaultValue="students">
             <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="students">Students</TabsTrigger>
-              <TabsTrigger value="teachers">Teachers</TabsTrigger>
-              <TabsTrigger value="payments">Payments</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="students">{t('admin.studentsInfo')}</TabsTrigger>
+              <TabsTrigger value="teachers">{t('admin.teachersInfo')}</TabsTrigger>
+              <TabsTrigger value="payments">{t('student.paymentMethod')}</TabsTrigger>
+              <TabsTrigger value="analytics">{t('admin.analytics')}</TabsTrigger>
+              <TabsTrigger value="reports">{t('admin.reports')}</TabsTrigger>
             </TabsList>
 
             {/* Students Tab */}
             <TabsContent value="students" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Students Management</h2>
+                <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
                 <Button className="bg-gradient-to-r from-primary to-secondary">
-                  Export Data
+                  {t('admin.exportData')}
                 </Button>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name (EN)</TableHead>
-                      <TableHead>Name (AR)</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Progress</TableHead>
+                      <TableHead>{t('admin.nameEn')}</TableHead>
+                      <TableHead>{t('admin.nameAr')}</TableHead>
+                      <TableHead>{t('student.phone')}</TableHead>
+                      <TableHead>{t('student.email')}</TableHead>
+                      <TableHead>{t('teacher.course')}</TableHead>
+                      <TableHead>{t('admin.branch')}</TableHead>
+                      <TableHead>{t('admin.payment')}</TableHead>
+                      <TableHead>{t('admin.status')}</TableHead>
+                      <TableHead>{t('teacher.progress')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -191,7 +190,7 @@ const AdminDashboard = () => {
                         <TableCell>{student.payment}</TableCell>
                         <TableCell>
                           <Badge variant={student.status === "active" ? "default" : "secondary"}>
-                            {student.status}
+                            {student.status === "active" ? t('student.active') : student.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -209,7 +208,7 @@ const AdminDashboard = () => {
 
             {/* Teachers Tab */}
             <TabsContent value="teachers" className="space-y-4">
-              <h2 className="text-2xl font-bold mb-4">Teachers Management</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('admin.teachersInfo')}</h2>
               <div className="grid gap-4">
                 {teachers.map((teacher) => (
                   <Card key={teacher.id} className="p-4">
@@ -217,9 +216,9 @@ const AdminDashboard = () => {
                       <div>
                         <h3 className="text-lg font-semibold">{teacher.name}</h3>
                         <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                        <p className="text-sm mt-2">Assigned Courses: {teacher.courses}</p>
+                        <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses}</p>
                       </div>
-                      <Badge variant="secondary">{teacher.students} Students</Badge>
+                      <Badge variant="secondary">{teacher.students} {t('admin.students')}</Badge>
                     </div>
                   </Card>
                 ))}
@@ -228,15 +227,15 @@ const AdminDashboard = () => {
 
             {/* Payments Tab */}
             <TabsContent value="payments" className="space-y-4">
-              <h2 className="text-2xl font-bold mb-4">Payment Management</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('admin.paymentManagement')}</h2>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Payment Method</TableHead>
-                    <TableHead>Amount (SAR)</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{t('admin.student')}</TableHead>
+                    <TableHead>{t('student.paymentMethod')}</TableHead>
+                    <TableHead>{t('admin.amount')}</TableHead>
+                    <TableHead>{t('admin.status')}</TableHead>
+                    <TableHead>{t('admin.date')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -247,7 +246,7 @@ const AdminDashboard = () => {
                       <TableCell>{payment.amount}</TableCell>
                       <TableCell>
                         <Badge variant={payment.status === "paid" ? "default" : "secondary"}>
-                          {payment.status}
+                          {payment.status === "paid" ? t('admin.paid') : t('admin.pending')}
                         </Badge>
                       </TableCell>
                       <TableCell>{payment.date}</TableCell>
@@ -259,10 +258,10 @@ const AdminDashboard = () => {
 
             {/* Analytics Tab */}
             <TabsContent value="analytics" className="space-y-6">
-              <h2 className="text-2xl font-bold mb-4">Analytics & Insights</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('admin.analyticsInsights')}</h2>
               
               <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Student Enrollment Trend</h3>
+                <h3 className="text-lg font-semibold mb-4">{t('admin.enrollmentTrend')}</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={enrollmentData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -276,7 +275,7 @@ const AdminDashboard = () => {
               </Card>
 
               <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Student Performance</h3>
+                <h3 className="text-lg font-semibold mb-4">{t('admin.studentPerformance')}</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={performanceData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -293,38 +292,38 @@ const AdminDashboard = () => {
 
             {/* Reports Tab */}
             <TabsContent value="reports" className="space-y-4">
-              <h2 className="text-2xl font-bold mb-4">Reports & Export</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('admin.reportsExport')}</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 <Card className="p-6 hover:bg-muted/50 transition-colors cursor-pointer">
-                  <h3 className="font-semibold mb-2">Student Data Report</h3>
+                  <h3 className="font-semibold mb-2">{t('admin.studentDataReport')}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Export complete student information including attendance and progress
+                    {t('admin.studentDataReportDesc')}
                   </p>
-                  <Button className="w-full">Export CSV</Button>
+                  <Button className="w-full">{t('admin.exportCSV')}</Button>
                 </Card>
                 
                 <Card className="p-6 hover:bg-muted/50 transition-colors cursor-pointer">
-                  <h3 className="font-semibold mb-2">Payment Report</h3>
+                  <h3 className="font-semibold mb-2">{t('admin.paymentReport')}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Export payment history and transaction details
+                    {t('admin.paymentReportDesc')}
                   </p>
-                  <Button className="w-full">Export PDF</Button>
+                  <Button className="w-full">{t('admin.exportPDF')}</Button>
                 </Card>
                 
                 <Card className="p-6 hover:bg-muted/50 transition-colors cursor-pointer">
-                  <h3 className="font-semibold mb-2">Teacher Performance Report</h3>
+                  <h3 className="font-semibold mb-2">{t('admin.teacherPerformanceReport')}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Export teacher statistics and student outcomes
+                    {t('admin.teacherPerformanceReportDesc')}
                   </p>
-                  <Button className="w-full">Export CSV</Button>
+                  <Button className="w-full">{t('admin.exportCSV')}</Button>
                 </Card>
                 
                 <Card className="p-6 hover:bg-muted/50 transition-colors cursor-pointer">
-                  <h3 className="font-semibold mb-2">Analytics Summary</h3>
+                  <h3 className="font-semibold mb-2">{t('admin.analyticsSummary')}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Export comprehensive analytics and trends
+                    {t('admin.analyticsSummaryDesc')}
                   </p>
-                  <Button className="w-full">Export PDF</Button>
+                  <Button className="w-full">{t('admin.exportPDF')}</Button>
                 </Card>
               </div>
             </TabsContent>

@@ -6,106 +6,100 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo-new.png";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Course curriculum data
 const courseLessons = [
   {
     part: 1,
-    title: "Introduction & Basics",
-    titleAr: "المقدمة والأساسيات",
+    titleKey: "course.part1.title",
     lessons: [
-      { id: 1, name: "Welcome & Course Overview", nameAr: "الترحيب ونظرة عامة" },
-      { id: 2, name: "Alphabet & Pronunciation", nameAr: "الأبجدية والنطق" },
-      { id: 3, name: "Basic Greetings", nameAr: "التحيات الأساسية" },
-      { id: 4, name: "Numbers 1-100", nameAr: "الأرقام 1-100" },
+      { id: 1, nameKey: "course.lesson1" },
+      { id: 2, nameKey: "course.lesson2" },
+      { id: 3, nameKey: "course.lesson3" },
+      { id: 4, nameKey: "course.lesson4" },
     ]
   },
   {
     part: 2,
-    title: "Grammar Fundamentals",
-    titleAr: "أساسيات القواعد",
+    titleKey: "course.part2.title",
     lessons: [
-      { id: 5, name: "Present Simple Tense", nameAr: "المضارع البسيط" },
-      { id: 6, name: "Articles (a, an, the)", nameAr: "أدوات التعريف" },
-      { id: 7, name: "Personal Pronouns", nameAr: "الضمائر الشخصية" },
-      { id: 8, name: "Basic Sentence Structure", nameAr: "تركيب الجملة الأساسي" },
+      { id: 5, nameKey: "course.lesson5" },
+      { id: 6, nameKey: "course.lesson6" },
+      { id: 7, nameKey: "course.lesson7" },
+      { id: 8, nameKey: "course.lesson8" },
     ]
   },
   {
     part: 3,
-    title: "Everyday Conversations",
-    titleAr: "المحادثات اليومية",
+    titleKey: "course.part3.title",
     lessons: [
-      { id: 9, name: "Shopping & Money", nameAr: "التسوق والمال" },
-      { id: 10, name: "At the Restaurant", nameAr: "في المطعم" },
-      { id: 11, name: "Asking for Directions", nameAr: "السؤال عن الاتجاهات" },
-      { id: 12, name: "Making Plans", nameAr: "وضع الخطط" },
+      { id: 9, nameKey: "course.lesson9" },
+      { id: 10, nameKey: "course.lesson10" },
+      { id: 11, nameKey: "course.lesson11" },
+      { id: 12, nameKey: "course.lesson12" },
     ]
   },
   {
     part: 4,
-    title: "Expanding Vocabulary",
-    titleAr: "توسيع المفردات",
+    titleKey: "course.part4.title",
     lessons: [
-      { id: 13, name: "Family & Relationships", nameAr: "العائلة والعلاقات" },
-      { id: 14, name: "Hobbies & Interests", nameAr: "الهوايات والاهتمامات" },
-      { id: 15, name: "Weather & Seasons", nameAr: "الطقس والفصول" },
-      { id: 16, name: "Jobs & Professions", nameAr: "الوظائف والمهن" },
+      { id: 13, nameKey: "course.lesson13" },
+      { id: 14, nameKey: "course.lesson14" },
+      { id: 15, nameKey: "course.lesson15" },
+      { id: 16, nameKey: "course.lesson16" },
     ]
   },
   {
     part: 5,
-    title: "Intermediate Grammar",
-    titleAr: "القواعد المتوسطة",
+    titleKey: "course.part5.title",
     lessons: [
-      { id: 17, name: "Past Simple Tense", nameAr: "الماضي البسيط" },
-      { id: 18, name: "Future Forms", nameAr: "صيغ المستقبل" },
-      { id: 19, name: "Comparative & Superlative", nameAr: "المقارنة والتفضيل" },
-      { id: 20, name: "Modal Verbs", nameAr: "الأفعال المساعدة" },
+      { id: 17, nameKey: "course.lesson17" },
+      { id: 18, nameKey: "course.lesson18" },
+      { id: 19, nameKey: "course.lesson19" },
+      { id: 20, nameKey: "course.lesson20" },
     ]
   },
   {
     part: 6,
-    title: "Communication Skills",
-    titleAr: "مهارات التواصل",
+    titleKey: "course.part6.title",
     lessons: [
-      { id: 21, name: "Email Writing", nameAr: "كتابة البريد الإلكتروني" },
-      { id: 22, name: "Phone Conversations", nameAr: "المحادثات الهاتفية" },
-      { id: 23, name: "Presentations Basics", nameAr: "أساسيات العروض التقديمية" },
-      { id: 24, name: "Business Meetings", nameAr: "الاجتماعات التجارية" },
+      { id: 21, nameKey: "course.lesson21" },
+      { id: 22, nameKey: "course.lesson22" },
+      { id: 23, nameKey: "course.lesson23" },
+      { id: 24, nameKey: "course.lesson24" },
     ]
   },
   {
     part: 7,
-    title: "Advanced Topics",
-    titleAr: "المواضيع المتقدمة",
+    titleKey: "course.part7.title",
     lessons: [
-      { id: 25, name: "Conditional Sentences", nameAr: "الجمل الشرطية" },
-      { id: 26, name: "Passive Voice", nameAr: "المبني للمجهول" },
-      { id: 27, name: "Reported Speech", nameAr: "الكلام المنقول" },
-      { id: 28, name: "Phrasal Verbs", nameAr: "الأفعال المركبة" },
+      { id: 25, nameKey: "course.lesson25" },
+      { id: 26, nameKey: "course.lesson26" },
+      { id: 27, nameKey: "course.lesson27" },
+      { id: 28, nameKey: "course.lesson28" },
     ]
   },
   {
     part: 8,
-    title: "Final Review & Assessment",
-    titleAr: "المراجعة النهائية والتقييم",
+    titleKey: "course.part8.title",
     lessons: [
-      { id: 29, name: "Comprehensive Review", nameAr: "مراجعة شاملة" },
-      { id: 30, name: "Practice Test", nameAr: "اختبار تدريبي" },
-      { id: 31, name: "Final Exam", nameAr: "الامتحان النهائي" },
-      { id: 32, name: "Certificate Award", nameAr: "منح الشهادة" },
+      { id: 29, nameKey: "course.lesson29" },
+      { id: 30, nameKey: "course.lesson30" },
+      { id: 31, nameKey: "course.lesson31" },
+      { id: 32, nameKey: "course.lesson32" },
     ]
   },
 ];
 
 const CoursePage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [courseData, setCourseData] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [attendedLessons, setAttendedLessons] = useState<number[]>([]);
-  const [dailyAttendance, setDailyAttendance] = useState<number[]>([]); // Track which parts have daily attendance marked
+  const [dailyAttendance, setDailyAttendance] = useState<number[]>([]);
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
 
   useEffect(() => {
@@ -123,7 +117,7 @@ const CoursePage = () => {
 
   const markLessonAttendance = (lessonId: number, partNumber: number) => {
     if (attendedLessons.includes(lessonId)) {
-      toast.info("Attendance already marked for this lesson");
+      toast.info(t('student.attendanceAlready'));
       return;
     }
     
@@ -138,15 +132,14 @@ const CoursePage = () => {
     
     if (allLessonsCompleted && partNumber === progress + 1) {
       setProgress(progress + 1);
-      // Mark daily attendance for this part
       if (!dailyAttendance.includes(partNumber)) {
         setDailyAttendance([...dailyAttendance, partNumber]);
-        toast.success(`🎉 Part ${partNumber} completed! Daily attendance marked.`);
+        toast.success(`🎉 ${t('student.part')} ${partNumber} ${t('student.partCompleted')}`);
       } else {
-        toast.success(`🎉 Part ${partNumber} completed!`);
+        toast.success(`🎉 ${t('student.part')} ${partNumber} ${t('student.completed')}!`);
       }
     } else {
-      toast.success("Lesson attendance marked");
+      toast.success(t('student.attendanceMarked'));
     }
   };
 
@@ -163,9 +156,8 @@ const CoursePage = () => {
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
           <img 
             src={logo} 
-            alt="M.E. English" 
+            alt="Modern Education Center" 
             className="h-12 object-contain"
-            style={{ filter: 'drop-shadow(0 0 0 transparent)' }}
           />
           <Button
             variant="ghost"
@@ -173,7 +165,7 @@ const CoursePage = () => {
             size="sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Home
+            {t('student.home')}
           </Button>
         </div>
       </div>
@@ -182,11 +174,8 @@ const CoursePage = () => {
         {/* Header */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            My Course
+            {t('student.myCourse')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            دورتي
-          </p>
         </div>
 
         {/* Student Info Card */}
@@ -202,7 +191,7 @@ const CoursePage = () => {
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-primary" />
                   <div>
-                    <p className="text-muted-foreground text-xs">Course Level</p>
+                    <p className="text-muted-foreground text-xs">{t('student.courseLevel')}</p>
                     <p className="font-medium">{courseData.courseLevel || "Level 1"}</p>
                   </div>
                 </div>
@@ -210,7 +199,7 @@ const CoursePage = () => {
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-secondary" />
                   <div>
-                    <p className="text-muted-foreground text-xs">Program</p>
+                    <p className="text-muted-foreground text-xs">{t('student.program')}</p>
                     <p className="font-medium capitalize">{courseData.program?.replace("-", " ")}</p>
                   </div>
                 </div>
@@ -218,7 +207,7 @@ const CoursePage = () => {
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-accent" />
                   <div>
-                    <p className="text-muted-foreground text-xs">Class Type</p>
+                    <p className="text-muted-foreground text-xs">{t('student.classTypeLabel')}</p>
                     <p className="font-medium capitalize">{courseData.classType}</p>
                   </div>
                 </div>
@@ -228,21 +217,21 @@ const CoursePage = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
                 <div>
-                  <p className="text-xs text-muted-foreground">Subscription Status</p>
-                  <Badge className="bg-success text-success-foreground mt-1">Active</Badge>
+                  <p className="text-xs text-muted-foreground">{t('student.subscriptionStatus')}</p>
+                  <Badge className="bg-success text-success-foreground mt-1">{t('student.active')}</Badge>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-success" />
               </div>
               
               <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground">Branch Location</p>
+                <p className="text-xs text-muted-foreground">{t('student.branchLocation')}</p>
                 <p className="font-medium capitalize">{courseData.branch}</p>
               </div>
               
               <div className="p-3 bg-primary/5 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <CreditCard className="w-4 h-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Next Payment</p>
+                  <p className="text-xs text-muted-foreground">{t('student.nextPayment')}</p>
                 </div>
                 <p className="font-medium">February 15, 2025</p>
                 <p className="text-sm text-muted-foreground">2,400 SAR</p>
@@ -251,10 +240,10 @@ const CoursePage = () => {
               <div className="p-3 bg-accent/5 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="w-4 h-4 text-accent" />
-                  <p className="text-xs text-muted-foreground">Daily Attendance</p>
+                  <p className="text-xs text-muted-foreground">{t('student.dailyAttendance')}</p>
                 </div>
-                <p className="font-medium text-lg">{dailyAttendance.length} / 8 Days</p>
-                <p className="text-xs text-muted-foreground mt-1">Complete a part to mark daily attendance</p>
+                <p className="font-medium text-lg">{dailyAttendance.length} / 8 {t('student.days')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('student.completePart')}</p>
               </div>
             </div>
           </div>
@@ -264,12 +253,12 @@ const CoursePage = () => {
         <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center gap-3 mb-4">
             <BookOpen className="w-6 h-6 text-primary" />
-            <h3 className="text-xl font-semibold">Course Progress</h3>
+            <h3 className="text-xl font-semibold">{t('student.courseProgress')}</h3>
           </div>
           
           <div className="mb-4">
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium">Completed Parts</span>
+              <span className="text-sm font-medium">{t('student.completedParts')}</span>
               <span className="text-sm font-medium">{progress} / 8</span>
             </div>
             <Progress value={progressPercentage} className="h-3" />
@@ -277,14 +266,14 @@ const CoursePage = () => {
 
           <p className="text-sm text-muted-foreground">
             {progress === 8 
-              ? "🎉 Congratulations! You've completed the course!"
-              : `Keep going! ${8 - progress} parts remaining.`}
+              ? t('student.congratulations')
+              : `${t('student.keepGoing')} ${8 - progress} ${t('student.partsRemaining')}.`}
           </p>
         </Card>
 
         {/* Course Parts & Lessons */}
         <div className="space-y-4">
-          <h3 className="text-2xl font-semibold mb-4">Course Curriculum</h3>
+          <h3 className="text-2xl font-semibold mb-4">{t('student.curriculum')}</h3>
           {courseLessons.map((part) => {
             const partLessons = part.lessons;
             const completedLessonsInPart = partLessons.filter(lesson => 
@@ -324,16 +313,13 @@ const CoursePage = () => {
                         </div>
                       )}
                       <div className="flex-1">
-                        <h4 className="text-lg font-semibold">{part.title}</h4>
-                        <p className="text-sm text-muted-foreground" dir="rtl">
-                          {part.titleAr}
-                        </p>
+                        <h4 className="text-lg font-semibold">{t(part.titleKey)}</h4>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge variant={isPartCompleted ? "default" : isPartCurrent ? "secondary" : "outline"} className="text-xs">
-                            {isPartCompleted ? "Completed" : isPartCurrent ? "In Progress" : isPartLocked ? "Locked" : "Available"}
+                            {isPartCompleted ? t('student.completed') : isPartCurrent ? t('student.inProgress') : isPartLocked ? t('student.locked') : t('student.available')}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                            {completedLessonsInPart} / {partLessons.length} lessons
+                            {completedLessonsInPart} / {partLessons.length} {t('student.lessons')}
                           </span>
                         </div>
                       </div>
@@ -366,8 +352,7 @@ const CoursePage = () => {
                               <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
                             )}
                             <div>
-                              <p className="font-medium text-sm">{lesson.name}</p>
-                              <p className="text-xs text-muted-foreground" dir="rtl">{lesson.nameAr}</p>
+                              <p className="font-medium text-sm">{t(lesson.nameKey)}</p>
                             </div>
                           </div>
                           {canAttend && isPartCurrent && (
@@ -380,11 +365,11 @@ const CoursePage = () => {
                               className="bg-gradient-to-r from-primary to-secondary"
                             >
                               <Calendar className="w-3 h-3 mr-1" />
-                              Attend
+                              {t('student.attend')}
                             </Button>
                           )}
                           {isLessonCompleted && (
-                            <span className="text-xs text-success font-medium">Completed ✓</span>
+                            <span className="text-xs text-success font-medium">{t('student.completedCheck')}</span>
                           )}
                         </div>
                       );
