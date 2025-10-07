@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/contexts/LanguageContext";
-import logo from "@/assets/logo-new.png";
+import logo from "@/assets/logo.jpeg";
 
 const Index = () => {
   const navigate = useNavigate();
