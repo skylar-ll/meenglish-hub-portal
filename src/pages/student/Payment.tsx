@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -50,18 +49,13 @@ const Payment = () => {
     },
   ];
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!selectedMethod) {
       toast.error("Please select a payment method");
       return;
     }
 
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    
-    // Calculate next payment date (30 days from now)
-    const nextPaymentDate = new Date();
-    nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
-    
     const finalData = {
       ...registration,
       paymentMethod: selectedMethod,
@@ -70,31 +64,6 @@ const Payment = () => {
 
     // Store final registration data
     sessionStorage.setItem("studentRegistration", JSON.stringify(finalData));
-    
-    // Save to database
-    const { error } = await supabase
-      .from('students')
-      .insert({
-        full_name_ar: registration.fullNameAr,
-        full_name_en: registration.fullNameEn,
-        phone1: registration.phone1,
-        phone2: registration.phone2 || null,
-        email: registration.email,
-        national_id: registration.id,
-        branch: registration.branch,
-        program: registration.program,
-        class_type: registration.classType,
-        course_level: registration.courseLevel,
-        payment_method: selectedMethod,
-        subscription_status: 'active',
-        next_payment_date: nextPaymentDate.toISOString().split('T')[0]
-      });
-    
-    if (error) {
-      console.error("Error saving student data:", error);
-      toast.error("Registration failed. Please try again.");
-      return;
-    }
     
     toast.success("Registration completed successfully!");
     navigate("/student/course-page");

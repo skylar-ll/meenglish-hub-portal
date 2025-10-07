@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const TeacherLogin = () => {
   const navigate = useNavigate();
@@ -29,26 +28,9 @@ const TeacherLogin = () => {
     navigate("/teacher/dashboard");
   };
 
-  const handleSignup = async () => {
+  const handleSignup = () => {
     if (!signupName || !signupEmail || !signupPassword) {
       toast.error("Please fill in all fields");
-      return;
-    }
-
-    // Save to database
-    const { error } = await supabase
-      .from('teachers')
-      .insert({
-        full_name: signupName,
-        email: signupEmail,
-        password_hash: signupPassword, // In production, this should be properly hashed
-        courses_assigned: '',
-        student_count: 0
-      });
-    
-    if (error) {
-      console.error("Error saving teacher data:", error);
-      toast.error("Signup failed. Email might already be registered.");
       return;
     }
 
