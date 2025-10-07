@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,16 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CreateQuizModal } from "@/components/teacher/CreateQuizModal";
+import { UploadLessonModal } from "@/components/teacher/UploadLessonModal";
+import { MarkAttendanceModal } from "@/components/teacher/MarkAttendanceModal";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
   const handleLogout = () => {
     sessionStorage.removeItem("teacherSession");
@@ -75,15 +82,24 @@ const TeacherDashboard = () => {
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90">
+          <Button 
+            onClick={() => setIsAttendanceModalOpen(true)}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90"
+          >
             <Calendar className="w-6 h-6" />
             <span>{t('teacher.markAttendance')}</span>
           </Button>
-          <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-accent to-primary hover:opacity-90">
+          <Button 
+            onClick={() => setIsLessonModalOpen(true)}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-accent to-primary hover:opacity-90"
+          >
             <BookOpen className="w-6 h-6" />
             <span>{t('teacher.uploadLessons')}</span>
           </Button>
-          <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+          <Button 
+            onClick={() => setIsQuizModalOpen(true)}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+          >
             <FileText className="w-6 h-6" />
             <span>{t('teacher.createQuiz')}</span>
           </Button>
@@ -128,6 +144,20 @@ const TeacherDashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Modals */}
+      <CreateQuizModal 
+        isOpen={isQuizModalOpen} 
+        onClose={() => setIsQuizModalOpen(false)} 
+      />
+      <UploadLessonModal 
+        isOpen={isLessonModalOpen} 
+        onClose={() => setIsLessonModalOpen(false)} 
+      />
+      <MarkAttendanceModal 
+        isOpen={isAttendanceModalOpen} 
+        onClose={() => setIsAttendanceModalOpen(false)} 
+      />
     </div>
   );
 };

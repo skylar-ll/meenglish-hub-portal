@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { ExportDataModal } from "@/components/admin/ExportDataModal";
 import {
   Table,
   TableBody,
@@ -19,6 +21,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminSession");
@@ -159,7 +162,10 @@ const AdminDashboard = () => {
             <TabsContent value="students" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
-                <Button className="bg-gradient-to-r from-primary to-secondary">
+                <Button 
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="bg-gradient-to-r from-primary to-secondary"
+                >
                   {t('admin.exportData')}
                 </Button>
               </div>
@@ -330,6 +336,12 @@ const AdminDashboard = () => {
           </Tabs>
         </Card>
       </div>
+
+      {/* Export Modal */}
+      <ExportDataModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)} 
+      />
     </div>
   );
 };
