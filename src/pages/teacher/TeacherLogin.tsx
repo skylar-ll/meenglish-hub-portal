@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const TeacherLogin = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [signupName, setSignupName] = useState("");
@@ -18,25 +20,25 @@ const TeacherLogin = () => {
 
   const handleLogin = () => {
     if (!loginEmail || !loginPassword) {
-      toast.error("Please enter email and password");
+      toast.error(t('teacher.loginError'));
       return;
     }
 
     // Store teacher session
     sessionStorage.setItem("teacherSession", JSON.stringify({ email: loginEmail }));
-    toast.success("Login successful!");
+    toast.success(t('teacher.loginSuccess'));
     navigate("/teacher/dashboard");
   };
 
   const handleSignup = () => {
     if (!signupName || !signupEmail || !signupPassword) {
-      toast.error("Please fill in all fields");
+      toast.error(t('student.fillRequired'));
       return;
     }
 
     // Store teacher session
     sessionStorage.setItem("teacherSession", JSON.stringify({ name: signupName, email: signupEmail }));
-    toast.success("Account created successfully!");
+    toast.success(t('teacher.loginSuccess'));
     navigate("/teacher/dashboard");
   };
 
@@ -51,31 +53,28 @@ const TeacherLogin = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            {t('teacher.backHome')}
           </Button>
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center">
             <UserCircle className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
-            Teacher Portal
+            {t('teacher.login')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            بوابة المعلم
-          </p>
         </div>
 
         {/* Login/Signup Tabs */}
         <Card className="p-6 animate-slide-up">
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="login">{t('common.login')}</TabsTrigger>
+              <TabsTrigger value="signup">{t('common.signup')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">{t('teacher.email')}</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -86,7 +85,7 @@ const TeacherLogin = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">{t('teacher.password')}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -101,7 +100,7 @@ const TeacherLogin = () => {
                   className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90"
                   size="lg"
                 >
-                  Login
+                  {t('common.login')}
                 </Button>
               </div>
             </TabsContent>
@@ -109,7 +108,7 @@ const TeacherLogin = () => {
             <TabsContent value="signup">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Label htmlFor="signup-name">{t('student.fullNameEn')}</Label>
                   <Input
                     id="signup-name"
                     placeholder="John Doe"
@@ -119,7 +118,7 @@ const TeacherLogin = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">{t('teacher.email')}</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -130,7 +129,7 @@ const TeacherLogin = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">{t('teacher.password')}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -145,7 +144,7 @@ const TeacherLogin = () => {
                   className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90"
                   size="lg"
                 >
-                  Sign Up
+                  {t('common.signup')}
                 </Button>
               </div>
             </TabsContent>

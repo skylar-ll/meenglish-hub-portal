@@ -6,52 +6,49 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Payment = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedMethod, setSelectedMethod] = useState("");
 
   const paymentMethods = [
     {
       value: "tamara",
-      label: "Tamara",
-      labelAr: "تمارا",
+      labelKey: "payment.tamara",
+      descKey: "payment.tamaraDesc",
       icon: Smartphone,
-      description: "Split into installments",
     },
     {
       value: "taby",
-      label: "Tabby",
-      labelAr: "تابي",
+      labelKey: "payment.tabby",
+      descKey: "payment.tabbyDesc",
       icon: Smartphone,
-      description: "Buy now, pay later",
     },
     {
       value: "cash",
-      label: "Cash",
-      labelAr: "نقداً",
+      labelKey: "payment.cash",
+      descKey: "payment.cashDesc",
       icon: DollarSign,
-      description: "Pay in cash at branch",
     },
     {
       value: "transfer",
-      label: "Bank Transfer",
-      labelAr: "تحويل بنكي",
+      labelKey: "payment.transfer",
+      descKey: "payment.transferDesc",
       icon: Building2,
-      description: "Direct bank transfer",
     },
     {
       value: "card",
-      label: "Credit/Debit Card",
-      labelAr: "بطاقة ائتمان",
+      labelKey: "payment.card",
+      descKey: "payment.cardDesc",
       icon: CreditCard,
-      description: "Visa, Mastercard, Mada",
     },
   ];
 
   const handleConfirm = () => {
     if (!selectedMethod) {
-      toast.error("Please select a payment method");
+      toast.error(t('student.selectPaymentError'));
       return;
     }
 
@@ -65,7 +62,7 @@ const Payment = () => {
     // Store final registration data
     sessionStorage.setItem("studentRegistration", JSON.stringify(finalData));
     
-    toast.success("Registration completed successfully!");
+    toast.success(t('student.registrationSuccess'));
     navigate("/student/course-page");
   };
 
@@ -80,20 +77,17 @@ const Payment = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Payment Method
+            {t('student.paymentMethod')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            طريقة الدفع
-          </p>
         </div>
 
         {/* Payment Selection Form */}
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
-            <Label>Select Payment Method</Label>
+            <Label>{t('student.selectPayment')}</Label>
             <RadioGroup value={selectedMethod} onValueChange={setSelectedMethod}>
               <div className="space-y-4">
                 {paymentMethods.map((method) => (
@@ -115,14 +109,11 @@ const Payment = () => {
                             htmlFor={method.value}
                             className="text-base font-semibold cursor-pointer"
                           >
-                            {method.label}
+                            {t(method.labelKey)}
                           </Label>
-                          <span className="text-sm text-muted-foreground" dir="rtl">
-                            ({method.labelAr})
-                          </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {method.description}
+                          {t(method.descKey)}
                         </p>
                       </div>
                     </div>
@@ -133,9 +124,9 @@ const Payment = () => {
 
             <div className="pt-4 space-y-4">
               <div className="p-4 bg-success/10 rounded-lg border border-success/20">
-                <h3 className="font-semibold mb-2 text-success">Payment Terms</h3>
+                <h3 className="font-semibold mb-2 text-success">{t('student.paymentTerms')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Payment confirmation will be processed within 24 hours. You will receive access to your course materials once payment is verified.
+                  {t('student.paymentTermsDesc')}
                 </p>
               </div>
 
@@ -144,7 +135,7 @@ const Payment = () => {
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                 size="lg"
               >
-                Confirm & Subscribe
+                {t('student.confirmSubscribe')}
               </Button>
             </div>
           </div>

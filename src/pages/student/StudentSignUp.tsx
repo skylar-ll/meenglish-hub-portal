@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const StudentSignUp = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     fullNameAr: "",
     fullNameEn: "",
@@ -25,7 +27,7 @@ const StudentSignUp = () => {
   const handleNext = () => {
     // Validate required fields
     if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id) {
-      toast.error("Please fill in all required fields");
+      toast.error(t('student.fillRequired'));
       return;
     }
 
@@ -45,13 +47,13 @@ const StudentSignUp = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            {t('student.backHome')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Student Registration
+            {t('student.signup')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            تسجيل الطالب
+          <p className="text-sm text-muted-foreground mt-2">
+            {t('student.signup.subtitle')}
           </p>
         </div>
 
@@ -59,7 +61,7 @@ const StudentSignUp = () => {
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fullNameAr">Full Name (Arabic) *</Label>
+              <Label htmlFor="fullNameAr">{t('student.fullNameAr')} *</Label>
               <Input
                 id="fullNameAr"
                 dir="rtl"
@@ -70,7 +72,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullNameEn">Full Name (English) *</Label>
+              <Label htmlFor="fullNameEn">{t('student.fullNameEn')} *</Label>
               <Input
                 id="fullNameEn"
                 placeholder="Full Name"
@@ -81,7 +83,7 @@ const StudentSignUp = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone1">Primary Phone *</Label>
+                <Label htmlFor="phone1">{t('student.phone')} *</Label>
                 <Input
                   id="phone1"
                   type="tel"
@@ -92,7 +94,7 @@ const StudentSignUp = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone2">Secondary Phone</Label>
+                <Label htmlFor="phone2">{t('student.phoneSecondary')}</Label>
                 <Input
                   id="phone2"
                   type="tel"
@@ -104,7 +106,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t('student.email')} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -115,7 +117,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="id">National ID / Iqama *</Label>
+              <Label htmlFor="id">{t('student.nationalId')} *</Label>
               <Input
                 id="id"
                 placeholder="ID Number"
@@ -129,7 +131,7 @@ const StudentSignUp = () => {
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
               size="lg"
             >
-              Next
+              {t('student.next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

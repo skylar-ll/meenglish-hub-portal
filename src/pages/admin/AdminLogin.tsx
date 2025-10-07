@@ -6,22 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
     if (!email || !password) {
-      toast.error("Please enter email and password");
+      toast.error(t('admin.loginError'));
       return;
     }
 
     // For demo purposes - in production, this would verify against backend
     if (email && password) {
       sessionStorage.setItem("adminSession", JSON.stringify({ email }));
-      toast.success("Admin login successful!");
+      toast.success(t('admin.loginSuccess'));
       navigate("/admin/dashboard");
     }
   };
@@ -37,24 +39,21 @@ const AdminLogin = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            {t('admin.backHome')}
           </Button>
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
             <ShieldCheck className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            Admin Portal
+            {t('admin.login')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            بوابة الإدارة
-          </p>
         </div>
 
         {/* Login Form */}
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Admin Email</Label>
+              <Label htmlFor="email">{t('admin.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,7 +64,7 @@ const AdminLogin = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('admin.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -80,11 +79,11 @@ const AdminLogin = () => {
               className="w-full bg-gradient-to-r from-accent to-primary hover:opacity-90"
               size="lg"
             >
-              Login to Admin Portal
+              {t('admin.loginButton')}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Secure admin access only. Unauthorized access is prohibited.
+              {t('admin.secureAccess')}
             </p>
           </div>
         </Card>

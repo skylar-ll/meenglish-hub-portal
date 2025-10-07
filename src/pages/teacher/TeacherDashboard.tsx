@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
     sessionStorage.removeItem("teacherSession");
@@ -23,9 +25,9 @@ const TeacherDashboard = () => {
   ];
 
   const stats = [
-    { label: "Total Students", value: students.length, icon: Users, color: "from-primary to-secondary" },
-    { label: "Active Classes", value: "3", icon: BookOpen, color: "from-secondary to-accent" },
-    { label: "Pending Attendance", value: "12", icon: Calendar, color: "from-accent to-primary" },
+    { label: t('teacher.totalStudents'), value: students.length, icon: Users, color: "from-primary to-secondary" },
+    { label: t('teacher.activeClasses'), value: "3", icon: BookOpen, color: "from-secondary to-accent" },
+    { label: t('teacher.pendingAttendance'), value: "12", icon: Calendar, color: "from-accent to-primary" },
   ];
 
   return (
@@ -40,18 +42,15 @@ const TeacherDashboard = () => {
               className="mb-4"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              {t('teacher.backHome')}
             </Button>
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
-              Teacher Dashboard
+              {t('teacher.dashboard')}
             </h1>
-            <p className="text-xl text-muted-foreground" dir="rtl">
-              لوحة المعلم
-            </p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            {t('teacher.logout')}
           </Button>
         </div>
 
@@ -78,21 +77,21 @@ const TeacherDashboard = () => {
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90">
             <Calendar className="w-6 h-6" />
-            <span>Mark Attendance</span>
+            <span>{t('teacher.markAttendance')}</span>
           </Button>
           <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-accent to-primary hover:opacity-90">
             <BookOpen className="w-6 h-6" />
-            <span>Upload Lessons</span>
+            <span>{t('teacher.uploadLessons')}</span>
           </Button>
           <Button className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90">
             <FileText className="w-6 h-6" />
-            <span>Create Quiz</span>
+            <span>{t('teacher.createQuiz')}</span>
           </Button>
         </div>
 
         {/* Students List */}
         <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-6">My Students</h2>
+          <h2 className="text-2xl font-bold mb-6">{t('teacher.myStudents')}</h2>
           <div className="space-y-4">
             {students.map((student) => (
               <Card key={student.id} className="p-4 hover:bg-muted/50 transition-colors">
@@ -108,18 +107,18 @@ const TeacherDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Course</p>
+                    <p className="text-sm text-muted-foreground">{t('teacher.course')}</p>
                     <p className="font-medium">{student.course}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Progress</p>
-                    <p className="font-medium">{student.progress} / 8 parts</p>
+                    <p className="text-sm text-muted-foreground">{t('teacher.progress')}</p>
+                    <p className="font-medium">{student.progress} / 8 {t('teacher.parts')}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Course Progress</span>
+                    <span className="text-muted-foreground">{t('teacher.courseProgress')}</span>
                     <span className="font-medium">{Math.round((student.progress / 8) * 100)}%</span>
                   </div>
                   <Progress value={(student.progress / 8) * 100} className="h-2" />

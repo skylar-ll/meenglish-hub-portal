@@ -12,9 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
 
@@ -45,7 +47,7 @@ const CourseSelection = () => {
 
   const handleNext = () => {
     if (!selectedProgram || !selectedClass) {
-      toast.error("Please select both program level and class type");
+      toast.error(t('student.selectBothError'));
       return;
     }
 
@@ -70,24 +72,21 @@ const CourseSelection = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Course Selection
+            {t('student.courseSelection')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            اختيار الدورة
-          </p>
         </div>
 
         {/* Course Selection Form */}
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label>English Program Level</Label>
+              <Label>{t('student.englishLevel')}</Label>
               <Select value={selectedProgram} onValueChange={setSelectedProgram}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your level" />
+                  <SelectValue placeholder={t('student.selectLevel')} />
                 </SelectTrigger>
                 <SelectContent>
                   {englishLevels.map((level) => (
@@ -100,10 +99,10 @@ const CourseSelection = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Class Type / Other Languages</Label>
+              <Label>{t('student.classType')}</Label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select class type" />
+                  <SelectValue placeholder={t('student.selectClassType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {classTypes.map((type) => (
@@ -117,9 +116,9 @@ const CourseSelection = () => {
 
             <div className="pt-4 space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold mb-2">Course Information</h3>
+                <h3 className="font-semibold mb-2">{t('student.courseInfo')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Each English course consists of 8 parts. Your progress will be tracked throughout the program.
+                  {t('student.courseInfoDesc')}
                 </p>
               </div>
 
@@ -128,7 +127,7 @@ const CourseSelection = () => {
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                 size="lg"
               >
-                Next
+                {t('student.next')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>

@@ -6,45 +6,39 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedBranch, setSelectedBranch] = useState("");
 
   const branches = [
     {
       value: "online",
-      label: "Online Classes",
-      labelAr: "الفصول الافتراضية",
-      description: "Learn from anywhere with our virtual classrooms",
-      descriptionAr: "تعلم من أي مكان مع فصولنا الافتراضية",
+      labelKey: "branch.online",
+      descriptionKey: "branch.onlineDesc",
     },
     {
       value: "dammam",
-      label: "Dammam Branch",
-      labelAr: "فرع الدمام",
-      description: "Main campus in Dammam",
-      descriptionAr: "الحرم الرئيسي في الدمام",
+      labelKey: "branch.dammam",
+      descriptionKey: "branch.dammamDesc",
     },
     {
       value: "dhahran",
-      label: "Dhahran Branch",
-      labelAr: "فرع الظهران",
-      description: "Located in Dhahran",
-      descriptionAr: "يقع في الظهران",
+      labelKey: "branch.dhahran",
+      descriptionKey: "branch.dhahranDesc",
     },
     {
       value: "khobar",
-      label: "Khobar Branch",
-      labelAr: "فرع الخبر",
-      description: "Located in Khobar",
-      descriptionAr: "يقع في الخبر",
+      labelKey: "branch.khobar",
+      descriptionKey: "branch.khobarDesc",
     },
   ];
 
   const handleNext = () => {
     if (!selectedBranch) {
-      toast.error("Please select a branch");
+      toast.error(t('student.selectBranchError'));
       return;
     }
 
@@ -68,20 +62,17 @@ const BranchSelection = () => {
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Branch Selection
+            {t('student.branchSelection')}
           </h1>
-          <p className="text-xl text-muted-foreground" dir="rtl">
-            اختيار الفرع
-          </p>
         </div>
 
         {/* Branch Selection Form */}
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
-            <Label>Select Your Preferred Branch</Label>
+            <Label>{t('student.selectBranch')}</Label>
             <RadioGroup value={selectedBranch} onValueChange={setSelectedBranch}>
               <div className="space-y-4">
                 {branches.map((branch) => (
@@ -103,14 +94,11 @@ const BranchSelection = () => {
                             htmlFor={branch.value}
                             className="text-base font-semibold cursor-pointer"
                           >
-                            {branch.label}
+                            {t(branch.labelKey)}
                           </Label>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          {branch.description}
-                        </p>
-                        <p className="text-sm text-muted-foreground" dir="rtl">
-                          {branch.labelAr} - {branch.descriptionAr}
+                        <p className="text-sm text-muted-foreground">
+                          {t(branch.descriptionKey)}
                         </p>
                       </div>
                     </div>
@@ -124,7 +112,7 @@ const BranchSelection = () => {
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
               size="lg"
             >
-              Next
+              {t('student.next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
