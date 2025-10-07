@@ -44,7 +44,7 @@ const Index = () => {
           <img 
             src={logo} 
             alt="M.E. English" 
-            className="h-12 object-contain"
+            className="h-20 object-contain"
             style={{ filter: 'drop-shadow(0 0 0 transparent)' }}
           />
         </div>
@@ -58,10 +58,10 @@ const Index = () => {
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               M.E. English
             </h1>
-            <p className="text-2xl md:text-3xl text-foreground/80 mb-2">
+            <p className="text-xl md:text-2xl text-foreground/80 mb-2">
               Modern Education Institute of Languages
             </p>
-            <p className="text-xl md:text-2xl text-foreground/60" dir="rtl">
+            <p className="text-lg md:text-xl text-foreground/60" dir="rtl">
               المعهد الحديث للتعليم واللغات
             </p>
           </div>
