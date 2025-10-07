@@ -1,36 +1,39 @@
-import { GraduationCap, Users, BarChart3 } from "lucide-react";
+import { GraduationCap, Users, BarChart3, Languages } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/logo-new.png";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { language, setLanguage, t } = useLanguage();
 
   const portals = [
     {
-      title: "Student Portal",
-      titleAr: "بوابة الطالب",
+      title: t('home.studentPortal'),
       icon: GraduationCap,
-      description: "Register, select courses, and track your progress",
-      descriptionAr: "سجل، اختر الدورات، وتتبع تقدمك",
+      description: t('home.studentDesc'),
       path: "/student/signup",
       gradient: "from-primary to-secondary",
     },
     {
-      title: "Teacher Portal",
-      titleAr: "بوابة المعلم",
+      title: t('home.teacherPortal'),
       icon: Users,
-      description: "Manage students, mark attendance, and upload lessons",
-      descriptionAr: "إدارة الطلاب، تسجيل الحضور، ورفع الدروس",
+      description: t('home.teacherDesc'),
       path: "/teacher/login",
       gradient: "from-secondary to-accent",
     },
     {
-      title: "Admin Portal",
-      titleAr: "بوابة الإدارة",
+      title: t('home.adminPortal'),
       icon: BarChart3,
-      description: "View analytics, manage payments, and oversee operations",
-      descriptionAr: "عرض التحليلات، إدارة المدفوعات، والإشراف على العمليات",
+      description: t('home.adminDesc'),
       path: "/admin/login",
       gradient: "from-accent to-primary",
     },
@@ -40,20 +43,36 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Top Logo Bar */}
       <div className="bg-card/50 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-center items-center gap-6">
-          <img 
-            src={logo} 
-            alt="Modern Education Center" 
-            className="h-24 object-contain"
-          />
-          <div className="text-left">
-            <p className="text-lg md:text-xl text-foreground/80">
-              Modern Education Institute of Languages
-            </p>
-            <p className="text-base md:text-lg text-foreground/60" dir="rtl">
-              المعهد الحديث للتعليم واللغات
-            </p>
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-6">
+            <img 
+              src={logo} 
+              alt="Modern Education Center" 
+              className="h-24 object-contain"
+            />
+            <div className="text-left">
+              <p className="text-lg md:text-xl text-foreground/80">
+                {t('home.instituteName')}
+              </p>
+            </div>
           </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 bg-background">
+                <Languages className="h-4 w-4" />
+                {language === 'en' ? 'English' : 'العربية'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background z-50">
+              <DropdownMenuItem onClick={() => setLanguage('en')} className="cursor-pointer">
+                English
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage('ar')} className="cursor-pointer">
+                العربية
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -63,7 +82,7 @@ const Index = () => {
         <div className="relative container mx-auto px-4 py-12 text-center">
           <div className="mb-8 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              Welcome to Modern Education Center
+              {t('home.welcome')}
             </h1>
           </div>
         </div>
@@ -72,10 +91,7 @@ const Index = () => {
       {/* Portals Section */}
       <div className="container mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">
-          Choose Your Portal
-          <span className="block text-xl text-muted-foreground mt-2" dir="rtl">
-            اختر بوابتك
-          </span>
+          {t('home.choosePortal')}
         </h2>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -90,16 +106,10 @@ const Index = () => {
                 <portal.icon className="w-8 h-8 text-white" />
               </div>
               
-              <h3 className="text-2xl font-bold mb-2 text-center">{portal.title}</h3>
-              <p className="text-lg text-center mb-4 text-muted-foreground" dir="rtl">
-                {portal.titleAr}
-              </p>
+              <h3 className="text-2xl font-bold mb-4 text-center">{portal.title}</h3>
               
-              <p className="text-sm text-center text-muted-foreground mb-2">
+              <p className="text-sm text-center text-muted-foreground">
                 {portal.description}
-              </p>
-              <p className="text-sm text-center text-muted-foreground" dir="rtl">
-                {portal.descriptionAr}
               </p>
             </Card>
           ))}
@@ -108,7 +118,7 @@ const Index = () => {
 
       {/* Footer */}
       <div className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-        <p>© 2024 Modern Education Institute of Languages. All rights reserved.</p>
+        <p>{t('home.copyright')}</p>
       </div>
     </div>
   );
