@@ -19,26 +19,28 @@ const CourseSelection = () => {
   const [selectedClass, setSelectedClass] = useState("");
 
   const englishLevels = [
-    { value: "level-1", label: "Level 1 - المستوى الأول" },
-    { value: "level-2", label: "Level 2 - المستوى الثاني" },
-    { value: "level-3", label: "Level 3 - المستوى الثالث" },
-    { value: "level-4", label: "Level 4 - المستوى الرابع" },
-    { value: "level-5", label: "Level 5 - المستوى الخامس" },
-    { value: "level-6", label: "Level 6 - المستوى السادس" },
-    { value: "level-7", label: "Level 7 - المستوى السابع" },
-    { value: "level-8", label: "Level 8 - المستوى الثامن" },
-    { value: "level-9", label: "Level 9 - المستوى التاسع" },
-    { value: "level-10", label: "Level 10 - المستوى العاشر" },
-    { value: "level-11", label: "Level 11 - المستوى الحادي عشر" },
-    { value: "level-12", label: "Level 12 - المستوى الثاني عشر" },
+    { value: "level-1", label: "Level 1 (Pre1) - مستوى اول" },
+    { value: "level-2", label: "Level 2 (Pre2) - مستوى ثاني" },
+    { value: "level-3", label: "Level 3 (Intro A) - مستوى ثالث" },
+    { value: "level-4", label: "Level 4 (Intro B) - مستوى رابع" },
+    { value: "level-5", label: "Level 5 (1A) - مستوى خامس" },
+    { value: "level-6", label: "Level 6 (1B) - مستوى سادس" },
+    { value: "level-7", label: "Level 7 (2A) - مستوى سابع" },
+    { value: "level-8", label: "Level 8 (2B) - مستوى ثامن" },
+    { value: "level-9", label: "Level 9 (3A) - مستوى تاسع" },
+    { value: "level-10", label: "Level 10 (3B) - مستوى عاشر" },
+    { value: "level-11", label: "Level 11 (IELTS 1 - STEP 1) - مستوى-11" },
+    { value: "level-12", label: "Level 12 (IELTS 2 - STEP 2) - مستوى-12" },
   ];
 
   const classTypes = [
-    { value: "speaking", label: "Speaking Class - فصل المحادثة" },
-    { value: "private", label: "Private Class - فصل خاص" },
-    { value: "french", label: "French Language - اللغة الفرنسية" },
-    { value: "spanish", label: "Spanish Language - اللغة الإسبانية" },
-    { value: "german", label: "German Language - اللغة الألمانية" },
+    { value: "speaking", label: "Speaking Class" },
+    { value: "private", label: "1:1 Class - Private Class - كلاس فردي" },
+    { value: "french", label: "French Language - لغة فرنسية" },
+    { value: "chinese", label: "Chinese Language - لغة صينية" },
+    { value: "spanish", label: "Spanish Language - لغة اسبانية" },
+    { value: "italian", label: "Italian Language - لغة ايطالية" },
+    { value: "arabic", label: "Arabic for Non-Arabic Speakers - عربي لغير الناطقين بها" },
   ];
 
   const handleNext = () => {
