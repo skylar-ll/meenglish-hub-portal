@@ -1,16 +1,110 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, Users, CreditCard, Mail, Phone, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+// Course curriculum data
+const courseLessons = [
+  {
+    part: 1,
+    title: "Introduction & Basics",
+    titleAr: "المقدمة والأساسيات",
+    lessons: [
+      { id: 1, name: "Welcome & Course Overview", nameAr: "الترحيب ونظرة عامة" },
+      { id: 2, name: "Alphabet & Pronunciation", nameAr: "الأبجدية والنطق" },
+      { id: 3, name: "Basic Greetings", nameAr: "التحيات الأساسية" },
+      { id: 4, name: "Numbers 1-100", nameAr: "الأرقام 1-100" },
+    ]
+  },
+  {
+    part: 2,
+    title: "Grammar Fundamentals",
+    titleAr: "أساسيات القواعد",
+    lessons: [
+      { id: 5, name: "Present Simple Tense", nameAr: "المضارع البسيط" },
+      { id: 6, name: "Articles (a, an, the)", nameAr: "أدوات التعريف" },
+      { id: 7, name: "Personal Pronouns", nameAr: "الضمائر الشخصية" },
+      { id: 8, name: "Basic Sentence Structure", nameAr: "تركيب الجملة الأساسي" },
+    ]
+  },
+  {
+    part: 3,
+    title: "Everyday Conversations",
+    titleAr: "المحادثات اليومية",
+    lessons: [
+      { id: 9, name: "Shopping & Money", nameAr: "التسوق والمال" },
+      { id: 10, name: "At the Restaurant", nameAr: "في المطعم" },
+      { id: 11, name: "Asking for Directions", nameAr: "السؤال عن الاتجاهات" },
+      { id: 12, name: "Making Plans", nameAr: "وضع الخطط" },
+    ]
+  },
+  {
+    part: 4,
+    title: "Expanding Vocabulary",
+    titleAr: "توسيع المفردات",
+    lessons: [
+      { id: 13, name: "Family & Relationships", nameAr: "العائلة والعلاقات" },
+      { id: 14, name: "Hobbies & Interests", nameAr: "الهوايات والاهتمامات" },
+      { id: 15, name: "Weather & Seasons", nameAr: "الطقس والفصول" },
+      { id: 16, name: "Jobs & Professions", nameAr: "الوظائف والمهن" },
+    ]
+  },
+  {
+    part: 5,
+    title: "Intermediate Grammar",
+    titleAr: "القواعد المتوسطة",
+    lessons: [
+      { id: 17, name: "Past Simple Tense", nameAr: "الماضي البسيط" },
+      { id: 18, name: "Future Forms", nameAr: "صيغ المستقبل" },
+      { id: 19, name: "Comparative & Superlative", nameAr: "المقارنة والتفضيل" },
+      { id: 20, name: "Modal Verbs", nameAr: "الأفعال المساعدة" },
+    ]
+  },
+  {
+    part: 6,
+    title: "Communication Skills",
+    titleAr: "مهارات التواصل",
+    lessons: [
+      { id: 21, name: "Email Writing", nameAr: "كتابة البريد الإلكتروني" },
+      { id: 22, name: "Phone Conversations", nameAr: "المحادثات الهاتفية" },
+      { id: 23, name: "Presentations Basics", nameAr: "أساسيات العروض التقديمية" },
+      { id: 24, name: "Business Meetings", nameAr: "الاجتماعات التجارية" },
+    ]
+  },
+  {
+    part: 7,
+    title: "Advanced Topics",
+    titleAr: "المواضيع المتقدمة",
+    lessons: [
+      { id: 25, name: "Conditional Sentences", nameAr: "الجمل الشرطية" },
+      { id: 26, name: "Passive Voice", nameAr: "المبني للمجهول" },
+      { id: 27, name: "Reported Speech", nameAr: "الكلام المنقول" },
+      { id: 28, name: "Phrasal Verbs", nameAr: "الأفعال المركبة" },
+    ]
+  },
+  {
+    part: 8,
+    title: "Final Review & Assessment",
+    titleAr: "المراجعة النهائية والتقييم",
+    lessons: [
+      { id: 29, name: "Comprehensive Review", nameAr: "مراجعة شاملة" },
+      { id: 30, name: "Practice Test", nameAr: "اختبار تدريبي" },
+      { id: 31, name: "Final Exam", nameAr: "الامتحان النهائي" },
+      { id: 32, name: "Certificate Award", nameAr: "منح الشهادة" },
+    ]
+  },
+];
 
 const CoursePage = () => {
   const navigate = useNavigate();
   const [courseData, setCourseData] = useState<any>(null);
   const [progress, setProgress] = useState(0);
-  const [attendance, setAttendance] = useState<number[]>([]);
+  const [attendedLessons, setAttendedLessons] = useState<number[]>([]);
+  const [expandedPart, setExpandedPart] = useState<number | null>(null);
 
   useEffect(() => {
     const registration = sessionStorage.getItem("studentRegistration");
@@ -20,23 +114,34 @@ const CoursePage = () => {
     }
     setCourseData(JSON.parse(registration));
     
-    // Simulate some progress
+    // Simulate some progress - attended first 8 lessons (2 parts)
     setProgress(2);
-    setAttendance([1, 2]);
+    setAttendedLessons([1, 2, 3, 4, 5, 6, 7, 8]);
   }, [navigate]);
 
-  const markAttendance = (partNumber: number) => {
-    if (attendance.includes(partNumber)) {
-      toast.info("Attendance already marked for this part");
+  const markLessonAttendance = (lessonId: number, partNumber: number) => {
+    if (attendedLessons.includes(lessonId)) {
+      toast.info("Attendance already marked for this lesson");
       return;
     }
     
-    setAttendance([...attendance, partNumber]);
-    setProgress(progress + 1);
-    toast.success(`Attendance marked for Part ${partNumber}`);
+    const newAttendedLessons = [...attendedLessons, lessonId];
+    setAttendedLessons(newAttendedLessons);
+    
+    // Check if all lessons in the part are completed
+    const partLessons = courseLessons[partNumber - 1].lessons;
+    const allLessonsCompleted = partLessons.every(lesson => 
+      newAttendedLessons.includes(lesson.id)
+    );
+    
+    if (allLessonsCompleted && partNumber === progress + 1) {
+      setProgress(progress + 1);
+      toast.success(`🎉 Part ${partNumber} completed!`);
+    } else {
+      toast.success("Attendance marked successfully");
+    }
   };
 
-  const parts = Array.from({ length: 8 }, (_, i) => i + 1);
   const progressPercentage = (progress / 8) * 100;
 
   if (!courseData) {
@@ -65,28 +170,73 @@ const CoursePage = () => {
         </div>
 
         {/* Student Info Card */}
-        <Card className="p-6 mb-6 animate-slide-up">
-          <div className="flex items-start justify-between mb-4">
+        <Card className="p-6 mb-6 animate-slide-up bg-gradient-to-br from-card to-muted/20">
+          <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold mb-1">{courseData.fullNameEn}</h2>
               <p className="text-lg text-muted-foreground" dir="rtl">
                 {courseData.fullNameAr}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Branch</p>
-              <p className="font-semibold capitalize">{courseData.branch}</p>
-            </div>
+            <Badge className="bg-success text-success-foreground">Active</Badge>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Program</p>
-              <p className="font-semibold capitalize">{courseData.program?.replace("-", " ")}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-muted-foreground text-xs">Email</p>
+                <p className="font-medium">{courseData.email}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-muted-foreground">Class Type</p>
-              <p className="font-semibold capitalize">{courseData.classType}</p>
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-muted-foreground text-xs">Phone 1</p>
+                <p className="font-medium">{courseData.phone1}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <IdCard className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-muted-foreground text-xs">ID Number</p>
+                <p className="font-medium">{courseData.id}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-muted-foreground text-xs">Branch</p>
+                <p className="font-medium capitalize">{courseData.branch}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-secondary" />
+              <div>
+                <p className="text-muted-foreground text-xs">Program</p>
+                <p className="font-medium capitalize">{courseData.program?.replace("-", " ")}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-secondary" />
+              <div>
+                <p className="text-muted-foreground text-xs">Class Type</p>
+                <p className="font-medium capitalize">{courseData.classType}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-accent" />
+              <div>
+                <p className="text-muted-foreground text-xs">Payment Method</p>
+                <p className="font-medium capitalize">{courseData.paymentMethod}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              <div>
+                <p className="text-muted-foreground text-xs">Subscription</p>
+                <p className="font-medium text-success">Active</p>
+              </div>
             </div>
           </div>
         </Card>
@@ -113,51 +263,115 @@ const CoursePage = () => {
           </p>
         </Card>
 
-        {/* Course Parts */}
+        {/* Course Parts & Lessons */}
         <div className="space-y-4">
-          <h3 className="text-2xl font-semibold mb-4">Course Parts</h3>
-          {parts.map((partNum) => {
-            const isCompleted = attendance.includes(partNum);
-            const isCurrent = partNum === progress + 1;
+          <h3 className="text-2xl font-semibold mb-4">Course Curriculum</h3>
+          {courseLessons.map((part) => {
+            const partLessons = part.lessons;
+            const completedLessonsInPart = partLessons.filter(lesson => 
+              attendedLessons.includes(lesson.id)
+            ).length;
+            const isPartCompleted = partLessons.every(lesson => 
+              attendedLessons.includes(lesson.id)
+            );
+            const isPartCurrent = part.part === progress + 1;
+            const isPartLocked = part.part > progress + 1;
+            const isExpanded = expandedPart === part.part;
             
             return (
               <Card
-                key={partNum}
-                className={`p-6 transition-all ${
-                  isCompleted
+                key={part.part}
+                className={`transition-all ${
+                  isPartCompleted
                     ? "bg-success/10 border-success/30"
-                    : isCurrent
+                    : isPartCurrent
                     ? "bg-primary/5 border-primary/30"
+                    : isPartLocked
+                    ? "opacity-60"
                     : "hover:bg-muted/50"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {isCompleted ? (
-                      <CheckCircle2 className="w-8 h-8 text-success" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full border-2 border-muted flex items-center justify-center font-semibold">
-                        {partNum}
+                <div 
+                  className="p-6 cursor-pointer"
+                  onClick={() => setExpandedPart(isExpanded ? null : part.part)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      {isPartCompleted ? (
+                        <CheckCircle2 className="w-10 h-10 text-success" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center font-bold text-primary">
+                          {part.part}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h4 className="text-lg font-semibold">{part.title}</h4>
+                        <p className="text-sm text-muted-foreground" dir="rtl">
+                          {part.titleAr}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant={isPartCompleted ? "default" : isPartCurrent ? "secondary" : "outline"} className="text-xs">
+                            {isPartCompleted ? "Completed" : isPartCurrent ? "In Progress" : isPartLocked ? "Locked" : "Available"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {completedLessonsInPart} / {partLessons.length} lessons
+                          </span>
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <h4 className="text-lg font-semibold">Part {partNum}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {isCompleted ? "Completed" : isCurrent ? "Current" : "Upcoming"}
-                      </p>
                     </div>
-                  </div>
-
-                  {!isCompleted && isCurrent && (
-                    <Button
-                      onClick={() => markAttendance(partNum)}
-                      className="bg-gradient-to-r from-primary to-secondary"
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Mark Attendance
+                    <Button variant="ghost" size="sm">
+                      {isExpanded ? "−" : "+"}
                     </Button>
-                  )}
+                  </div>
                 </div>
+
+                {isExpanded && (
+                  <div className="px-6 pb-6 space-y-2 border-t pt-4">
+                    {partLessons.map((lesson) => {
+                      const isLessonCompleted = attendedLessons.includes(lesson.id);
+                      const canAttend = !isPartLocked && !isLessonCompleted;
+                      
+                      return (
+                        <div
+                          key={lesson.id}
+                          className={`flex items-center justify-between p-4 rounded-lg border ${
+                            isLessonCompleted 
+                              ? "bg-success/5 border-success/20" 
+                              : "bg-muted/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isLessonCompleted ? (
+                              <CheckCircle2 className="w-5 h-5 text-success" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">{lesson.name}</p>
+                              <p className="text-xs text-muted-foreground" dir="rtl">{lesson.nameAr}</p>
+                            </div>
+                          </div>
+                          {canAttend && isPartCurrent && (
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markLessonAttendance(lesson.id, part.part);
+                              }}
+                              className="bg-gradient-to-r from-primary to-secondary"
+                            >
+                              <Calendar className="w-3 h-3 mr-1" />
+                              Attend
+                            </Button>
+                          )}
+                          {isLessonCompleted && (
+                            <span className="text-xs text-success font-medium">Completed ✓</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
             );
           })}
