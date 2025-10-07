@@ -1,7 +1,7 @@
 import { GraduationCap, Users, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo-new.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -40,30 +40,31 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Top Logo Bar */}
       <div className="bg-card/50 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4 py-2 flex justify-center">
+        <div className="container mx-auto px-4 py-4 flex justify-center items-center gap-6">
           <img 
             src={logo} 
-            alt="M.E. English" 
-            className="h-20 object-contain"
-            style={{ filter: 'drop-shadow(0 0 0 transparent)' }}
+            alt="Modern Education Center" 
+            className="h-24 object-contain"
           />
+          <div className="text-left">
+            <p className="text-lg md:text-xl text-foreground/80">
+              Modern Education Institute of Languages
+            </p>
+            <p className="text-base md:text-lg text-foreground/60" dir="rtl">
+              المعهد الحديث للتعليم واللغات
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10" />
-        <div className="relative container mx-auto px-4 py-16 text-center">
+        <div className="relative container mx-auto px-4 py-12 text-center">
           <div className="mb-8 animate-fade-in">
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              M.E. English
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Welcome to Modern Education Center
             </h1>
-            <p className="text-xl md:text-2xl text-foreground/80 mb-2">
-              Modern Education Institute of Languages
-            </p>
-            <p className="text-lg md:text-xl text-foreground/60" dir="rtl">
-              المعهد الحديث للتعليم واللغات
-            </p>
           </div>
         </div>
       </div>
