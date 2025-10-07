@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar, Users, CreditCard, Mail, Phone, IdCard } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import logo from "@/assets/logo.jpeg";
 
 // Course curriculum data
 const courseLessons = [
@@ -104,6 +105,7 @@ const CoursePage = () => {
   const [courseData, setCourseData] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [attendedLessons, setAttendedLessons] = useState<number[]>([]);
+  const [dailyAttendance, setDailyAttendance] = useState<number[]>([]); // Track which parts have daily attendance marked
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
 
   useEffect(() => {
@@ -136,9 +138,15 @@ const CoursePage = () => {
     
     if (allLessonsCompleted && partNumber === progress + 1) {
       setProgress(progress + 1);
-      toast.success(`🎉 Part ${partNumber} completed!`);
+      // Mark daily attendance for this part
+      if (!dailyAttendance.includes(partNumber)) {
+        setDailyAttendance([...dailyAttendance, partNumber]);
+        toast.success(`🎉 Part ${partNumber} completed! Daily attendance marked.`);
+      } else {
+        toast.success(`🎉 Part ${partNumber} completed!`);
+      }
     } else {
-      toast.success("Attendance marked successfully");
+      toast.success("Lesson attendance marked");
     }
   };
 
@@ -149,18 +157,30 @@ const CoursePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
-      <div className="container max-w-4xl mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8 animate-fade-in">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Top Logo Bar */}
+      <div className="bg-card/50 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-4 py-2 flex justify-between items-center">
+          <img 
+            src={logo} 
+            alt="M.E. English" 
+            className="h-12 object-contain"
+            style={{ filter: 'drop-shadow(0 0 0 transparent)' }}
+          />
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
-            className="mb-4"
+            size="sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            Home
           </Button>
+        </div>
+      </div>
+
+      <div className="container max-w-4xl mx-auto p-4 py-8">
+        {/* Header */}
+        <div className="mb-8 animate-fade-in">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             My Course
           </h1>
@@ -171,71 +191,70 @@ const CoursePage = () => {
 
         {/* Student Info Card */}
         <Card className="p-6 mb-6 animate-slide-up bg-gradient-to-br from-card to-muted/20">
-          <div className="flex items-start justify-between mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h2 className="text-2xl font-bold mb-1">{courseData.fullNameEn}</h2>
-              <p className="text-lg text-muted-foreground" dir="rtl">
+              <p className="text-lg text-muted-foreground mb-4" dir="rtl">
                 {courseData.fullNameAr}
               </p>
-            </div>
-            <Badge className="bg-success text-success-foreground">Active</Badge>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-muted-foreground text-xs">Email</p>
-                <p className="font-medium">{courseData.email}</p>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Course Level</p>
+                    <p className="font-medium">{courseData.courseLevel || "Level 1"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-secondary" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Program</p>
+                    <p className="font-medium capitalize">{courseData.program?.replace("-", " ")}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-accent" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Class Type</p>
+                    <p className="font-medium capitalize">{courseData.classType}</p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-muted-foreground text-xs">Phone 1</p>
-                <p className="font-medium">{courseData.phone1}</p>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Subscription Status</p>
+                  <Badge className="bg-success text-success-foreground mt-1">Active</Badge>
+                </div>
+                <CheckCircle2 className="w-8 h-8 text-success" />
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <IdCard className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-muted-foreground text-xs">ID Number</p>
-                <p className="font-medium">{courseData.id}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-muted-foreground text-xs">Branch</p>
+              
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Branch Location</p>
                 <p className="font-medium capitalize">{courseData.branch}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-secondary" />
-              <div>
-                <p className="text-muted-foreground text-xs">Program</p>
-                <p className="font-medium capitalize">{courseData.program?.replace("-", " ")}</p>
+              
+              <div className="p-3 bg-primary/5 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Next Payment</p>
+                </div>
+                <p className="font-medium">February 15, 2025</p>
+                <p className="text-sm text-muted-foreground">2,400 SAR</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-secondary" />
-              <div>
-                <p className="text-muted-foreground text-xs">Class Type</p>
-                <p className="font-medium capitalize">{courseData.classType}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-accent" />
-              <div>
-                <p className="text-muted-foreground text-xs">Payment Method</p>
-                <p className="font-medium capitalize">{courseData.paymentMethod}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              <div>
-                <p className="text-muted-foreground text-xs">Subscription</p>
-                <p className="font-medium text-success">Active</p>
+              
+              <div className="p-3 bg-accent/5 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-accent" />
+                  <p className="text-xs text-muted-foreground">Daily Attendance</p>
+                </div>
+                <p className="font-medium text-lg">{dailyAttendance.length} / 8 Days</p>
+                <p className="text-xs text-muted-foreground mt-1">Complete a part to mark daily attendance</p>
               </div>
             </div>
           </div>

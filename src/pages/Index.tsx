@@ -38,16 +38,23 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Top Logo Bar */}
+      <div className="bg-card/50 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-4 py-2 flex justify-center">
+          <img 
+            src={logo} 
+            alt="M.E. English" 
+            className="h-12 object-contain"
+            style={{ filter: 'drop-shadow(0 0 0 transparent)' }}
+          />
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10" />
         <div className="relative container mx-auto px-4 py-16 text-center">
           <div className="mb-8 animate-fade-in">
-            <img 
-              src={logo} 
-              alt="M.E. English - Modern Education Institute of Languages" 
-              className="w-64 md:w-80 mx-auto mb-6"
-            />
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               M.E. English
             </h1>
