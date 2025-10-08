@@ -30,16 +30,39 @@ const TeacherLogin = () => {
     navigate("/teacher/dashboard");
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!signupName || !signupEmail || !signupPassword) {
       toast.error(t('student.fillRequired'));
       return;
     }
 
-    // Store teacher session
-    sessionStorage.setItem("teacherSession", JSON.stringify({ name: signupName, email: signupEmail }));
-    toast.success(t('teacher.loginSuccess'));
-    navigate("/teacher/dashboard");
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { error } = await supabase.from("teachers").insert({
+        full_name: signupName,
+        email: signupEmail,
+        password_hash: signupPassword,
+        student_count: 0,
+      });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error("This email is already registered");
+        } else {
+          console.error("Error creating teacher account:", error);
+          toast.error("Failed to create account. Please try again.");
+        }
+        return;
+      }
+
+      sessionStorage.setItem("teacherSession", JSON.stringify({ name: signupName, email: signupEmail }));
+      toast.success(t('teacher.loginSuccess'));
+      navigate("/teacher/dashboard");
+    } catch (error) {
+      console.error("Error during signup:", error);
+      toast.error("An error occurred. Please try again.");
+    }
   };
 
   return (

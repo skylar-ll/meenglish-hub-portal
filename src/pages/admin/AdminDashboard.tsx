@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,69 +22,56 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [students, setStudents] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        
+        const { data: studentsData, error: studentsError } = await supabase
+          .from("students")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (studentsError) {
+          console.error("Error fetching students:", studentsError);
+        } else {
+          setStudents(studentsData || []);
+        }
+
+        const { data: teachersData, error: teachersError } = await supabase
+          .from("teachers")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (teachersError) {
+          console.error("Error fetching teachers:", teachersError);
+        } else {
+          setTeachers(teachersData || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminSession");
     navigate("/");
   };
 
-  // Mock data
   const stats = [
-    { labelKey: "admin.totalStudents", value: "245", icon: Users, change: "+12%", color: "from-primary to-secondary" },
-    { labelKey: "admin.totalTeachers", value: "18", icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
+    { labelKey: "admin.totalStudents", value: students.length.toString(), icon: Users, change: "+12%", color: "from-primary to-secondary" },
+    { labelKey: "admin.totalTeachers", value: teachers.length.toString(), icon: UserCheck, change: "+2", color: "from-secondary to-accent" },
     { labelKey: "admin.revenue", value: "125,400", icon: CreditCard, change: "+8%", color: "from-accent to-primary" },
     { labelKey: "admin.activeClasses", value: "78%", icon: GraduationCap, change: "+5%", color: "from-primary to-accent" },
-  ];
-
-  const students = [
-    { 
-      id: 1, 
-      nameAr: "أحمد الراشد", 
-      nameEn: "Ahmed Al-Rashid", 
-      phone1: "+966501234567",
-      phone2: "+966502234567",
-      email: "ahmed@example.com",
-      nationalId: "1234567890",
-      course: "Level 5",
-      branch: "Dammam",
-      payment: "Tamara",
-      status: "active",
-      progress: 5,
-    },
-    { 
-      id: 2, 
-      nameAr: "فاطمة حسن", 
-      nameEn: "Fatima Hassan", 
-      phone1: "+966503234567",
-      phone2: "-",
-      email: "fatima@example.com",
-      nationalId: "2234567890",
-      course: "Level 3",
-      branch: "Online",
-      payment: "Card",
-      status: "active",
-      progress: 2,
-    },
-    { 
-      id: 3, 
-      nameAr: "محمد علي", 
-      nameEn: "Mohammed Ali", 
-      phone1: "+966504234567",
-      phone2: "+966505234567",
-      email: "mohammed@example.com",
-      nationalId: "3234567890",
-      course: "Level 7",
-      branch: "Khobar",
-      payment: "Cash",
-      status: "active",
-      progress: 6,
-    },
-  ];
-
-  const teachers = [
-    { id: 1, name: "John Smith", email: "john@me-english.com", courses: "Level 1-4", students: 28 },
-    { id: 2, name: "Sarah Johnson", email: "sarah@me-english.com", courses: "Level 5-8", students: 32 },
-    { id: 3, name: "Michael Brown", email: "michael@me-english.com", courses: "Speaking Classes", students: 25 },
   ];
 
   const payments = [
@@ -169,66 +156,71 @@ const AdminDashboard = () => {
                   {t('admin.exportData')}
                 </Button>
               </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('admin.nameEn')}</TableHead>
-                      <TableHead>{t('admin.nameAr')}</TableHead>
-                      <TableHead>{t('student.phone')}</TableHead>
-                      <TableHead>{t('student.email')}</TableHead>
-                      <TableHead>{t('teacher.course')}</TableHead>
-                      <TableHead>{t('admin.branch')}</TableHead>
-                      <TableHead>{t('admin.payment')}</TableHead>
-                      <TableHead>{t('admin.status')}</TableHead>
-                      <TableHead>{t('teacher.progress')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.nameEn}</TableCell>
-                        <TableCell dir="rtl">{student.nameAr}</TableCell>
-                        <TableCell className="text-sm">{student.phone1}</TableCell>
-                        <TableCell className="text-sm">{student.email}</TableCell>
-                        <TableCell>{student.course}</TableCell>
-                        <TableCell>{student.branch}</TableCell>
-                        <TableCell>{student.payment}</TableCell>
-                        <TableCell>
-                          <Badge variant={student.status === "active" ? "default" : "secondary"}>
-                            {student.status === "active" ? t('student.active') : student.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={(student.progress / 8) * 100} className="w-20 h-2" />
-                            <span className="text-sm">{student.progress}/8</span>
-                          </div>
-                        </TableCell>
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : students.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No students registered yet</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('admin.nameEn')}</TableHead>
+                        <TableHead>{t('admin.nameAr')}</TableHead>
+                        <TableHead>{t('student.phone')}</TableHead>
+                        <TableHead>{t('student.email')}</TableHead>
+                        <TableHead>{t('teacher.course')}</TableHead>
+                        <TableHead>{t('admin.branch')}</TableHead>
+                        <TableHead>{t('admin.payment')}</TableHead>
+                        <TableHead>{t('admin.status')}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{student.full_name_en}</TableCell>
+                          <TableCell dir="rtl">{student.full_name_ar}</TableCell>
+                          <TableCell className="text-sm">{student.phone1}</TableCell>
+                          <TableCell className="text-sm">{student.email}</TableCell>
+                          <TableCell>{student.program}</TableCell>
+                          <TableCell>{student.branch}</TableCell>
+                          <TableCell>{student.payment_method}</TableCell>
+                          <TableCell>
+                            <Badge variant={student.subscription_status === "active" ? "default" : "secondary"}>
+                              {student.subscription_status === "active" ? t('student.active') : student.subscription_status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </TabsContent>
 
             {/* Teachers Tab */}
             <TabsContent value="teachers" className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">{t('admin.teachersInfo')}</h2>
-              <div className="grid gap-4">
-                {teachers.map((teacher) => (
-                  <Card key={teacher.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-semibold">{teacher.name}</h3>
-                        <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                        <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses}</p>
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : teachers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No teachers registered yet</div>
+              ) : (
+                <div className="grid gap-4">
+                  {teachers.map((teacher) => (
+                    <Card key={teacher.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-semibold">{teacher.full_name}</h3>
+                          <p className="text-sm text-muted-foreground">{teacher.email}</p>
+                          <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses_assigned || "Not assigned"}</p>
+                        </div>
+                        <Badge variant="secondary">{teacher.student_count} {t('admin.students')}</Badge>
                       </div>
-                      <Badge variant="secondary">{teacher.students} {t('admin.students')}</Badge>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* Payments Tab */}

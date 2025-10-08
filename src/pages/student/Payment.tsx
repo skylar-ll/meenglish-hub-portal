@@ -46,24 +46,51 @@ const Payment = () => {
     },
   ];
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedMethod) {
       toast.error(t('student.selectPaymentError'));
       return;
     }
 
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    const finalData = {
-      ...registration,
-      paymentMethod: selectedMethod,
-      registrationDate: new Date().toISOString(),
-    };
-
-    // Store final registration data
-    sessionStorage.setItem("studentRegistration", JSON.stringify(finalData));
     
-    toast.success(t('student.registrationSuccess'));
-    navigate("/student/course-page");
+    try {
+      // Save to Supabase database
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { error } = await supabase.from("students").insert({
+        full_name_ar: registration.fullNameAr,
+        full_name_en: registration.fullNameEn,
+        phone1: registration.phone1,
+        phone2: registration.phone2 || null,
+        email: registration.email,
+        national_id: registration.nationalId,
+        program: registration.program,
+        class_type: registration.classType,
+        branch: registration.branch,
+        payment_method: selectedMethod,
+        subscription_status: 'active',
+        next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      });
+
+      if (error) {
+        console.error("Error saving student:", error);
+        toast.error(t('student.registrationError') || "Registration failed. Please try again.");
+        return;
+      }
+
+      // Store final registration data in session
+      sessionStorage.setItem("studentRegistration", JSON.stringify({
+        ...registration,
+        paymentMethod: selectedMethod,
+      }));
+      
+      toast.success(t('student.registrationSuccess'));
+      navigate("/student/course-page");
+    } catch (error) {
+      console.error("Error during registration:", error);
+      toast.error("An error occurred. Please try again.");
+    }
   };
 
   return (
