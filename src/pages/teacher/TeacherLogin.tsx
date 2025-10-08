@@ -39,12 +39,14 @@ const TeacherLogin = () => {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
-      const { error } = await supabase.from("teachers").insert({
+      const teacherData: any = {
         full_name: signupName,
         email: signupEmail,
         password_hash: signupPassword,
         student_count: 0,
-      });
+      };
+      
+      const { error } = await supabase.from("teachers").insert(teacherData);
 
       if (error) {
         if (error.code === '23505') {

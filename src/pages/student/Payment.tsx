@@ -58,20 +58,22 @@ const Payment = () => {
       // Save to Supabase database
       const { supabase } = await import("@/integrations/supabase/client");
       
-      const { error } = await supabase.from("students").insert({
+      const studentData: any = {
         full_name_ar: registration.fullNameAr,
         full_name_en: registration.fullNameEn,
         phone1: registration.phone1,
         phone2: registration.phone2 || null,
         email: registration.email,
-        national_id: registration.nationalId,
+        national_id: registration.id,
         program: registration.program,
         class_type: registration.classType,
         branch: registration.branch,
         payment_method: selectedMethod,
         subscription_status: 'active',
-        next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-      });
+        next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+      
+      const { error } = await supabase.from("students").insert(studentData);
 
       if (error) {
         console.error("Error saving student:", error);
