@@ -14,6 +14,7 @@ import CourseSelection from "./pages/student/CourseSelection";
 import BranchSelection from "./pages/student/BranchSelection";
 import Payment from "./pages/student/Payment";
 import CoursePage from "./pages/student/CoursePage";
+import StudentAttendance from "./pages/student/StudentAttendance";
 
 // Teacher Portal
 import TeacherLogin from "./pages/teacher/TeacherLogin";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/student/branch-selection" element={<BranchSelection />} />
           <Route path="/student/payment" element={<Payment />} />
           <Route path="/student/course" element={<CoursePage />} />
+          <Route path="/student/attendance" element={<StudentAttendance />} />
           <Route path="/student/course-page" element={<CoursePage />} />
           
           {/* Teacher Portal Routes */}

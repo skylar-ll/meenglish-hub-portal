@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ExportDataModal } from "@/components/admin/ExportDataModal";
 import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal";
+import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ const AdminDashboard = () => {
   const { t } = useLanguage();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +154,14 @@ const AdminDashboard = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
                 <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowAttendanceModal(true)}
+                    variant="default"
+                    className="gap-2"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    View Attendance Records
+                  </Button>
                   <Button 
                     onClick={() => setShowAddStudentModal(true)}
                     variant="outline"
@@ -352,6 +362,12 @@ const AdminDashboard = () => {
         open={showAddStudentModal}
         onOpenChange={setShowAddStudentModal}
         onStudentAdded={fetchData}
+      />
+
+      {/* Attendance Records Modal */}
+      <AttendanceRecordsModal
+        isOpen={showAttendanceModal}
+        onClose={() => setShowAttendanceModal(false)}
       />
     </div>
   );

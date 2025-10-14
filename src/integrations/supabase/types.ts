@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          class_time: string | null
+          created_at: string
+          date: string
+          id: string
+          marked_at: string
+          marked_by: string
+          status: string
+          student_id: string
+          updated_at: string
+          week_number: number | null
+        }
+        Insert: {
+          class_time?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          marked_at?: string
+          marked_by: string
+          status: string
+          student_id: string
+          updated_at?: string
+          week_number?: number | null
+        }
+        Update: {
+          class_time?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          marked_at?: string
+          marked_by?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+          week_number?: number | null
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           branch: string

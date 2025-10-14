@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -166,6 +166,15 @@ const CoursePage = () => {
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('student.home')}
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => navigate("/student/attendance")}
+            size="sm"
+            className="ml-2"
+          >
+            <UserCheck className="w-4 h-4 mr-2" />
+            Mark Attendance
           </Button>
         </div>
       </div>

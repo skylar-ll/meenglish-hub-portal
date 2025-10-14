@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -15,10 +16,11 @@ import {
 } from "@/components/ui/table";
 
 interface Student {
-  id: number;
+  id: string;
   name: string;
   nameAr: string;
   present: boolean;
+  phone: string;
 }
 
 interface MarkAttendanceModalProps {
@@ -29,25 +31,103 @@ interface MarkAttendanceModalProps {
 export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProps) => {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [students, setStudents] = useState<Student[]>([
-    { id: 1, name: "Ahmed Al-Saudi", nameAr: "أحمد السعودي", present: true },
-    { id: 2, name: "Lina Hassan", nameAr: "لينا حسن", present: false },
-    { id: 3, name: "Omar Khalid", nameAr: "عمر خالد", present: true },
-    { id: 4, name: "Rania Al-Zahrani", nameAr: "رانيا الزهراني", present: true },
-  ]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const toggleAttendance = (id: number) => {
+  useEffect(() => {
+    if (isOpen) {
+      fetchStudentsWithAttendance();
+    }
+  }, [isOpen]);
+
+  const fetchStudentsWithAttendance = async () => {
+    setLoading(true);
+    try {
+      // Fetch all students
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("students")
+        .select("id, full_name_en, full_name_ar, phone1");
+
+      if (studentsError) throw studentsError;
+
+      // Fetch today's attendance
+      const today = new Date().toISOString().split('T')[0];
+      const { data: attendanceData } = await supabase
+        .from("attendance")
+        .select("student_id, status")
+        .eq("date", today);
+
+      const attendanceMap = new Map(
+        attendanceData?.map(a => [a.student_id, a.status === 'present']) || []
+      );
+
+      const studentsWithAttendance = studentsData?.map(s => ({
+        id: s.id,
+        name: s.full_name_en,
+        nameAr: s.full_name_ar,
+        phone: s.phone1,
+        present: attendanceMap.get(s.id) ?? false
+      })) || [];
+
+      setStudents(studentsWithAttendance);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAttendance = (id: string) => {
     setStudents(students.map(s => 
       s.id === id ? { ...s, present: !s.present } : s
     ));
   };
 
-  const handleSave = () => {
-    toast({
-      title: t('teacher.attendanceSaved'),
-      description: `${t('teacher.attendanceSavedDesc')} (Demo mode)`,
-    });
-    onClose();
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const currentHour = new Date().getHours();
+      
+      // Prepare attendance records
+      const attendanceRecords = students.map(student => ({
+        student_id: student.id,
+        date: today,
+        status: student.present ? 'present' : 'absent',
+        marked_by: 'teacher',
+        class_time: `${currentHour}:00`
+      }));
+
+      // Upsert attendance records
+      const { error } = await supabase
+        .from("attendance")
+        .upsert(attendanceRecords, { 
+          onConflict: 'student_id,date,class_time',
+          ignoreDuplicates: false 
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: t('teacher.attendanceSaved'),
+        description: `Attendance marked for ${students.length} students`,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save attendance",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -98,11 +178,11 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
           </Table>
 
           <div className="flex gap-3">
-            <Button onClick={handleSave} className="flex-1">
+            <Button onClick={handleSave} className="flex-1" disabled={loading}>
               <Check className="w-4 h-4 mr-2" />
-              {t('teacher.saveAttendance')}
+              {loading ? "Saving..." : t('teacher.saveAttendance')}
             </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1">
+            <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
               {t('common.cancel')}
             </Button>
           </div>
