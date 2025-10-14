@@ -25,6 +25,7 @@ import QuizAttempts from "./pages/teacher/QuizAttempts";
 // Student Quiz
 import StudentQuizzes from "./pages/student/StudentQuizzes";
 import TakeQuiz from "./pages/student/TakeQuiz";
+import StudentNotes from "./pages/student/StudentNotes";
 
 // Admin Portal
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/student/course-page" element={<CoursePage />} />
           <Route path="/student/quizzes" element={<StudentQuizzes />} />
           <Route path="/student/quiz/:quizId" element={<TakeQuiz />} />
+          <Route path="/student/notes" element={<StudentNotes />} />
           
           {/* Teacher Portal Routes */}
           <Route path="/teacher/login" element={<TeacherLogin />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck, FileText, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -190,23 +190,41 @@ const CoursePage = () => {
             alt="Modern Education Center" 
             className="h-12 object-contain"
           />
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            size="sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {t('student.home')}
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => navigate("/student/attendance")}
-            size="sm"
-            className="ml-2"
-          >
-            <UserCheck className="w-4 h-4 mr-2" />
-            Mark Attendance
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              size="sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t('student.home')}
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => navigate("/student/attendance")}
+              size="sm"
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Mark Attendance
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => navigate("/student/quizzes")}
+              size="sm"
+              className="bg-gradient-to-r from-primary to-secondary"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              {t('student.myQuizzes')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/student/notes")}
+              size="sm"
+            >
+              <NotebookPen className="w-4 h-4 mr-2" />
+              {t('student.notes')}
+            </Button>
+          </div>
         </div>
       </div>
 
