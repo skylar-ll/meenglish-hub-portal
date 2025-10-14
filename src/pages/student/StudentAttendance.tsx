@@ -18,17 +18,33 @@ export default function StudentAttendance() {
   }, []);
 
   const checkAttendanceStatus = async () => {
-    const studentData = sessionStorage.getItem("studentData");
-    if (!studentData) {
+    // 1. Get authenticated user
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate("/student/login");
       return;
     }
 
-    const student = JSON.parse(studentData);
+    // 2. Fetch student record using authenticated user's email
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('email', session.user.email)
+      .single();
+
+    if (studentError || !student) {
+      toast({
+        title: "Error",
+        description: "Student record not found",
+        variant: "destructive"
+      });
+      navigate('/student/login');
+      return;
+    }
+
     setStudentInfo(student);
 
     const today = new Date().toISOString().split('T')[0];
-    const currentHour = new Date().getHours();
 
     const { data } = await supabase
       .from("attendance")

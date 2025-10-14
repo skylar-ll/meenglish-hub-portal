@@ -125,7 +125,6 @@ export type Database = {
           id: string
           national_id: string
           next_payment_date: string | null
-          password_hash: string | null
           payment_method: string
           phone1: string
           phone2: string | null
@@ -144,7 +143,6 @@ export type Database = {
           id?: string
           national_id: string
           next_payment_date?: string | null
-          password_hash?: string | null
           payment_method: string
           phone1: string
           phone2?: string | null
@@ -163,7 +161,6 @@ export type Database = {
           id?: string
           national_id?: string
           next_payment_date?: string | null
-          password_hash?: string | null
           payment_method?: string
           phone1?: string
           phone2?: string | null
@@ -180,7 +177,6 @@ export type Database = {
           email: string
           full_name: string
           id: string
-          password_hash: string | null
           phone: string | null
           student_count: number | null
           updated_at: string
@@ -191,7 +187,6 @@ export type Database = {
           email: string
           full_name: string
           id?: string
-          password_hash?: string | null
           phone?: string | null
           student_count?: number | null
           updated_at?: string
@@ -202,7 +197,6 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
-          password_hash?: string | null
           phone?: string | null
           student_count?: number | null
           updated_at?: string

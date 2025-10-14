@@ -108,6 +108,31 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       return;
     }
 
+    // Validate inputs using zod schema
+    try {
+      const { studentSignupSchema } = await import("@/lib/validations");
+      studentSignupSchema.parse({
+        fullNameAr: formData.fullNameAr,
+        fullNameEn: formData.fullNameEn,
+        phone1: formData.phone1,
+        phone2: formData.phone2,
+        email: formData.email,
+        id: formData.id,
+        password: formData.password
+      });
+    } catch (error: any) {
+      if (error.errors) {
+        toast.error(error.errors[0].message);
+      }
+      return;
+    }
+
+    // Validate course selection
+    if (formData.courses.length === 0) {
+      toast.error("At least one course is required");
+      return;
+    }
+
     try {
       const studentData: any = {
         full_name_ar: formData.fullNameAr,
@@ -116,7 +141,6 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         phone2: formData.phone2 || null,
         email: formData.email,
         national_id: formData.id,
-        password_hash: formData.password,
         program: formData.courses.join(', '),
         class_type: formData.courses.join(', '),
         branch: formData.branch,

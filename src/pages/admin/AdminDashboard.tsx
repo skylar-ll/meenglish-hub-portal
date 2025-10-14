@@ -63,11 +63,41 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    const checkAuthAndFetch = async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      // 1. Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/admin/login');
+        return;
+      }
+
+      // 2. Verify admin role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        const { toast } = await import("sonner");
+        toast.error('Unauthorized access');
+        navigate('/admin/login');
+        return;
+      }
+
+      // 3. Only then fetch data
+      fetchData();
+    };
+
+    checkAuthAndFetch();
   }, []);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("adminSession");
+  const handleLogout = async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    await supabase.auth.signOut();
     navigate("/");
   };
 
