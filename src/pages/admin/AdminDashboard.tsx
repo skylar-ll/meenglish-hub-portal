@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ExportDataModal } from "@/components/admin/ExportDataModal";
+import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal";
 import {
   Table,
   TableBody,
@@ -22,43 +23,44 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { supabase } = await import("@/integrations/supabase/client");
-        
-        const { data: studentsData, error: studentsError } = await supabase
-          .from("students")
-          .select("*")
-          .order("created_at", { ascending: false });
+  const fetchData = async () => {
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("students")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-        if (studentsError) {
-          console.error("Error fetching students:", studentsError);
-        } else {
-          setStudents(studentsData || []);
-        }
-
-        const { data: teachersData, error: teachersError } = await supabase
-          .from("teachers")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (teachersError) {
-          console.error("Error fetching teachers:", teachersError);
-        } else {
-          setTeachers(teachersData || []);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+      if (studentsError) {
+        console.error("Error fetching students:", studentsError);
+      } else {
+        setStudents(studentsData || []);
       }
-    };
 
+      const { data: teachersData, error: teachersError } = await supabase
+        .from("teachers")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (teachersError) {
+        console.error("Error fetching teachers:", teachersError);
+      } else {
+        setTeachers(teachersData || []);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -149,12 +151,22 @@ const AdminDashboard = () => {
             <TabsContent value="students" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
-                <Button 
-                  onClick={() => setIsExportModalOpen(true)}
-                  className="bg-gradient-to-r from-primary to-secondary"
-                >
-                  {t('admin.exportData')}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowAddStudentModal(true)}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Previous Students
+                  </Button>
+                  <Button 
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="bg-gradient-to-r from-primary to-secondary"
+                  >
+                    {t('admin.exportData')}
+                  </Button>
+                </div>
               </div>
               {loading ? (
                 <div className="text-center py-8">Loading...</div>
@@ -333,6 +345,13 @@ const AdminDashboard = () => {
       <ExportDataModal 
         isOpen={isExportModalOpen} 
         onClose={() => setIsExportModalOpen(false)} 
+      />
+
+      {/* Add Previous Student Modal */}
+      <AddPreviousStudentModal
+        open={showAddStudentModal}
+        onOpenChange={setShowAddStudentModal}
+        onStudentAdded={fetchData}
       />
     </div>
   );
