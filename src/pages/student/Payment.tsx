@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -55,9 +56,48 @@ const Payment = () => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
     
     try {
-      // Save to Supabase database
-      const { supabase } = await import("@/integrations/supabase/client");
-      
+      // Create Supabase Auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: registration.email,
+        password: registration.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name_en: registration.fullNameEn,
+            full_name_ar: registration.fullNameAr,
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create user");
+
+      // Assign student role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: authData.user.id, role: "student" });
+
+      if (roleError) throw roleError;
+
+      // Update profile with additional data
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          phone1: registration.phone1,
+          phone2: registration.phone2 || null,
+          national_id: registration.id,
+          program: registration.courses ? registration.courses.join(', ') : '',
+          class_type: registration.courses ? registration.courses.join(', ') : '',
+          branch: registration.branch,
+          payment_method: selectedMethod,
+          subscription_status: 'active',
+          next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        })
+        .eq("id", authData.user.id);
+
+      if (profileError) throw profileError;
+
+      // Also save to students table for backward compatibility
       const studentData: any = {
         full_name_ar: registration.fullNameAr,
         full_name_en: registration.fullNameEn,
@@ -65,7 +105,6 @@ const Payment = () => {
         phone2: registration.phone2 || null,
         email: registration.email,
         national_id: registration.id,
-        password_hash: registration.password,
         program: registration.courses ? registration.courses.join(', ') : '',
         class_type: registration.courses ? registration.courses.join(', ') : '',
         branch: registration.branch,
@@ -74,25 +113,16 @@ const Payment = () => {
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       };
       
-      const { error } = await supabase.from("students").insert(studentData);
+      await supabase.from("students").insert(studentData);
 
-      if (error) {
-        console.error("Error saving student:", error);
-        toast.error(t('student.registrationError') || "Registration failed. Please try again.");
-        return;
-      }
-
-      // Store final registration data in session
-      sessionStorage.setItem("studentRegistration", JSON.stringify({
-        ...registration,
-        paymentMethod: selectedMethod,
-      }));
+      // Clear registration data
+      sessionStorage.removeItem("studentRegistration");
       
       toast.success(t('student.registrationSuccess'));
-      navigate("/student/course-page");
-    } catch (error) {
+      navigate("/student/course");
+    } catch (error: any) {
       console.error("Error during registration:", error);
-      toast.error("An error occurred. Please try again.");
+      toast.error(error.message || "An error occurred. Please try again.");
     }
   };
 

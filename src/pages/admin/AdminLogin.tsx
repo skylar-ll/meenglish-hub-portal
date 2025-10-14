@@ -7,24 +7,51 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       toast.error(t('admin.loginError'));
       return;
     }
 
-    // For demo purposes - in production, this would verify against backend
-    if (email && password) {
-      sessionStorage.setItem("adminSession", JSON.stringify({ email }));
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Check if user has admin role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!roleData) {
+        await supabase.auth.signOut();
+        toast.error("You don't have admin privileges");
+        return;
+      }
+
       toast.success(t('admin.loginSuccess'));
       navigate("/admin/dashboard");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,10 +103,11 @@ const AdminLogin = () => {
 
             <Button
               onClick={handleLogin}
+              disabled={loading}
               className="w-full bg-gradient-to-r from-accent to-primary hover:opacity-90"
               size="lg"
             >
-              {t('admin.loginButton')}
+              {loading ? "Logging in..." : t('admin.loginButton')}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">

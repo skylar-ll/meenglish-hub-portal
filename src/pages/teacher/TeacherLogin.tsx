@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { teacherSignupSchema, loginSchema } from "@/lib/validations";
 
 const TeacherLogin = () => {
   const navigate = useNavigate();
@@ -17,91 +19,100 @@ const TeacherLogin = () => {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      toast.error(t('teacher.loginError'));
+    try {
+      loginSchema.parse({ email: loginEmail, password: loginPassword });
+    } catch (error: any) {
+      toast.error(error.errors[0].message);
       return;
     }
 
+    setLoading(true);
     try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data: teacher } = await supabase
-        .from("teachers")
-        .select("*")
-        .eq("email", loginEmail)
-        .eq("password_hash", loginPassword)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (error) throw error;
+
+      // Verify teacher role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "teacher")
         .maybeSingle();
 
-      if (!teacher) {
-        toast.error("Invalid email or password");
+      if (!roleData) {
+        await supabase.auth.signOut();
+        toast.error("Invalid teacher account");
         return;
       }
 
-      sessionStorage.setItem("teacherSession", JSON.stringify(teacher));
       toast.success(t('teacher.loginSuccess'));
       navigate("/teacher/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("An error occurred during login");
+      toast.error(error.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSignup = async () => {
-    if (!signupName || !signupEmail || !signupPassword) {
-      toast.error(t('student.fillRequired'));
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(signupEmail)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-
-    if (signupPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
     try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      
-      // Check if teacher already exists
-      const { data: existingTeacher } = await supabase
-        .from("teachers")
-        .select("email")
-        .eq("email", signupEmail)
-        .maybeSingle();
+      teacherSignupSchema.parse({
+        fullName: signupName,
+        email: signupEmail,
+        password: signupPassword,
+      });
+    } catch (error: any) {
+      toast.error(error.errors[0].message);
+      return;
+    }
 
-      if (existingTeacher) {
-        toast.error("This email is already registered. Please login instead.");
-        return;
-      }
+    setLoading(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name_en: signupName,
+          }
+        }
+      });
 
-      // Create new teacher account
-      const { error } = await supabase
-        .from("teachers")
-        .insert({
-          full_name: signupName,
-          email: signupEmail,
-          password_hash: signupPassword,
-          student_count: 0
-        } as any);
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create user");
 
-      if (error) {
-        toast.error("Failed to create account. Please try again.");
-        return;
-      }
+      // Assign teacher role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: authData.user.id, role: "teacher" });
+
+      if (roleError) throw roleError;
+
+      // Also save to teachers table for backward compatibility
+      await supabase.from("teachers").insert({
+        full_name: signupName,
+        email: signupEmail,
+        student_count: 0,
+      });
 
       toast.success("Account created successfully! Please login.");
       // Switch to login tab
       const loginTab = document.querySelector('[value="login"]') as HTMLElement;
       loginTab?.click();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during signup:", error);
-      toast.error("An error occurred. Please try again.");
+      toast.error(error.message || "Failed to create account");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,6 +155,7 @@ const TeacherLogin = () => {
                     placeholder="teacher@example.com"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
                 </div>
 
@@ -155,15 +167,17 @@ const TeacherLogin = () => {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
                 </div>
 
                 <Button
                   onClick={handleLogin}
+                  disabled={loading}
                   className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90"
                   size="lg"
                 >
-                  {t('common.login')}
+                  {loading ? "Logging in..." : t('common.login')}
                 </Button>
               </div>
             </TabsContent>
@@ -200,14 +214,18 @@ const TeacherLogin = () => {
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Min 8 characters
+                  </p>
                 </div>
 
                 <Button
                   onClick={handleSignup}
+                  disabled={loading}
                   className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90"
                   size="lg"
                 >
-                  {t('common.signup')}
+                  {loading ? "Creating account..." : t('common.signup')}
                 </Button>
               </div>
             </TabsContent>

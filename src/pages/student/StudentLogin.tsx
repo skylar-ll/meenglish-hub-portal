@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const StudentLogin = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -20,41 +22,36 @@ const StudentLogin = () => {
       return;
     }
 
+    setLoading(true);
     try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data: student } = await supabase
-        .from("students")
-        .select("*")
-        .eq("email", email)
-        .eq("password_hash", password)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Verify student role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "student")
         .maybeSingle();
 
-      if (!student) {
-        toast.error("Invalid email or password");
+      if (!roleData) {
+        await supabase.auth.signOut();
+        toast.error("Invalid student account");
         return;
       }
 
-      // Store student data in session
-      sessionStorage.setItem("studentRegistration", JSON.stringify({
-        fullNameAr: student.full_name_ar,
-        fullNameEn: student.full_name_en,
-        phone1: student.phone1,
-        phone2: student.phone2,
-        email: student.email,
-        id: student.national_id,
-        courses: student.class_type?.split(', ') || [],
-        branch: student.branch,
-        paymentMethod: student.payment_method,
-        program: student.program,
-        classType: student.class_type,
-        courseLevel: student.course_level || student.program?.split(',')[0] || "level-1"
-      }));
-
       toast.success("Login successful!");
       navigate("/student/course");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("An error occurred during login");
+      toast.error(error.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,6 +90,7 @@ const StudentLogin = () => {
                 placeholder="student@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
             </div>
 
@@ -104,15 +102,17 @@ const StudentLogin = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
             </div>
 
             <Button
               onClick={handleLogin}
+              disabled={loading}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
               size="lg"
             >
-              {t('common.login')}
+              {loading ? "Logging in..." : t('common.login')}
             </Button>
 
             <div className="text-center pt-4">

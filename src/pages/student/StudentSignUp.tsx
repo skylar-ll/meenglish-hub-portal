@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { studentSignupSchema } from "@/lib/validations";
 
 const StudentSignUp = () => {
   const navigate = useNavigate();
@@ -26,40 +28,20 @@ const StudentSignUp = () => {
   };
 
   const handleNext = async () => {
-    // Validate required fields
-    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
-      toast.error(t('student.fillRequired'));
-      return;
+    try {
+      // Validate with zod schema
+      const validatedData = studentSignupSchema.parse(formData);
+
+      // Store data in sessionStorage for the registration flow
+      sessionStorage.setItem("studentRegistration", JSON.stringify(validatedData));
+      navigate("/student/course-selection");
+    } catch (error: any) {
+      if (error.errors) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error("Invalid form data");
+      }
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    // Check if student already exists
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data: existingStudent } = await supabase
-      .from("students")
-      .select("email")
-      .eq("email", formData.email)
-      .maybeSingle();
-
-    if (existingStudent) {
-      toast.error("This email is already registered. Please login instead.");
-      return;
-    }
-
-    // Store data in sessionStorage for the registration flow
-    sessionStorage.setItem("studentRegistration", JSON.stringify(formData));
-    navigate("/student/course-selection");
   };
 
   return (
@@ -157,7 +139,7 @@ const StudentSignUp = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password (min 6 characters)"
+                placeholder="Enter password (min 8 characters)"
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
               />
