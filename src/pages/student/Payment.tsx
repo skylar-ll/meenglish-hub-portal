@@ -18,16 +18,10 @@ const Payment = () => {
 
   const paymentMethods = [
     {
-      value: "tamara",
-      labelKey: "payment.tamara",
-      descKey: "payment.tamaraDesc",
-      icon: Smartphone,
-    },
-    {
-      value: "taby",
-      labelKey: "payment.tabby",
-      descKey: "payment.tabbyDesc",
-      icon: Smartphone,
+      value: "card",
+      labelKey: "payment.card",
+      descKey: "payment.cardDesc",
+      icon: CreditCard,
     },
     {
       value: "cash",
@@ -36,16 +30,34 @@ const Payment = () => {
       icon: DollarSign,
     },
     {
+      value: "card-cash",
+      labelKey: "payment.cardCash",
+      descKey: "payment.cardCashDesc",
+      icon: CreditCard,
+    },
+    {
       value: "transfer",
       labelKey: "payment.transfer",
       descKey: "payment.transferDesc",
       icon: Building2,
     },
     {
-      value: "card",
-      labelKey: "payment.card",
-      descKey: "payment.cardDesc",
-      icon: CreditCard,
+      value: "tamara",
+      labelKey: "payment.tamara",
+      descKey: "payment.tamaraDesc",
+      icon: Smartphone,
+    },
+    {
+      value: "tabby",
+      labelKey: "payment.tabby",
+      descKey: "payment.tabbyDesc",
+      icon: Smartphone,
+    },
+    {
+      value: "stcpay",
+      labelKey: "payment.stcpay",
+      descKey: "payment.stcpayDesc",
+      icon: Smartphone,
     },
   ];
 

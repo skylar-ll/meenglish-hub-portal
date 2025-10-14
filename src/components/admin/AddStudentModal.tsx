@@ -301,10 +301,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <SelectValue placeholder="Select Payment Method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Card">Card</SelectItem>
-                <SelectItem value="Tabby">Tabby</SelectItem>
-                <SelectItem value="Tamara">Tamara</SelectItem>
+                <SelectItem value="card">Card - بطاقة</SelectItem>
+                <SelectItem value="cash">Cash - كاش</SelectItem>
+                <SelectItem value="card-cash">Card/Cash - بطاقة/كاش</SelectItem>
+                <SelectItem value="transfer">Transfer - تحويل</SelectItem>
+                <SelectItem value="tamara">Tamara - تمارا</SelectItem>
+                <SelectItem value="tabby">Tabby - تابي</SelectItem>
+                <SelectItem value="stcpay">Stcpay - اس تي سي باي</SelectItem>
               </SelectContent>
             </Select>
           </div>

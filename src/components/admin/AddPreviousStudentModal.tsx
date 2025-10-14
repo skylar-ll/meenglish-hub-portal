@@ -60,11 +60,13 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   ];
 
   const paymentMethods = [
-    { value: "cash", label: "Cash - كاش" },
     { value: "card", label: "Card - بطاقة" },
+    { value: "cash", label: "Cash - كاش" },
+    { value: "card-cash", label: "Card/Cash - بطاقة/كاش" },
+    { value: "transfer", label: "Transfer - تحويل" },
     { value: "tamara", label: "Tamara - تمارا" },
     { value: "tabby", label: "Tabby - تابي" },
-    { value: "bank-transfer", label: "Bank Transfer - تحويل بنكي" },
+    { value: "stcpay", label: "Stcpay - اس تي سي باي" },
   ];
 
   const toggleCourse = (courseValue: string) => {
