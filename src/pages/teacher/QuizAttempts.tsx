@@ -15,6 +15,8 @@ interface Attempt {
   submitted_at: string | null;
   score: number | null;
   total_points: number | null;
+  grade: string | null;
+  graded_at: string | null;
   student: {
     full_name_en: string;
     full_name_ar: string;
@@ -55,6 +57,8 @@ const QuizAttempts = () => {
           submitted_at,
           score,
           total_points,
+          grade,
+          graded_at,
           profiles!quiz_attempts_student_id_fkey (
             full_name_en,
             full_name_ar
@@ -73,6 +77,8 @@ const QuizAttempts = () => {
         submitted_at: attempt.submitted_at,
         score: attempt.score,
         total_points: attempt.total_points,
+        grade: attempt.grade,
+        graded_at: attempt.graded_at,
         student: {
           full_name_en: attempt.profiles?.full_name_en || 'Unknown',
           full_name_ar: attempt.profiles?.full_name_ar || 'غير معروف'
@@ -140,6 +146,18 @@ const QuizAttempts = () => {
                       {t('teacher.notSubmitted')}
                     </Badge>
                   )}
+                  {attempt.submitted_at && (
+                    attempt.graded_at ? (
+                      <Badge className="flex items-center gap-1 bg-green-600">
+                        <CheckCircle className="w-3 h-3" />
+                        {t('teacher.graded')}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        {t('teacher.notGraded')}
+                      </Badge>
+                    )
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -159,6 +177,20 @@ const QuizAttempts = () => {
                       </p>
                     </div>
                   )}
+                  {attempt.grade && (
+                    <div>
+                      <p className="text-muted-foreground">{t('teacher.grade')}</p>
+                      <p className="font-medium">{attempt.grade}</p>
+                    </div>
+                  )}
+                  {attempt.graded_at && (
+                    <div>
+                      <p className="text-muted-foreground">{t('teacher.gradedAt')}</p>
+                      <p className="font-medium">
+                        {format(new Date(attempt.graded_at), 'PPp')}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {attempt.submitted_at && (
@@ -167,7 +199,7 @@ const QuizAttempts = () => {
                     className="mt-4"
                     onClick={() => navigate(`/teacher/quizzes/${quizId}/attempts/${attempt.id}`)}
                   >
-                    {t('teacher.viewDetails')}
+                    {attempt.graded_at ? t('teacher.viewDetails') : t('teacher.gradeQuiz')}
                   </Button>
                 )}
               </Card>

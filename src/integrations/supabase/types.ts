@@ -115,30 +115,42 @@ export type Database = {
       }
       quiz_attempts: {
         Row: {
+          grade: string | null
+          graded_at: string | null
+          graded_by: string | null
           id: string
           quiz_id: string
           score: number | null
           started_at: string
           student_id: string
           submitted_at: string | null
+          teacher_feedback: string | null
           total_points: number | null
         }
         Insert: {
+          grade?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
           id?: string
           quiz_id: string
           score?: number | null
           started_at?: string
           student_id: string
           submitted_at?: string | null
+          teacher_feedback?: string | null
           total_points?: number | null
         }
         Update: {
+          grade?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
           id?: string
           quiz_id?: string
           score?: number | null
           started_at?: string
           student_id?: string
           submitted_at?: string | null
+          teacher_feedback?: string | null
           total_points?: number | null
         }
         Relationships: [
@@ -262,24 +274,30 @@ export type Database = {
           attempt_id: string
           created_at: string
           id: string
+          points_awarded: number | null
           question_id: string
           selected_option_index: number | null
+          teacher_feedback: string | null
           text_answer: string | null
         }
         Insert: {
           attempt_id: string
           created_at?: string
           id?: string
+          points_awarded?: number | null
           question_id: string
           selected_option_index?: number | null
+          teacher_feedback?: string | null
           text_answer?: string | null
         }
         Update: {
           attempt_id?: string
           created_at?: string
           id?: string
+          points_awarded?: number | null
           question_id?: string
           selected_option_index?: number | null
+          teacher_feedback?: string | null
           text_answer?: string | null
         }
         Relationships: [

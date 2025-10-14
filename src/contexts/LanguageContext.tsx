@@ -229,6 +229,16 @@ const translations = {
     'teacher.submittedAt': 'Submitted At',
     'teacher.notSubmitted': 'Not Submitted',
     'teacher.viewDetails': 'View Details',
+    'teacher.gradeQuiz': 'Grade Quiz',
+    'teacher.graded': 'Graded',
+    'teacher.notGraded': 'Not Graded',
+    'teacher.grade': 'Grade',
+    'teacher.feedback': 'Feedback',
+    'teacher.pointsAwarded': 'Points Awarded',
+    'teacher.questionFeedback': 'Question Feedback',
+    'teacher.saveGrade': 'Save Grade',
+    'teacher.gradedAt': 'Graded At',
+    'teacher.viewAllResults': 'View All Quiz Results',
     
     // Admin Portal
     'admin.login': 'Admin Portal',
@@ -348,6 +358,7 @@ const translations = {
     'student.quizSubmittedDesc': 'Your answers have been submitted successfully',
     'student.confirmSubmit': 'Are you sure you want to submit?',
     'student.cannotChangeAnswers': 'You cannot change your answers after submission',
+    'student.studentAnswer': 'Student Answer',
     'student.notes': 'Notes',
     'student.myNotes': 'My Notes',
     'student.addNote': 'Add Note',
@@ -379,6 +390,8 @@ const translations = {
     'common.close': 'Close',
     'common.created': 'Created',
     'common.back': 'Back',
+    'common.error': 'Error',
+    'common.success': 'Success',
   },
   ar: {
     // Homepage
@@ -598,6 +611,16 @@ const translations = {
     'teacher.submittedAt': 'تم التسليم في',
     'teacher.notSubmitted': 'لم يتم التسليم',
     'teacher.viewDetails': 'عرض التفاصيل',
+    'teacher.gradeQuiz': 'تقييم الاختبار',
+    'teacher.graded': 'تم التقييم',
+    'teacher.notGraded': 'لم يتم التقييم',
+    'teacher.grade': 'الدرجة',
+    'teacher.feedback': 'الملاحظات',
+    'teacher.pointsAwarded': 'النقاط الممنوحة',
+    'teacher.questionFeedback': 'ملاحظات السؤال',
+    'teacher.saveGrade': 'حفظ التقييم',
+    'teacher.gradedAt': 'تم التقييم في',
+    'teacher.viewAllResults': 'عرض جميع نتائج الاختبارات',
     
     // Admin Portal
     'admin.login': 'بوابة الإدارة',
@@ -717,6 +740,7 @@ const translations = {
     'student.quizSubmittedDesc': 'تم تسليم إجاباتك بنجاح',
     'student.confirmSubmit': 'هل أنت متأكد من أنك تريد التسليم؟',
     'student.cannotChangeAnswers': 'لا يمكنك تغيير إجاباتك بعد التسليم',
+    'student.studentAnswer': 'إجابة الطالب',
     'student.notes': 'الملاحظات',
     'student.myNotes': 'ملاحظاتي',
     'student.addNote': 'إضافة ملاحظة',
@@ -748,6 +772,8 @@ const translations = {
     'common.close': 'إغلاق',
     'common.created': 'تم الإنشاء',
     'common.back': 'رجوع',
+    'common.error': 'خطأ',
+    'common.success': 'نجاح',
   },
 };
 

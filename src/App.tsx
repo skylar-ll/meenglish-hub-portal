@@ -21,6 +21,7 @@ import TeacherLogin from "./pages/teacher/TeacherLogin";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherQuizzes from "./pages/teacher/TeacherQuizzes";
 import QuizAttempts from "./pages/teacher/QuizAttempts";
+import QuizAttemptDetail from "./pages/teacher/QuizAttemptDetail";
 
 // Student Quiz
 import StudentQuizzes from "./pages/student/StudentQuizzes";
@@ -61,6 +62,7 @@ const App = () => (
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/teacher/quizzes" element={<TeacherQuizzes />} />
           <Route path="/teacher/quizzes/:quizId" element={<QuizAttempts />} />
+          <Route path="/teacher/quizzes/:quizId/attempts/:attemptId" element={<QuizAttemptDetail />} />
           
           {/* Admin Portal Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
