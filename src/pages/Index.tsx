@@ -17,13 +17,6 @@ const Index = () => {
 
   const portals = [
     {
-      title: t('home.teacherPortal'),
-      icon: Users,
-      description: t('home.teacherDesc'),
-      path: "/teacher/login",
-      gradient: "from-secondary to-accent",
-    },
-    {
       title: t('home.adminPortal'),
       icon: BarChart3,
       description: t('home.adminDesc'),
@@ -132,13 +125,64 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Other Portals Section */}
+      {/* Teacher Section */}
+      <div className="container mx-auto px-4 py-12 bg-muted/30">
+        <h2 className="text-3xl font-bold text-center mb-8 animate-slide-up">
+          {t('home.teacherPortal')}
+        </h2>
+        <p className="text-center text-muted-foreground mb-8">
+          {t('home.teacherDesc')}
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-16">
+          <Card
+            className="card-interactive p-8 bg-card hover:bg-gradient-to-br hover:from-card hover:to-muted/50 animate-scale-in"
+            onClick={() => navigate("/teacher/login")}
+          >
+            <div className="w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center mx-auto">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            
+            <h3 className="text-2xl font-bold mb-4 text-center">Teacher Login</h3>
+            
+            <p className="text-sm text-center text-muted-foreground mb-4">
+              Access your dashboard to manage students and mark attendance
+            </p>
+
+            <Button className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90">
+              Login
+            </Button>
+          </Card>
+
+          <Card
+            className="card-interactive p-8 bg-card hover:bg-gradient-to-br hover:from-card hover:to-muted/50 animate-scale-in"
+            style={{ animationDelay: "100ms" }}
+            onClick={() => navigate("/teacher/login?signup=true")}
+          >
+            <div className="w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center mx-auto">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            
+            <h3 className="text-2xl font-bold mb-4 text-center">New Teacher Registration</h3>
+            
+            <p className="text-sm text-center text-muted-foreground mb-4">
+              Join our team and start managing your classes
+            </p>
+
+            <Button className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90">
+              Sign Up
+            </Button>
+          </Card>
+        </div>
+      </div>
+
+      {/* Admin Portal Section */}
       <div className="container mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">
-          {t('home.choosePortal')}
+          Administration
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">
           {portals.map((portal, index) => (
             <Card
               key={portal.title}

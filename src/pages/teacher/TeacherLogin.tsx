@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { teacherSignupSchema, loginSchema } from "@/lib/validations";
 const TeacherLogin = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("signup") === "true" ? "signup" : "login");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [signupName, setSignupName] = useState("");
@@ -139,7 +141,7 @@ const TeacherLogin = () => {
 
         {/* Login/Signup Tabs */}
         <Card className="p-6 animate-slide-up">
-          <Tabs defaultValue="login">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">{t('common.login')}</TabsTrigger>
               <TabsTrigger value="signup">{t('common.signup')}</TabsTrigger>
