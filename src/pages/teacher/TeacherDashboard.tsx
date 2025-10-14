@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { CreateQuizModal } from "@/components/teacher/CreateQuizModal";
 import { UploadLessonModal } from "@/components/teacher/UploadLessonModal";
 import { MarkAttendanceModal } from "@/components/teacher/MarkAttendanceModal";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -16,11 +18,49 @@ const TeacherDashboard = () => {
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("teacherSession");
+  useEffect(() => {
+    const checkAuth = async () => {
+      // 1. Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/teacher/login');
+        return;
+      }
+
+      // 2. Verify teacher role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'teacher')
+        .maybeSingle();
+
+      if (!roleData) {
+        toast.error('Unauthorized access - teacher role required');
+        navigate('/teacher/login');
+        return;
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate("/");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Loading...</p>
+      </div>
+    );
+  }
 
   // Mock students data
   const students = [
