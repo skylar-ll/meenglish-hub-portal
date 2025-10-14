@@ -123,8 +123,17 @@ const Payment = () => {
       
       await supabase.from("students").insert(studentData);
 
-      // Clear registration data
-      sessionStorage.removeItem("studentRegistration");
+      // Persist registration data for CoursePage
+      const registrationData = {
+        fullNameEn: registration.fullNameEn,
+        fullNameAr: registration.fullNameAr,
+        email: registration.email,
+        program: registration.courses ? registration.courses.join(', ') : '',
+        classType: registration.courses ? registration.courses.join(', ') : '',
+        branch: registration.branch,
+        courseLevel: registration.courseLevel || null,
+      };
+      sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
       
       toast.success(t('student.registrationSuccess'));
       navigate("/student/course");

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import logo from "@/assets/logo-new.png";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 // Course curriculum data
 const courseLessons = [
@@ -103,16 +104,46 @@ const CoursePage = () => {
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
 
   useEffect(() => {
-    const registration = sessionStorage.getItem("studentRegistration");
-    if (!registration) {
-      navigate("/student/signup");
-      return;
-    }
-    setCourseData(JSON.parse(registration));
-    
-    // Simulate some progress - attended first 8 lessons (2 parts)
-    setProgress(2);
-    setAttendedLessons([1, 2, 3, 4, 5, 6, 7, 8]);
+    const load = async () => {
+      const registration = sessionStorage.getItem("studentRegistration");
+      if (registration) {
+        setCourseData(JSON.parse(registration));
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        const email = session?.user?.email;
+        if (email) {
+          const { data: student } = await supabase
+            .from("students")
+            .select("*")
+            .eq("email", email)
+            .maybeSingle();
+          if (student) {
+            const registrationData = {
+              fullNameEn: student.full_name_en,
+              fullNameAr: student.full_name_ar,
+              email: student.email,
+              program: student.program,
+              classType: student.class_type,
+              branch: student.branch,
+              courseLevel: student.course_level,
+            };
+            sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
+            setCourseData(registrationData);
+          } else {
+            navigate("/student/signup");
+            return;
+          }
+        } else {
+          navigate("/student/login");
+          return;
+        }
+      }
+
+      // Simulate some progress - attended first 8 lessons (2 parts)
+      setProgress(2);
+      setAttendedLessons([1, 2, 3, 4, 5, 6, 7, 8]);
+    };
+    load();
   }, [navigate]);
 
   const markLessonAttendance = (lessonId: number, partNumber: number) => {
