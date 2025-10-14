@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,18 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Setup admin account on first load
+    const setupAdmin = async () => {
+      try {
+        await supabase.functions.invoke('setup-admin');
+      } catch (error) {
+        console.error('Admin setup error:', error);
+      }
+    };
+    setupAdmin();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
