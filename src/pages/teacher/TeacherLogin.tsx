@@ -40,13 +40,23 @@ const TeacherLogin = () => {
 
       if (error) throw error;
 
-      // Verify teacher role
-      const { data: roleData } = await supabase
+      // Verify teacher role (auto-assign if missing)
+      let { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id)
         .eq("role", "teacher")
         .maybeSingle();
+
+      if (!roleData) {
+        await supabase.from("user_roles").insert({ user_id: data.user.id, role: "teacher" });
+        ({ data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "teacher")
+          .maybeSingle());
+      }
 
       if (!roleData) {
         await supabase.auth.signOut();
@@ -106,10 +116,16 @@ const TeacherLogin = () => {
         student_count: 0,
       });
 
-      toast.success("Account created successfully! Please login.");
-      // Switch to login tab
-      const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-      loginTab?.click();
+      toast.success("Account created successfully! Redirecting...");
+      // If the session is created automatically, go to dashboard
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/teacher/dashboard");
+      } else {
+        // Fallback: show login tab if auto-login not enabled
+        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+        loginTab?.click();
+      }
     } catch (error: any) {
       console.error("Error during signup:", error);
       toast.error(error.message || "Failed to create account");
