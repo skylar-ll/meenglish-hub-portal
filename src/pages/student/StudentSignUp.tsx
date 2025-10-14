@@ -32,9 +32,14 @@ const StudentSignUp = () => {
       // Validate with zod schema
       const validatedData = studentSignupSchema.parse(formData);
 
-      // Store data in sessionStorage for the registration flow
-      sessionStorage.setItem("studentRegistration", JSON.stringify(validatedData));
-      navigate("/student/course-selection");
+      // Store data WITHOUT password in sessionStorage
+      const { password, ...dataWithoutPassword } = validatedData;
+      sessionStorage.setItem("studentRegistration", JSON.stringify(dataWithoutPassword));
+      
+      // Store password separately in memory only (component state passed via navigation)
+      navigate("/student/course-selection", { 
+        state: { password } 
+      });
     } catch (error: any) {
       if (error.errors) {
         toast.error(error.errors[0].message);

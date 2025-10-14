@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const password = location.state?.password;
 
   const allCourses = [
     { value: "level-1", label: "Level 1 (Pre1) - مستوى اول", category: "English Program" },
@@ -55,7 +57,7 @@ const CourseSelection = () => {
       courses: selectedCourses,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(courseData));
-    navigate("/student/branch-selection");
+    navigate("/student/branch-selection", { state: { password } });
   };
 
   return (

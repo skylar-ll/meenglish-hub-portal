@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, CreditCard, Smartphone, DollarSign, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,8 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Payment = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const [selectedMethod, setSelectedMethod] = useState("");
+  const password = location.state?.password;
 
   const paymentMethods = [
     {
@@ -53,13 +55,19 @@ const Payment = () => {
       return;
     }
 
+    if (!password) {
+      toast.error("Session expired. Please start registration again.");
+      navigate("/student/signup");
+      return;
+    }
+
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
     
     try {
       // Create Supabase Auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: registration.email,
-        password: registration.password,
+        password: password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
@@ -121,7 +129,7 @@ const Payment = () => {
       toast.success(t('student.registrationSuccess'));
       navigate("/student/course");
     } catch (error: any) {
-      console.error("Error during registration:", error);
+      // Error logged server-side only in production
       toast.error(error.message || "An error occurred. Please try again.");
     }
   };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const [selectedBranch, setSelectedBranch] = useState("");
+  const password = location.state?.password;
 
   const branches = [
     {
@@ -48,7 +50,7 @@ const BranchSelection = () => {
       branch: selectedBranch,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(branchData));
-    navigate("/student/payment");
+    navigate("/student/payment", { state: { password } });
   };
 
   return (
