@@ -53,6 +53,13 @@ const TeacherLogin = () => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signupEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     if (signupPassword.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
@@ -61,7 +68,7 @@ const TeacherLogin = () => {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
-      // Check if teacher exists in admin dashboard
+      // Check if teacher already exists
       const { data: existingTeacher } = await supabase
         .from("teachers")
         .select("email")
@@ -73,7 +80,25 @@ const TeacherLogin = () => {
         return;
       }
 
-      toast.error("Your email is not registered in the system. Please contact the admin.");
+      // Create new teacher account
+      const { error } = await supabase
+        .from("teachers")
+        .insert({
+          full_name: signupName,
+          email: signupEmail,
+          password_hash: signupPassword,
+          student_count: 0
+        } as any);
+
+      if (error) {
+        toast.error("Failed to create account. Please try again.");
+        return;
+      }
+
+      toast.success("Account created successfully! Please login.");
+      // Switch to login tab
+      const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+      loginTab?.click();
     } catch (error) {
       console.error("Error during signup:", error);
       toast.error("An error occurred. Please try again.");

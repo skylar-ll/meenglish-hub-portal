@@ -32,21 +32,28 @@ const StudentSignUp = () => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     if (formData.password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
 
-    // Check if student exists in admin dashboard
+    // Check if student already exists
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: existingStudent } = await supabase
       .from("students")
-      .select("email, password_hash")
+      .select("email")
       .eq("email", formData.email)
       .maybeSingle();
 
-    if (!existingStudent) {
-      toast.error("Your email is not registered. Please contact the admin.");
+    if (existingStudent) {
+      toast.error("This email is already registered. Please login instead.");
       return;
     }
 
