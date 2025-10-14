@@ -33,6 +33,28 @@ const QuizAttempts = () => {
 
   useEffect(() => {
     fetchQuizAndAttempts();
+
+    // Set up realtime subscription for quiz attempts
+    const channel = supabase
+      .channel('quiz-attempts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quiz_attempts',
+          filter: `quiz_id=eq.${quizId}`
+        },
+        () => {
+          // Refetch attempts when any change occurs
+          fetchQuizAndAttempts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [quizId]);
 
   const fetchQuizAndAttempts = async () => {
