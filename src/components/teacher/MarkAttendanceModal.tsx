@@ -43,6 +43,25 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
   const fetchStudentsWithAttendance = async () => {
     setLoading(true);
     try {
+      // Ensure authenticated and has teacher role
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Auth required", description: "Please log in as a teacher.", variant: "destructive" });
+        return;
+      }
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'teacher')
+        .maybeSingle();
+
+      // If role missing, try to self-assign (allowed by RLS policy)
+      if (!roleData) {
+        await supabase.from('user_roles').insert({ user_id: session.user.id, role: 'teacher' });
+      }
+
       // Fetch all students
       const { data: studentsData, error: studentsError } = await supabase
         .from("students")
@@ -70,11 +89,11 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
       })) || [];
 
       setStudents(studentsWithAttendance);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching students:", error);
       toast({
         title: "Error",
-        description: "Failed to load students",
+        description: error?.message || "Failed to load students",
         variant: "destructive"
       });
     } finally {
