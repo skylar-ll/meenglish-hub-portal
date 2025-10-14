@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Calendar, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -20,19 +20,23 @@ interface AttendanceRecordsModalProps {
   onClose: () => void;
 }
 
+interface DayAttendance {
+  [day: string]: string; // 'P', 'A', 'L', etc.
+}
+
+interface WeekAttendance {
+  [weekNumber: number]: DayAttendance;
+}
+
 interface StudentAttendance {
   student_id: string;
   full_name_en: string;
   full_name_ar: string;
   phone1: string;
   program: string;
-  weeks: {
-    [weekNumber: number]: {
-      [day: string]: string; // 'P', 'A', 'L', etc.
-    };
-  };
-  totalPresent: number;
-  totalAbsent: number;
+  weeks: WeekAttendance;
+  weekTotals: { [weekNumber: number]: number };
+  overallTotal: number;
   attendancePercentage: number;
 }
 
@@ -40,7 +44,6 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
   const { toast } = useToast();
   const [attendanceData, setAttendanceData] = useState<StudentAttendance[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentWeek, setCurrentWeek] = useState(1);
   const [maxWeek, setMaxWeek] = useState(4);
 
   useEffect(() => {
@@ -68,47 +71,69 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
 
       if (attendanceError) throw attendanceError;
 
-      // Find the maximum week number
-      const maxWeekNum = Math.max(
-        ...(attendanceRecords?.map(r => r.week_number || 0) || [0]),
-        4
+      // Calculate week numbers from dates
+      const weekMap = new Map<string, number>();
+      const sortedRecords = [...(attendanceRecords || [])].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
       );
+
+      // Group dates by week (Sunday to Saturday)
+      sortedRecords.forEach(record => {
+        const date = new Date(record.date);
+        const startOfWeek = new Date(date);
+        startOfWeek.setDate(date.getDate() - date.getDay()); // Get Sunday
+        const weekKey = startOfWeek.toISOString().split('T')[0];
+        
+        if (!weekMap.has(weekKey)) {
+          weekMap.set(weekKey, weekMap.size + 1);
+        }
+      });
+
+      const maxWeekNum = Math.max(...Array.from(weekMap.values()), 4);
       setMaxWeek(maxWeekNum);
 
       // Process data into structured format
       const processedData: StudentAttendance[] = (studentsData || []).map(student => {
         const studentRecords = attendanceRecords?.filter(r => r.student_id === student.id) || [];
         
-        const weeks: { [weekNumber: number]: { [day: string]: string } } = {};
-        let totalPresent = 0;
-        let totalAbsent = 0;
+        const weeks: WeekAttendance = {};
+        const weekTotals: { [weekNumber: number]: number } = {};
+        let overallTotal = 0;
 
         studentRecords.forEach(record => {
-          const weekNum = record.week_number || 1;
+          const date = new Date(record.date);
+          const startOfWeek = new Date(date);
+          startOfWeek.setDate(date.getDate() - date.getDay());
+          const weekKey = startOfWeek.toISOString().split('T')[0];
+          const weekNum = weekMap.get(weekKey) || 1;
+          
           if (!weeks[weekNum]) {
             weeks[weekNum] = {};
+            weekTotals[weekNum] = 0;
           }
           
-          const dayOfWeek = new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' });
+          const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
           
-          // Map status to letter code
-          let statusCode = 'A'; // Default absent
+          // Map status to letter code matching reference image
+          let statusCode = 'A';
           if (record.status === 'present') {
             statusCode = 'P';
-            totalPresent++;
+            weekTotals[weekNum]++;
+            overallTotal++;
           } else if (record.status === 'late') {
             statusCode = 'L';
-            totalPresent++; // Count late as present for percentage
+            weekTotals[weekNum]++;
+            overallTotal++;
           } else if (record.status === 'absent') {
             statusCode = 'A';
-            totalAbsent++;
           }
           
           weeks[weekNum][dayOfWeek] = statusCode;
         });
 
-        const totalRecords = totalPresent + totalAbsent;
-        const attendancePercentage = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
+        // Calculate attendance percentage
+        const totalDays = studentRecords.length;
+        const attendancePercentage = totalDays > 0 ? Math.round((overallTotal / totalDays) * 100) : 0;
 
         return {
           student_id: student.id,
@@ -117,8 +142,8 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
           phone1: student.phone1,
           program: student.program,
           weeks,
-          totalPresent,
-          totalAbsent,
+          weekTotals,
+          overallTotal,
           attendancePercentage
         };
       });
@@ -140,13 +165,11 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
     const headers = [
       "Student Name",
-      "Phone",
-      "Program",
+      "Phone Number",
       ...Array.from({ length: maxWeek }, (_, i) => 
-        weekDays.map(day => `Week ${i + 1} ${day}`)
+        [...weekDays.map(day => `Week ${i + 1} - ${day}`), `Week ${i + 1} Total`]
       ).flat(),
-      "Total Present",
-      "Total Absent", 
+      "Overall Total",
       "Attendance %"
     ];
 
@@ -154,17 +177,16 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
       const weekData: string[] = [];
       for (let w = 1; w <= maxWeek; w++) {
         weekDays.forEach(day => {
-          weekData.push(student.weeks[w]?.[day] || '-');
+          weekData.push(student.weeks[w]?.[day] || '');
         });
+        weekData.push(student.weekTotals[w]?.toString() || '0');
       }
       
       return [
         student.full_name_en,
         student.phone1,
-        student.program,
         ...weekData,
-        student.totalPresent.toString(),
-        student.totalAbsent.toString(),
+        student.overallTotal.toString(),
         `${student.attendancePercentage}%`
       ];
     });
@@ -185,26 +207,30 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'P': return 'text-success font-semibold';
-      case 'A': return 'text-destructive font-semibold';
-      case 'L': return 'text-warning font-semibold';
+      case 'P': return 'bg-success/20 text-success font-bold';
+      case 'A': return 'bg-destructive/20 text-destructive font-bold';
+      case 'L': return 'bg-warning/20 text-warning font-bold';
       default: return 'text-muted-foreground';
     }
+  };
+
+  const getCellBgColor = (weekNum: number) => {
+    const colors = ['bg-blue-50', 'bg-green-50', 'bg-red-50', 'bg-yellow-50'];
+    return colors[(weekNum - 1) % colors.length];
   };
 
   if (!isOpen) return null;
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
-  const visibleWeeks = [currentWeek];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <Card className="w-full max-w-[95vw] max-h-[90vh] m-4 p-6 flex flex-col">
-        <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-2">
+      <Card className="w-full max-w-[98vw] max-h-[95vh] p-4 flex flex-col">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-2xl font-bold">Attendance Sheet</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              View-only attendance records for all students
+            <h2 className="text-xl font-bold">Attendance Sheet</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Weekly attendance records (Sunday - Thursday)
             </p>
           </div>
           <div className="flex gap-2">
@@ -226,112 +252,134 @@ export const AttendanceRecordsModal = ({ isOpen, onClose }: AttendanceRecordsMod
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">Total Students: {attendanceData.length}</Badge>
-                <Badge variant="outline">
-                  Avg Attendance: {Math.round(attendanceData.reduce((sum, s) => sum + s.attendancePercentage, 0) / attendanceData.length)}%
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentWeek(Math.max(1, currentWeek - 1))}
-                  disabled={currentWeek <= 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous Week
-                </Button>
-                <span className="text-sm font-medium px-3">Week {currentWeek}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentWeek(Math.min(maxWeek, currentWeek + 1))}
-                  disabled={currentWeek >= maxWeek}
-                >
-                  Next Week
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">
-                      Student Name
-                    </TableHead>
-                    <TableHead className="min-w-[120px]">Phone</TableHead>
-                    <TableHead className="min-w-[100px]">Program</TableHead>
-                    {visibleWeeks.map(weekNum => (
-                      weekDays.map(day => (
-                        <TableHead key={`${weekNum}-${day}`} className="text-center min-w-[60px]">
-                          <div className="text-xs">
-                            <div className="font-semibold">Week {weekNum}</div>
-                            <div className="text-muted-foreground">{day}</div>
-                          </div>
-                        </TableHead>
-                      ))
-                    ))}
-                    <TableHead className="text-center min-w-[80px]">Present</TableHead>
-                    <TableHead className="text-center min-w-[80px]">Absent</TableHead>
-                    <TableHead className="text-center min-w-[100px]">Attendance %</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendanceData.map((student) => (
-                    <TableRow key={student.student_id}>
-                      <TableCell className="sticky left-0 bg-background z-10">
-                        <div>
-                          <p className="font-medium text-sm">{student.full_name_en}</p>
-                          <p className="text-xs text-muted-foreground" dir="rtl">
-                            {student.full_name_ar}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{student.phone1}</TableCell>
-                      <TableCell className="text-sm">{student.program}</TableCell>
-                      {visibleWeeks.map(weekNum => (
-                        weekDays.map(day => {
-                          const status = student.weeks[weekNum]?.[day] || '-';
-                          return (
-                            <TableCell key={`${weekNum}-${day}`} className="text-center">
-                              <span className={getStatusColor(status)}>
-                                {status}
-                              </span>
-                            </TableCell>
-                          );
-                        })
-                      ))}
-                      <TableCell className="text-center font-semibold">
-                        {student.totalPresent}
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">
-                        {student.totalAbsent}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge 
-                          variant={student.attendancePercentage >= 80 ? "default" : "secondary"}
-                          className={student.attendancePercentage >= 80 ? "bg-success" : "bg-warning"}
+            <ScrollArea className="flex-1 w-full">
+              <div className="min-w-max">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-2">
+                      <TableHead rowSpan={2} className="sticky left-0 bg-background z-20 border-r-2 min-w-[180px]">
+                        <div className="font-bold text-center">STUDENTS' NAMES</div>
+                      </TableHead>
+                      <TableHead rowSpan={2} className="border-r-2 min-w-[120px]">
+                        <div className="font-bold text-center">PHONE NUMBER</div>
+                      </TableHead>
+                      {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
+                        <TableHead 
+                          key={`week-${weekNum}`} 
+                          colSpan={6} 
+                          className={`text-center border-r-2 ${getCellBgColor(weekNum)}`}
                         >
-                          {student.attendancePercentage}%
-                        </Badge>
-                      </TableCell>
+                          <div className="font-bold">Week {weekNum}</div>
+                        </TableHead>
+                      ))}
+                      <TableHead rowSpan={2} className="border-l-2 border-r-2 min-w-[80px]">
+                        <div className="font-bold text-center">OVERALL TOTAL</div>
+                      </TableHead>
+                      <TableHead rowSpan={2} className="border-r-2 min-w-[100px]">
+                        <div className="font-bold text-center">TEACHER'S EVALUATION</div>
+                      </TableHead>
+                      <TableHead rowSpan={2} className="border-r-2 min-w-[100px]">
+                        <div className="font-bold text-center">FINAL GRADES</div>
+                      </TableHead>
+                      <TableHead rowSpan={2} className="min-w-[100px]">
+                        <div className="font-bold text-center">EQUIVALENT</div>
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableHeader>
+                    <TableRow className="border-b-2">
+                      {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
+                        <>
+                          {weekDays.map(day => (
+                            <TableHead 
+                              key={`${weekNum}-${day}-header`} 
+                              className={`text-center p-1 text-xs ${getCellBgColor(weekNum)}`}
+                            >
+                              {day}
+                            </TableHead>
+                          ))}
+                          <TableHead 
+                            key={`${weekNum}-total-header`}
+                            className={`text-center p-1 text-xs font-bold border-r-2 ${getCellBgColor(weekNum)}`}
+                          >
+                            WE
+                          </TableHead>
+                        </>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendanceData.map((student, index) => (
+                      <TableRow key={student.student_id} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
+                        <TableCell className="sticky left-0 bg-background z-10 border-r-2 p-2">
+                          <div className="text-xs">
+                            <p className="font-medium">{student.full_name_en}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="border-r-2 text-xs p-1 text-center">
+                          {student.phone1}
+                        </TableCell>
+                        {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
+                          <>
+                            {weekDays.map(day => {
+                              const status = student.weeks[weekNum]?.[day] || '';
+                              return (
+                                <TableCell 
+                                  key={`${weekNum}-${day}`} 
+                                  className={`text-center p-1 ${getCellBgColor(weekNum)}`}
+                                >
+                                  <span className={status ? getStatusColor(status) : 'text-muted-foreground text-xs'}>
+                                    {status || '-'}
+                                  </span>
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell 
+                              key={`${weekNum}-total`}
+                              className={`text-center p-1 font-bold border-r-2 ${getCellBgColor(weekNum)}`}
+                            >
+                              {student.weekTotals[weekNum] || 0}
+                            </TableCell>
+                          </>
+                        ))}
+                        <TableCell className="text-center font-bold border-l-2 border-r-2 p-1">
+                          {student.overallTotal}
+                        </TableCell>
+                        <TableCell className="text-center border-r-2 p-1">
+                          <Badge 
+                            variant={student.attendancePercentage >= 80 ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {student.attendancePercentage}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center border-r-2 p-1 text-xs font-semibold">
+                          {student.attendancePercentage >= 90 ? 'A+' :
+                           student.attendancePercentage >= 80 ? 'A' :
+                           student.attendancePercentage >= 70 ? 'B+' :
+                           student.attendancePercentage >= 60 ? 'B' : 'C'}
+                        </TableCell>
+                        <TableCell className="text-center p-1 text-xs">
+                          {student.attendancePercentage >= 80 ? 'next level' : 'repeat'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </ScrollArea>
 
-            <div className="mt-4 p-4 bg-muted/30 rounded-lg text-xs">
-              <p className="font-semibold mb-2">Legend:</p>
-              <div className="flex gap-4 flex-wrap">
-                <span><span className="text-success font-bold">P</span> = Present</span>
-                <span><span className="text-destructive font-bold">A</span> = Absent</span>
-                <span><span className="text-warning font-bold">L</span> = Late</span>
-                <span className="text-muted-foreground">- = No record</span>
+            <div className="mt-3 p-3 bg-muted/30 rounded-lg">
+              <div className="flex justify-between items-center text-xs">
+                <div>
+                  <span className="font-semibold">Legend: </span>
+                  <span className="text-success font-bold mx-1">P</span>= Present
+                  <span className="text-destructive font-bold mx-2">A</span>= Absent
+                  <span className="text-warning font-bold mx-2">L</span>= Late
+                </div>
+                <div className="text-muted-foreground">
+                  <span className="font-semibold">Note:</span> All attendance marked by teachers appears here
+                </div>
               </div>
             </div>
           </>

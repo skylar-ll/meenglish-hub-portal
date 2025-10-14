@@ -168,6 +168,39 @@ const AdminDashboard = () => {
           ))}
         </div>
 
+        {/* Action Buttons - Above Tabs */}
+        <Card className="p-6 mb-6">
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Button 
+              onClick={() => setShowAttendanceModal(true)}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-primary to-secondary"
+              size="lg"
+            >
+              <Calendar className="w-5 h-5" />
+              View Attendance Records
+            </Button>
+            <Button 
+              onClick={() => setShowAddStudentModal(true)}
+              variant="outline"
+              className="gap-2"
+              size="lg"
+            >
+              <UserPlus className="w-5 h-5" />
+              Add Previous Students
+            </Button>
+            <Button 
+              onClick={() => setIsExportModalOpen(true)}
+              variant="outline"
+              className="gap-2"
+              size="lg"
+            >
+              <TrendingUp className="w-5 h-5" />
+              Export Data
+            </Button>
+          </div>
+        </Card>
+
         {/* Main Content Tabs */}
         <Card className="p-6">
           <Tabs defaultValue="students">
@@ -181,33 +214,7 @@ const AdminDashboard = () => {
 
             {/* Students Tab */}
             <TabsContent value="students" className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => setShowAttendanceModal(true)}
-                    variant="default"
-                    className="gap-2"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    View Attendance Records
-                  </Button>
-                  <Button 
-                    onClick={() => setShowAddStudentModal(true)}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Previous Students
-                  </Button>
-                  <Button 
-                    onClick={() => setIsExportModalOpen(true)}
-                    className="bg-gradient-to-r from-primary to-secondary"
-                  >
-                    {t('admin.exportData')}
-                  </Button>
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold mb-4">{t('admin.studentsInfo')}</h2>
               {loading ? (
                 <div className="text-center py-8">Loading...</div>
               ) : students.length === 0 ? (
