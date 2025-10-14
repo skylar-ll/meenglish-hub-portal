@@ -140,16 +140,20 @@ const translations = {
     'branch.khobarDesc': 'Located in Khobar',
     
     // Payment methods
+    'payment.card': 'Card',
+    'payment.cardDesc': 'Credit/Debit Card - Visa, Mastercard, Mada',
+    'payment.cash': 'Cash',
+    'payment.cashDesc': 'Pay in cash at branch',
+    'payment.cardCash': 'Card/Cash',
+    'payment.cardCashDesc': 'Pay with card or cash',
+    'payment.transfer': 'Bank Transfer',
+    'payment.transferDesc': 'Direct bank transfer',
     'payment.tamara': 'Tamara',
     'payment.tamaraDesc': 'Split into installments',
     'payment.tabby': 'Tabby',
     'payment.tabbyDesc': 'Buy now, pay later',
-    'payment.cash': 'Cash',
-    'payment.cashDesc': 'Pay in cash at branch',
-    'payment.transfer': 'Bank Transfer',
-    'payment.transferDesc': 'Direct bank transfer',
-    'payment.card': 'Credit/Debit Card',
-    'payment.cardDesc': 'Visa, Mastercard, Mada',
+    'payment.stcpay': 'Stcpay',
+    'payment.stcpayDesc': 'STC Pay digital wallet',
     
     // Teacher Portal
     'teacher.login': 'Teacher Login',
@@ -398,16 +402,20 @@ const translations = {
     'branch.khobarDesc': 'يقع في الخبر',
     
     // Payment methods
+    'payment.card': 'بطاقة',
+    'payment.cardDesc': 'بطاقة ائتمان/خصم - فيزا، ماستركارد، مدى',
+    'payment.cash': 'كاش',
+    'payment.cashDesc': 'ادفع نقداً في الفرع',
+    'payment.cardCash': 'بطاقة/كاش',
+    'payment.cardCashDesc': 'الدفع ببطاقة أو كاش',
+    'payment.transfer': 'تحويل',
+    'payment.transferDesc': 'تحويل بنكي مباشر',
     'payment.tamara': 'تمارا',
     'payment.tamaraDesc': 'قسّم على دفعات',
     'payment.tabby': 'تابي',
     'payment.tabbyDesc': 'اشترِ الآن وادفع لاحقاً',
-    'payment.cash': 'نقداً',
-    'payment.cashDesc': 'ادفع نقداً في الفرع',
-    'payment.transfer': 'تحويل بنكي',
-    'payment.transferDesc': 'تحويل بنكي مباشر',
-    'payment.card': 'بطاقة ائتمان/خصم',
-    'payment.cardDesc': 'فيزا، ماستركارد، مدى',
+    'payment.stcpay': 'اس تي سي باي',
+    'payment.stcpayDesc': 'محفظة اس تي سي باي الرقمية',
     
     // Teacher Portal
     'teacher.login': 'تسجيل دخول المعلم',

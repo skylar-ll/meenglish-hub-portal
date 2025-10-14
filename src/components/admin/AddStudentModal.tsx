@@ -260,9 +260,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Riyadh">Riyadh</SelectItem>
-                <SelectItem value="Jeddah">Jeddah</SelectItem>
-                <SelectItem value="Dammam">Dammam</SelectItem>
+                <SelectItem value="online">Online Classes - صفوف اونلاين</SelectItem>
+                <SelectItem value="dammam">Dammam Branch - فرع الدمام</SelectItem>
+                <SelectItem value="dhahran">Dhahran Branch - فرع الظهران</SelectItem>
+                <SelectItem value="khobar">Khobar Branch - فرع الخبر</SelectItem>
               </SelectContent>
             </Select>
           </div>

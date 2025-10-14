@@ -53,10 +53,10 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   ];
 
   const branches = [
-    { value: "riyadh-olaya", label: "Riyadh - Olaya - الرياض - العليا" },
-    { value: "riyadh-exit6", label: "Riyadh - Exit 6 - الرياض - مخرج ٦" },
-    { value: "jeddah", label: "Jeddah - جدة" },
-    { value: "online", label: "Online - اونلاين" },
+    { value: "online", label: "Online Classes - صفوف اونلاين" },
+    { value: "dammam", label: "Dammam Branch - فرع الدمام" },
+    { value: "dhahran", label: "Dhahran Branch - فرع الظهران" },
+    { value: "khobar", label: "Khobar Branch - فرع الخبر" },
   ];
 
   const paymentMethods = [
