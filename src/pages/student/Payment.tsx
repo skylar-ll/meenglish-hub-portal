@@ -65,6 +65,7 @@ const Payment = () => {
         phone2: registration.phone2 || null,
         email: registration.email,
         national_id: registration.id,
+        password_hash: registration.password,
         program: registration.courses ? registration.courses.join(', ') : '',
         class_type: registration.courses ? registration.courses.join(', ') : '',
         branch: registration.branch,

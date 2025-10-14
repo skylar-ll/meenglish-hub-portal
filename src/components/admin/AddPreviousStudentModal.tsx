@@ -24,6 +24,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     phone2: "",
     email: "",
     id: "",
+    password: "",
     courses: [] as string[],
     branch: "",
     paymentMethod: "",
@@ -77,8 +78,12 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
 
   const handleNext = () => {
     if (step === 1) {
-      if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id) {
+      if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
         toast.error("Please fill all required fields");
+        return;
+      }
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
         return;
       }
       setStep(2);
@@ -111,6 +116,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         phone2: formData.phone2 || null,
         email: formData.email,
         national_id: formData.id,
+        password_hash: formData.password,
         program: formData.courses.join(', '),
         class_type: formData.courses.join(', '),
         branch: formData.branch,
@@ -119,7 +125,11 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       };
 
-      const { error } = await supabase.from("students").insert(studentData);
+      const { data: insertedStudent, error } = await supabase
+        .from("students")
+        .insert(studentData)
+        .select()
+        .single();
 
       if (error) {
         console.error("Error adding previous student:", error);
@@ -127,9 +137,27 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         return;
       }
 
-      toast.success("Previous student added successfully!");
+      toast.success("Previous student added successfully! Redirecting to student page...");
       onStudentAdded();
       onOpenChange(false);
+      
+      // Store student data and redirect to course page
+      sessionStorage.setItem("studentRegistration", JSON.stringify({
+        fullNameAr: formData.fullNameAr,
+        fullNameEn: formData.fullNameEn,
+        phone1: formData.phone1,
+        phone2: formData.phone2,
+        email: formData.email,
+        id: formData.id,
+        courses: formData.courses,
+        branch: formData.branch,
+        paymentMethod: formData.paymentMethod,
+        program: formData.courses[0] || "level-1",
+        classType: formData.courses.join(', '),
+        courseLevel: formData.courses[0] || "level-1"
+      }));
+      
+      window.location.href = "/student/course";
       
       // Reset form
       setStep(1);
@@ -140,6 +168,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         phone2: "",
         email: "",
         id: "",
+        password: "",
         courses: [],
         branch: "",
         paymentMethod: "",
@@ -225,6 +254,18 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 placeholder="Enter ID number"
                 value={formData.id}
                 onChange={(e) => setFormData({...formData, id: e.target.value})}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password (min 6 characters)"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
                 required
               />
             </div>

@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 
 // Student Portal
 import StudentSignUp from "./pages/student/StudentSignUp";
+import StudentLogin from "./pages/student/StudentLogin";
 import CourseSelection from "./pages/student/CourseSelection";
 import BranchSelection from "./pages/student/BranchSelection";
 import Payment from "./pages/student/Payment";
@@ -35,10 +36,12 @@ const App = () => (
           <Route path="/" element={<Index />} />
           
           {/* Student Portal Routes */}
+          <Route path="/student/login" element={<StudentLogin />} />
           <Route path="/student/signup" element={<StudentSignUp />} />
           <Route path="/student/course-selection" element={<CourseSelection />} />
           <Route path="/student/branch-selection" element={<BranchSelection />} />
           <Route path="/student/payment" element={<Payment />} />
+          <Route path="/student/course" element={<CoursePage />} />
           <Route path="/student/course-page" element={<CoursePage />} />
           
           {/* Teacher Portal Routes */}

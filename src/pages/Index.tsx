@@ -20,7 +20,7 @@ const Index = () => {
       title: t('home.studentPortal'),
       icon: GraduationCap,
       description: t('home.studentDesc'),
-      path: "/student/signup",
+      path: "/student/login",
       gradient: "from-primary to-secondary",
     },
     {

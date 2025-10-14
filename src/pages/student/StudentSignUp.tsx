@@ -18,16 +18,35 @@ const StudentSignUp = () => {
     phone2: "",
     email: "",
     id: "",
+    password: "",
   });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate required fields
-    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id) {
+    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
       toast.error(t('student.fillRequired'));
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    // Check if student exists in admin dashboard
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: existingStudent } = await supabase
+      .from("students")
+      .select("email, password_hash")
+      .eq("email", formData.email)
+      .maybeSingle();
+
+    if (!existingStudent) {
+      toast.error("Your email is not registered. Please contact the admin.");
       return;
     }
 
@@ -123,6 +142,17 @@ const StudentSignUp = () => {
                 placeholder="ID Number"
                 value={formData.id}
                 onChange={(e) => handleInputChange("id", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password (min 6 characters)"
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
               />
             </div>
 

@@ -18,16 +18,33 @@ const TeacherLogin = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!loginEmail || !loginPassword) {
       toast.error(t('teacher.loginError'));
       return;
     }
 
-    // Store teacher session
-    sessionStorage.setItem("teacherSession", JSON.stringify({ email: loginEmail }));
-    toast.success(t('teacher.loginSuccess'));
-    navigate("/teacher/dashboard");
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select("*")
+        .eq("email", loginEmail)
+        .eq("password_hash", loginPassword)
+        .maybeSingle();
+
+      if (!teacher) {
+        toast.error("Invalid email or password");
+        return;
+      }
+
+      sessionStorage.setItem("teacherSession", JSON.stringify(teacher));
+      toast.success(t('teacher.loginSuccess'));
+      navigate("/teacher/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("An error occurred during login");
+    }
   };
 
   const handleSignup = async () => {
@@ -36,31 +53,27 @@ const TeacherLogin = () => {
       return;
     }
 
+    if (signupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
-      const teacherData: any = {
-        full_name: signupName,
-        email: signupEmail,
-        password_hash: signupPassword,
-        student_count: 0,
-      };
-      
-      const { error } = await supabase.from("teachers").insert(teacherData);
+      // Check if teacher exists in admin dashboard
+      const { data: existingTeacher } = await supabase
+        .from("teachers")
+        .select("email")
+        .eq("email", signupEmail)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error("This email is already registered");
-        } else {
-          console.error("Error creating teacher account:", error);
-          toast.error("Failed to create account. Please try again.");
-        }
+      if (existingTeacher) {
+        toast.error("This email is already registered. Please login instead.");
         return;
       }
 
-      sessionStorage.setItem("teacherSession", JSON.stringify({ name: signupName, email: signupEmail }));
-      toast.success(t('teacher.loginSuccess'));
-      navigate("/teacher/dashboard");
+      toast.error("Your email is not registered in the system. Please contact the admin.");
     } catch (error) {
       console.error("Error during signup:", error);
       toast.error("An error occurred. Please try again.");
