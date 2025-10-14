@@ -180,7 +180,7 @@ const AdminDashboard = () => {
               size="lg"
             >
               <UserPlus className="w-5 h-5" />
-              Add New Student
+              {t('admin.addNewStudent')}
             </Button>
             <Button 
               onClick={() => setShowAttendanceModal(true)}
@@ -189,7 +189,7 @@ const AdminDashboard = () => {
               size="lg"
             >
               <Calendar className="w-5 h-5" />
-              View Attendance Records
+              {t('admin.viewAttendanceRecords')}
             </Button>
             <Button 
               onClick={() => setShowAddStudentModal(true)}
@@ -198,7 +198,7 @@ const AdminDashboard = () => {
               size="lg"
             >
               <UserPlus className="w-5 h-5" />
-              Add Previous Students
+              {t('admin.addPreviousStudents')}
             </Button>
             <Button 
               onClick={() => setIsExportModalOpen(true)}
@@ -207,7 +207,7 @@ const AdminDashboard = () => {
               size="lg"
             >
               <TrendingUp className="w-5 h-5" />
-              Export Data
+              {t('admin.exportData')}
             </Button>
           </div>
         </Card>
@@ -227,9 +227,9 @@ const AdminDashboard = () => {
             <TabsContent value="students" className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">{t('admin.studentsInfo')}</h2>
               {loading ? (
-                <div className="text-center py-8">Loading...</div>
+                <div className="text-center py-8">{t('common.loading')}</div>
               ) : students.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No students registered yet</div>
+                <div className="text-center py-8 text-muted-foreground">{t('common.noStudentsYet')}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -272,9 +272,9 @@ const AdminDashboard = () => {
             <TabsContent value="teachers" className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">{t('admin.teachersInfo')}</h2>
               {loading ? (
-                <div className="text-center py-8">Loading...</div>
+                <div className="text-center py-8">{t('common.loading')}</div>
               ) : teachers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No teachers registered yet</div>
+                <div className="text-center py-8 text-muted-foreground">{t('common.noTeachersYet')}</div>
               ) : (
                 <div className="grid gap-4">
                   {teachers.map((teacher) => (
@@ -283,7 +283,7 @@ const AdminDashboard = () => {
                         <div>
                           <h3 className="text-lg font-semibold">{teacher.full_name}</h3>
                           <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                          <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses_assigned || "Not assigned"}</p>
+                          <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses_assigned || t('common.notAssigned')}</p>
                         </div>
                         <Badge variant="secondary">{teacher.student_count} {t('admin.students')}</Badge>
                       </div>

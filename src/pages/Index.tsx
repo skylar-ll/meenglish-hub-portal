@@ -92,14 +92,14 @@ const Index = () => {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             
-            <h3 className="text-2xl font-bold mb-4 text-center">Student Login</h3>
+            <h3 className="text-2xl font-bold mb-4 text-center">{t('home.studentLogin')}</h3>
             
             <p className="text-sm text-center text-muted-foreground mb-4">
-              Already registered? Access your course materials and track your progress
+              {t('home.studentLoginDesc')}
             </p>
 
             <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-              Login
+              {t('common.login')}
             </Button>
           </Card>
 
@@ -112,14 +112,14 @@ const Index = () => {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             
-            <h3 className="text-2xl font-bold mb-4 text-center">New Student Registration</h3>
+            <h3 className="text-2xl font-bold mb-4 text-center">{t('home.newStudentRegistration')}</h3>
             
             <p className="text-sm text-center text-muted-foreground mb-4">
-              First time here? Complete your registration to join our courses
+              {t('home.newStudentRegistrationDesc')}
             </p>
 
             <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-              Sign Up
+              {t('common.signup')}
             </Button>
           </Card>
         </div>
@@ -143,14 +143,14 @@ const Index = () => {
               <Users className="w-8 h-8 text-white" />
             </div>
             
-            <h3 className="text-2xl font-bold mb-4 text-center">Teacher Login</h3>
+            <h3 className="text-2xl font-bold mb-4 text-center">{t('home.teacherLogin')}</h3>
             
             <p className="text-sm text-center text-muted-foreground mb-4">
-              Access your dashboard to manage students and mark attendance
+              {t('home.teacherLoginDesc')}
             </p>
 
             <Button className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90">
-              Login
+              {t('common.login')}
             </Button>
           </Card>
 
@@ -163,14 +163,14 @@ const Index = () => {
               <Users className="w-8 h-8 text-white" />
             </div>
             
-            <h3 className="text-2xl font-bold mb-4 text-center">New Teacher Registration</h3>
+            <h3 className="text-2xl font-bold mb-4 text-center">{t('home.newTeacherRegistration')}</h3>
             
             <p className="text-sm text-center text-muted-foreground mb-4">
-              Join our team and start managing your classes
+              {t('home.newTeacherRegistrationDesc')}
             </p>
 
             <Button className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90">
-              Sign Up
+              {t('common.signup')}
             </Button>
           </Card>
         </div>
@@ -179,7 +179,7 @@ const Index = () => {
       {/* Admin Portal Section */}
       <div className="container mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">
-          Administration
+          {t('home.administration')}
         </h2>
 
         <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">

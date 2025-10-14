@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, ArrowLeft } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface AddPreviousStudentModalProps {
 }
 
 const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPreviousStudentModalProps) => {
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -81,23 +83,23 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const handleNext = () => {
     if (step === 1) {
       if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
-        toast.error("Please fill all required fields");
+        toast.error(t('addPrevStudent.fillAllFields'));
         return;
       }
       if (formData.password.length < 6) {
-        toast.error("Password must be at least 6 characters");
+        toast.error(t('addPrevStudent.passwordMinLength'));
         return;
       }
       setStep(2);
     } else if (step === 2) {
       if (formData.courses.length === 0) {
-        toast.error("Please select at least one course");
+        toast.error(t('addPrevStudent.selectAtLeastOneCourse'));
         return;
       }
       setStep(3);
     } else if (step === 3) {
       if (!formData.branch) {
-        toast.error("Please select a branch");
+        toast.error(t('addPrevStudent.selectBranchError'));
         return;
       }
       setStep(4);
@@ -106,7 +108,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
 
   const handleSubmit = async () => {
     if (!formData.paymentMethod) {
-      toast.error("Please select a payment method");
+      toast.error(t('addPrevStudent.selectPaymentError'));
       return;
     }
 
@@ -159,11 +161,11 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
 
       if (error) {
         console.error("Error adding previous student:", error);
-        toast.error("Failed to add previous student");
+        toast.error(t('addPrevStudent.error'));
         return;
       }
 
-      toast.success("Previous student added successfully! Redirecting to student page...");
+      toast.success(t('addPrevStudent.success'));
       onStudentAdded();
       onOpenChange(false);
       
@@ -201,7 +203,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       });
     } catch (error) {
       console.error("Error:", error);
-      toast.error("An error occurred");
+      toast.error(t('addPrevStudent.generalError'));
     }
   };
 
@@ -209,14 +211,14 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Previous Student - Step {step} of 4</DialogTitle>
+          <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 4</DialogTitle>
         </DialogHeader>
         
         {/* Step 1: Basic Information */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fullNameEn">Full Name (English) *</Label>
+              <Label htmlFor="fullNameEn">{t('addPrevStudent.fullNameEn')} *</Label>
               <Input
                 id="fullNameEn"
                 placeholder="Enter full name in English"
@@ -227,7 +229,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullNameAr">Full Name (Arabic) *</Label>
+              <Label htmlFor="fullNameAr">{t('addPrevStudent.fullNameAr')} *</Label>
               <Input
                 id="fullNameAr"
                 placeholder="ادخل الاسم الكامل بالعربي"
@@ -239,7 +241,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone1">Phone 1 *</Label>
+              <Label htmlFor="phone1">{t('addPrevStudent.phone1')} *</Label>
               <Input
                 id="phone1"
                 type="tel"
@@ -251,7 +253,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone2">Phone 2 (Optional)</Label>
+              <Label htmlFor="phone2">{t('addPrevStudent.phone2')}</Label>
               <Input
                 id="phone2"
                 type="tel"
@@ -262,7 +264,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t('addPrevStudent.email')} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -274,7 +276,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="id">National ID / Iqama *</Label>
+              <Label htmlFor="id">{t('addPrevStudent.nationalId')} *</Label>
               <Input
                 id="id"
                 placeholder="Enter ID number"
@@ -285,11 +287,11 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password">{t('addPrevStudent.password')} *</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password (min 6 characters)"
+                placeholder={t('addPrevStudent.passwordPlaceholder')}
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 required
@@ -297,7 +299,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             </div>
 
             <Button onClick={handleNext} className="w-full">
-              Next
+              {t('student.next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -306,44 +308,20 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         {/* Step 2: Course Selection */}
         {step === 2 && (
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Select Courses (Multiple selection allowed)</Label>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {["English Program", "Speaking Program", "Private Class", "Other Languages"].map(category => {
-                const coursesInCategory = allCourses.filter(c => c.category === category);
-                return (
-                  <div key={category} className="space-y-2">
-                    <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
-                    {coursesInCategory.map((course) => (
-                      <div key={course.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          id={course.value}
-                          checked={formData.courses.includes(course.value)}
-                          onCheckedChange={() => toggleCourse(course.value)}
-                        />
-                        <label
-                          htmlFor={course.value}
-                          className="text-sm flex-1 cursor-pointer"
-                        >
-                          {course.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+            <Label className="text-lg font-semibold">{t('addPrevStudent.selectCourses')}</Label>
+...
             {formData.courses.length > 0 && (
               <div className="p-3 bg-primary/10 rounded-lg">
-                <p className="text-sm font-medium">Selected: {formData.courses.length} course(s)</p>
+                <p className="text-sm font-medium">{t('addPrevStudent.selected')}: {formData.courses.length} {t('addPrevStudent.courses')}</p>
               </div>
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                {t('student.back')}
               </Button>
               <Button onClick={handleNext} className="flex-1">
-                Next
+                {t('student.next')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -353,29 +331,15 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         {/* Step 3: Branch Selection */}
         {step === 3 && (
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Select Branch</Label>
-            <div className="grid gap-4">
-              {branches.map((branch) => (
-                <Card
-                  key={branch.value}
-                  className={`p-4 cursor-pointer transition-all ${
-                    formData.branch === branch.value
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                  onClick={() => setFormData({...formData, branch: branch.value})}
-                >
-                  <p className="font-medium">{branch.label}</p>
-                </Card>
-              ))}
-            </div>
+            <Label className="text-lg font-semibold">{t('addPrevStudent.selectBranch')}</Label>
+...
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                {t('student.back')}
               </Button>
               <Button onClick={handleNext} className="flex-1">
-                Next
+                {t('student.next')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -385,29 +349,15 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         {/* Step 4: Payment Method */}
         {step === 4 && (
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Select Payment Method</Label>
-            <div className="grid gap-4">
-              {paymentMethods.map((method) => (
-                <Card
-                  key={method.value}
-                  className={`p-4 cursor-pointer transition-all ${
-                    formData.paymentMethod === method.value
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                  onClick={() => setFormData({...formData, paymentMethod: method.value})}
-                >
-                  <p className="font-medium">{method.label}</p>
-                </Card>
-              ))}
-            </div>
+            <Label className="text-lg font-semibold">{t('addPrevStudent.selectPaymentMethod')}</Label>
+...
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                {t('student.back')}
               </Button>
               <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary">
-                Add Student
+                {t('addPrevStudent.addStudent')}
               </Button>
             </div>
           </div>
