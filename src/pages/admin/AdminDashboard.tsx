@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExportDataModal } from "@/components/admin/ExportDataModal";
 import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal";
 import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
+import { AddStudentModal } from "@/components/admin/AddStudentModal";
 import {
   Table,
   TableBody,
@@ -25,6 +26,7 @@ const AdminDashboard = () => {
   const { t } = useLanguage();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [showAddNewStudentModal, setShowAddNewStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -172,9 +174,18 @@ const AdminDashboard = () => {
         <Card className="p-6 mb-6">
           <div className="flex flex-wrap gap-3 justify-center">
             <Button 
-              onClick={() => setShowAttendanceModal(true)}
+              onClick={() => setShowAddNewStudentModal(true)}
               variant="default"
               className="gap-2 bg-gradient-to-r from-primary to-secondary"
+              size="lg"
+            >
+              <UserPlus className="w-5 h-5" />
+              Add New Student
+            </Button>
+            <Button 
+              onClick={() => setShowAttendanceModal(true)}
+              variant="outline"
+              className="gap-2"
               size="lg"
             >
               <Calendar className="w-5 h-5" />
@@ -392,6 +403,13 @@ const AdminDashboard = () => {
       <ExportDataModal 
         isOpen={isExportModalOpen} 
         onClose={() => setIsExportModalOpen(false)} 
+      />
+
+      {/* Add New Student Modal */}
+      <AddStudentModal
+        open={showAddNewStudentModal}
+        onOpenChange={setShowAddNewStudentModal}
+        onStudentAdded={fetchData}
       />
 
       {/* Add Previous Student Modal */}
