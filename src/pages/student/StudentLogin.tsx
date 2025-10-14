@@ -45,10 +45,34 @@ const StudentLogin = () => {
         return;
       }
 
+      // Fetch student data and store in sessionStorage
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (studentError || !studentData) {
+        await supabase.auth.signOut();
+        toast.error("Student profile not found");
+        return;
+      }
+
+      // Store student data in sessionStorage for CoursePage
+      const registrationData = {
+        fullNameEn: studentData.full_name_en,
+        fullNameAr: studentData.full_name_ar,
+        email: studentData.email,
+        program: studentData.program,
+        classType: studentData.class_type,
+        branch: studentData.branch,
+        courseLevel: studentData.course_level,
+      };
+      sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
+
       toast.success("Login successful!");
       navigate("/student/course");
     } catch (error: any) {
-      console.error("Login error:", error);
       toast.error(error.message || "Invalid email or password");
     } finally {
       setLoading(false);
