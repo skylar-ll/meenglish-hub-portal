@@ -36,6 +36,7 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
     { id: 1, type: "multiple-choice", text: "", answers: ["", "", "", ""], correctAnswerIndex: 0, points: 1 }
   ]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   const addQuestion = () => {
     const newId = questions.length + 1;
@@ -56,7 +57,6 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
   const updateQuestionType = (id: number, type: QuestionType) => {
     setQuestions(questions.map(q => {
       if (q.id === id) {
-        // Reset answers based on type
         if (type === "multiple-choice") {
           return { ...q, type, answers: ["", "", "", ""], correctAnswerIndex: 0 };
         } else if (type === "long-answer") {
@@ -97,7 +97,7 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('quiz-media')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -140,7 +140,7 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
     ));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validation
     if (!quizTitle.trim()) {
       toast({
@@ -183,11 +183,87 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
       }
     }
 
-    toast({
-      title: t('teacher.quizCreated'),
-      description: `${t('teacher.quizCreatedDesc')}`,
-    });
-    onClose();
+    setSaving(true);
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Calculate total points
+      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
+      // Insert quiz
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .insert({
+          teacher_id: user.id,
+          title: quizTitle,
+          total_points: totalPoints,
+          is_published: true
+        })
+        .select()
+        .single();
+
+      if (quizError) throw quizError;
+
+      // Insert questions
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        
+        const { data: questionData, error: questionError } = await supabase
+          .from('quiz_questions')
+          .insert({
+            quiz_id: quizData.id,
+            question_type: q.type,
+            question_text: q.text,
+            media_url: q.mediaUrl,
+            points: q.points,
+            correct_answer_index: q.correctAnswerIndex,
+            question_order: i
+          })
+          .select()
+          .single();
+
+        if (questionError) throw questionError;
+
+        // Insert answer options for multiple choice
+        if (q.type === "multiple-choice" && q.answers.length > 0) {
+          const options = q.answers
+            .filter(a => a.trim())
+            .map((answer, index) => ({
+              question_id: questionData.id,
+              option_text: answer,
+              option_order: index
+            }));
+
+          const { error: optionsError } = await supabase
+            .from('quiz_question_options')
+            .insert(options);
+
+          if (optionsError) throw optionsError;
+        }
+      }
+
+      toast({
+        title: t('teacher.quizCreated'),
+        description: t('teacher.quizCreatedDesc'),
+      });
+
+      // Reset form
+      setQuizTitle("");
+      setQuestions([{ id: 1, type: "multiple-choice", text: "", answers: ["", "", "", ""], correctAnswerIndex: 0, points: 1 }]);
+      onClose();
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save quiz",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getQuestionIcon = (type: QuestionType) => {
@@ -424,8 +500,8 @@ export const CreateQuizModal = ({ isOpen, onClose }: CreateQuizModalProps) => {
           </Button>
 
           <div className="flex gap-3">
-            <Button onClick={handleSave} className="flex-1">
-              {t('teacher.saveQuiz')}
+            <Button onClick={handleSave} className="flex-1" disabled={saving}>
+              {saving ? t('common.loading') : t('teacher.saveQuiz')}
             </Button>
             <Button onClick={onClose} variant="outline" className="flex-1">
               {t('common.cancel')}

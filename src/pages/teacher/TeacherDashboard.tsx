@@ -131,7 +131,7 @@ const TeacherDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
           <Button 
             onClick={() => setIsAttendanceModalOpen(true)}
             className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90"
@@ -152,6 +152,13 @@ const TeacherDashboard = () => {
           >
             <FileText className="w-6 h-6" />
             <span>{t('teacher.createQuiz')}</span>
+          </Button>
+          <Button 
+            onClick={() => navigate("/teacher/quizzes")}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-primary hover:opacity-90"
+          >
+            <FileText className="w-6 h-6" />
+            <span>{t('teacher.viewQuizzes')}</span>
           </Button>
         </div>
 

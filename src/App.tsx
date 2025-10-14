@@ -19,6 +19,12 @@ import StudentAttendance from "./pages/student/StudentAttendance";
 // Teacher Portal
 import TeacherLogin from "./pages/teacher/TeacherLogin";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import TeacherQuizzes from "./pages/teacher/TeacherQuizzes";
+import QuizAttempts from "./pages/teacher/QuizAttempts";
+
+// Student Quiz
+import StudentQuizzes from "./pages/student/StudentQuizzes";
+import TakeQuiz from "./pages/student/TakeQuiz";
 
 // Admin Portal
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -45,10 +51,14 @@ const App = () => (
           <Route path="/student/course" element={<CoursePage />} />
           <Route path="/student/attendance" element={<StudentAttendance />} />
           <Route path="/student/course-page" element={<CoursePage />} />
+          <Route path="/student/quizzes" element={<StudentQuizzes />} />
+          <Route path="/student/quiz/:quizId" element={<TakeQuiz />} />
           
           {/* Teacher Portal Routes */}
           <Route path="/teacher/login" element={<TeacherLogin />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/quizzes" element={<TeacherQuizzes />} />
+          <Route path="/teacher/quizzes/:quizId" element={<QuizAttempts />} />
           
           {/* Admin Portal Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />

@@ -218,6 +218,17 @@ const translations = {
     'teacher.attendanceSavedDesc': 'Attendance has been recorded',
     'teacher.loginError': 'Please enter email and password',
     'teacher.loginSuccess': 'Teacher login successful!',
+    'teacher.myQuizzes': 'My Quizzes',
+    'teacher.viewQuizzes': 'View Quizzes',
+    'teacher.quizzes': 'Quizzes',
+    'teacher.attempts': 'Attempts',
+    'teacher.viewAttempts': 'View Attempts',
+    'teacher.noQuizzes': 'No quizzes created yet',
+    'teacher.createFirstQuiz': 'Create your first quiz',
+    'teacher.studentAnswers': 'Student Answers',
+    'teacher.submittedAt': 'Submitted At',
+    'teacher.notSubmitted': 'Not Submitted',
+    'teacher.viewDetails': 'View Details',
     
     // Admin Portal
     'admin.login': 'Admin Portal',
@@ -321,6 +332,23 @@ const translations = {
     'common.noTeachersYet': 'No teachers registered yet',
     'common.notAssigned': 'Not assigned',
     
+    // Student Quiz
+    'student.availableQuizzes': 'Available Quizzes',
+    'student.myQuizzes': 'My Quizzes',
+    'student.takeQuiz': 'Take Quiz',
+    'student.quizCompleted': 'Completed',
+    'student.quizNotStarted': 'Not Started',
+    'student.questions': 'Questions',
+    'student.totalPoints': 'Total Points',
+    'student.yourScore': 'Your Score',
+    'student.submitQuiz': 'Submit Quiz',
+    'student.selectAnswer': 'Select an answer',
+    'student.writeAnswer': 'Write your answer here',
+    'student.quizSubmitted': 'Quiz Submitted!',
+    'student.quizSubmittedDesc': 'Your answers have been submitted successfully',
+    'student.confirmSubmit': 'Are you sure you want to submit?',
+    'student.cannotChangeAnswers': 'You cannot change your answers after submission',
+    
     // Not Found
     'notfound.title': '404',
     'notfound.message': 'Oops! Page not found',
@@ -333,6 +361,8 @@ const translations = {
     'common.submit': 'Submit',
     'common.cancel': 'Cancel',
     'common.close': 'Close',
+    'common.created': 'Created',
+    'common.back': 'Back',
   },
   ar: {
     // Homepage
@@ -541,6 +571,17 @@ const translations = {
     'teacher.attendanceSavedDesc': 'تم تسجيل الحضور',
     'teacher.loginError': 'يرجى إدخال البريد الإلكتروني وكلمة المرور',
     'teacher.loginSuccess': 'تم تسجيل دخول المعلم بنجاح!',
+    'teacher.myQuizzes': 'اختباراتي',
+    'teacher.viewQuizzes': 'عرض الاختبارات',
+    'teacher.quizzes': 'الاختبارات',
+    'teacher.attempts': 'المحاولات',
+    'teacher.viewAttempts': 'عرض المحاولات',
+    'teacher.noQuizzes': 'لم يتم إنشاء اختبارات بعد',
+    'teacher.createFirstQuiz': 'إنشاء اختبارك الأول',
+    'teacher.studentAnswers': 'إجابات الطلاب',
+    'teacher.submittedAt': 'تم التسليم في',
+    'teacher.notSubmitted': 'لم يتم التسليم',
+    'teacher.viewDetails': 'عرض التفاصيل',
     
     // Admin Portal
     'admin.login': 'بوابة الإدارة',
@@ -644,6 +685,23 @@ const translations = {
     'common.noTeachersYet': 'لا يوجد معلمون مسجلون بعد',
     'common.notAssigned': 'غير مخصص',
     
+    // Student Quiz
+    'student.availableQuizzes': 'الاختبارات المتاحة',
+    'student.myQuizzes': 'اختباراتي',
+    'student.takeQuiz': 'إجراء الاختبار',
+    'student.quizCompleted': 'مكتمل',
+    'student.quizNotStarted': 'لم يبدأ',
+    'student.questions': 'الأسئلة',
+    'student.totalPoints': 'إجمالي النقاط',
+    'student.yourScore': 'نتيجتك',
+    'student.submitQuiz': 'تسليم الاختبار',
+    'student.selectAnswer': 'اختر إجابة',
+    'student.writeAnswer': 'اكتب إجابتك هنا',
+    'student.quizSubmitted': 'تم تسليم الاختبار!',
+    'student.quizSubmittedDesc': 'تم تسليم إجاباتك بنجاح',
+    'student.confirmSubmit': 'هل أنت متأكد من أنك تريد التسليم؟',
+    'student.cannotChangeAnswers': 'لا يمكنك تغيير إجاباتك بعد التسليم',
+    
     // Not Found
     'notfound.title': '404',
     'notfound.message': 'عذراً! الصفحة غير موجودة',
@@ -656,6 +714,8 @@ const translations = {
     'common.submit': 'إرسال',
     'common.cancel': 'إلغاء',
     'common.close': 'إغلاق',
+    'common.created': 'تم الإنشاء',
+    'common.back': 'رجوع',
   },
 };
 
