@@ -237,31 +237,50 @@ const AdminDashboard = () => {
                       <TableRow>
                         <TableHead>{t('admin.nameEn')}</TableHead>
                         <TableHead>{t('admin.nameAr')}</TableHead>
-                        <TableHead>{t('student.phone')}</TableHead>
-                        <TableHead>{t('student.email')}</TableHead>
                         <TableHead>{t('teacher.course')}</TableHead>
-                        <TableHead>{t('admin.branch')}</TableHead>
-                        <TableHead>{t('admin.payment')}</TableHead>
+                        <TableHead>Level</TableHead>
+                        <TableHead>Registration</TableHead>
+                        <TableHead>Expiration</TableHead>
+                        <TableHead>Grade</TableHead>
                         <TableHead>{t('admin.status')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student) => (
-                        <TableRow key={student.id}>
-                          <TableCell className="font-medium">{student.full_name_en}</TableCell>
-                          <TableCell dir="rtl">{student.full_name_ar}</TableCell>
-                          <TableCell className="text-sm">{student.phone1}</TableCell>
-                          <TableCell className="text-sm">{student.email}</TableCell>
-                          <TableCell>{student.program}</TableCell>
-                          <TableCell>{student.branch}</TableCell>
-                          <TableCell>{student.payment_method}</TableCell>
-                          <TableCell>
-                            <Badge variant={student.subscription_status === "active" ? "default" : "secondary"}>
-                              {student.subscription_status === "active" ? t('student.active') : student.subscription_status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {students.map((student) => {
+                        const completedCourses = student.total_grade ? 1 : 0;
+                        const totalCourses = 12;
+                        return (
+                          <TableRow key={student.id}>
+                            <TableCell className="font-medium">{student.full_name_en}</TableCell>
+                            <TableCell dir="rtl">{student.full_name_ar}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p className="font-medium">{student.program}</p>
+                                <p className="text-muted-foreground">{completedCourses}/{totalCourses} courses</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>{student.course_level || "Level 1"}</TableCell>
+                            <TableCell className="text-sm">
+                              {student.registration_date ? new Date(student.registration_date).toLocaleDateString() : "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {student.expiration_date ? new Date(student.expiration_date).toLocaleDateString() : "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              {student.total_grade ? (
+                                <Badge className="bg-success">{student.total_grade}% (A+)</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={student.subscription_status === "active" ? "default" : "secondary"}>
+                                {student.subscription_status === "active" ? t('student.active') : student.subscription_status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -278,10 +297,14 @@ const AdminDashboard = () => {
               ) : (
                 <div className="grid gap-4">
                   {teachers.map((teacher) => (
-                    <Card key={teacher.id} className="p-4">
+                    <Card 
+                      key={teacher.id} 
+                      className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/admin/teacher/${teacher.id}`)}
+                    >
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-lg font-semibold">{teacher.full_name}</h3>
+                          <h3 className="text-lg font-semibold text-primary hover:underline">{teacher.full_name}</h3>
                           <p className="text-sm text-muted-foreground">{teacher.email}</p>
                           <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses_assigned || t('common.notAssigned')}</p>
                         </div>

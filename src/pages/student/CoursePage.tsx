@@ -224,6 +224,14 @@ const CoursePage = () => {
               <NotebookPen className="w-4 h-4 mr-2" />
               {t('student.notes')}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/student/reports")}
+              size="sm"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Weekly Reports
+            </Button>
           </div>
         </div>
       </div>

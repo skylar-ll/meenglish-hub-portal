@@ -31,6 +31,10 @@ import StudentNotes from "./pages/student/StudentNotes";
 // Admin Portal
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import TeacherDetail from "./pages/admin/TeacherDetail";
+
+// Student Reports
+import StudentReports from "./pages/student/StudentReports";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +71,10 @@ const App = () => (
           {/* Admin Portal Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/teacher/:teacherId" element={<TeacherDetail />} />
+          
+          {/* Student Reports */}
+          <Route path="/student/reports" element={<StudentReports />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

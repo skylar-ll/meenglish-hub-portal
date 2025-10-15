@@ -9,6 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { CreateQuizModal } from "@/components/teacher/CreateQuizModal";
 import { UploadLessonModal } from "@/components/teacher/UploadLessonModal";
 import { MarkAttendanceModal } from "@/components/teacher/MarkAttendanceModal";
+import { StudentWeeklyReportModal } from "@/components/teacher/StudentWeeklyReportModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +19,9 @@ const TeacherDashboard = () => {
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +57,13 @@ const TeacherDashboard = () => {
         return;
       }
 
+      // Fetch students
+      const { data: studentsData } = await supabase
+        .from("students")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      setStudents(studentsData || []);
       setLoading(false);
     };
 
@@ -72,14 +83,10 @@ const TeacherDashboard = () => {
     );
   }
 
-  // Mock students data
-  const students = [
-    { id: 1, name: "Ahmed Al-Rashid", nameAr: "أحمد الراشد", course: "Level 5", progress: 5, branch: "Dammam" },
-    { id: 2, name: "Fatima Hassan", nameAr: "فاطمة حسن", course: "Level 3", progress: 2, branch: "Online" },
-    { id: 3, name: "Mohammed Ali", nameAr: "محمد علي", course: "Level 7", progress: 6, branch: "Khobar" },
-    { id: 4, name: "Sarah Abdullah", nameAr: "سارة عبدالله", course: "Speaking Class", progress: 4, branch: "Dhahran" },
-    { id: 5, name: "Omar Ibrahim", nameAr: "عمر إبراهيم", course: "Level 2", progress: 1, branch: "Dammam" },
-  ];
+  const handleOpenReport = (student: any) => {
+    setSelectedStudent(student);
+    setIsReportModalOpen(true);
+  };
 
   const stats = [
     { label: t('teacher.totalStudents'), value: students.length, icon: Users, color: "from-primary to-secondary" },
@@ -165,40 +172,51 @@ const TeacherDashboard = () => {
         {/* Students List */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-6">{t('teacher.myStudents')}</h2>
-          <div className="space-y-4">
-            {students.map((student) => (
-              <Card key={student.id} className="p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{student.name}</h3>
-                    <p className="text-sm text-muted-foreground" dir="rtl">
-                      {student.nameAr}
-                    </p>
+          {students.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">No students assigned yet</p>
+          ) : (
+            <div className="space-y-4">
+              {students.map((student) => (
+                <Card key={student.id} className="p-4 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{student.full_name_en}</h3>
+                      <p className="text-sm text-muted-foreground" dir="rtl">
+                        {student.full_name_ar}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{student.branch}</Badge>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleOpenReport(student)}
+                        className="bg-gradient-to-r from-primary to-secondary"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Report
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="secondary">{student.branch}</Badge>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t('teacher.course')}</p>
-                    <p className="font-medium">{student.course}</p>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">{t('teacher.course')}</p>
+                      <p className="font-medium">{student.program}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Level</p>
+                      <p className="font-medium">{student.course_level || "Level 1"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Grade</p>
+                      <p className="font-medium">{student.total_grade ? `${student.total_grade}%` : "N/A"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t('teacher.progress')}</p>
-                    <p className="font-medium">{student.progress} / 8 {t('teacher.parts')}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('teacher.courseProgress')}</span>
-                    <span className="font-medium">{Math.round((student.progress / 8) * 100)}%</span>
-                  </div>
-                  <Progress value={(student.progress / 8) * 100} className="h-2" />
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -215,6 +233,16 @@ const TeacherDashboard = () => {
         isOpen={isAttendanceModalOpen} 
         onClose={() => setIsAttendanceModalOpen(false)} 
       />
+      {selectedStudent && (
+        <StudentWeeklyReportModal 
+          isOpen={isReportModalOpen} 
+          onClose={() => {
+            setIsReportModalOpen(false);
+            setSelectedStudent(null);
+          }}
+          student={selectedStudent}
+        />
+      )}
     </div>
   );
 };

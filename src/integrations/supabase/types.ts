@@ -344,6 +344,93 @@ export type Database = {
         }
         Relationships: []
       }
+      student_weekly_reports: {
+        Row: {
+          attendance_rating: number | null
+          course_name: string | null
+          created_at: string | null
+          current_grade: number | null
+          exam_1_score: number | null
+          exam_2_score: number | null
+          exam_3_score: number | null
+          exam_4_score: number | null
+          expiration_date: string | null
+          grammar_rating: number | null
+          id: string
+          level: string | null
+          reading_rating: number | null
+          registration_date: string | null
+          report_date: string
+          schedule: string | null
+          speaking_rating: number | null
+          student_id: string
+          teacher_comments: string | null
+          teacher_id: string
+          teacher_name: string | null
+          teacher_notes: string | null
+          updated_at: string | null
+          vocabulary_rating: number | null
+          week_number: number
+          writing_rating: number | null
+        }
+        Insert: {
+          attendance_rating?: number | null
+          course_name?: string | null
+          created_at?: string | null
+          current_grade?: number | null
+          exam_1_score?: number | null
+          exam_2_score?: number | null
+          exam_3_score?: number | null
+          exam_4_score?: number | null
+          expiration_date?: string | null
+          grammar_rating?: number | null
+          id?: string
+          level?: string | null
+          reading_rating?: number | null
+          registration_date?: string | null
+          report_date?: string
+          schedule?: string | null
+          speaking_rating?: number | null
+          student_id: string
+          teacher_comments?: string | null
+          teacher_id: string
+          teacher_name?: string | null
+          teacher_notes?: string | null
+          updated_at?: string | null
+          vocabulary_rating?: number | null
+          week_number: number
+          writing_rating?: number | null
+        }
+        Update: {
+          attendance_rating?: number | null
+          course_name?: string | null
+          created_at?: string | null
+          current_grade?: number | null
+          exam_1_score?: number | null
+          exam_2_score?: number | null
+          exam_3_score?: number | null
+          exam_4_score?: number | null
+          expiration_date?: string | null
+          grammar_rating?: number | null
+          id?: string
+          level?: string | null
+          reading_rating?: number | null
+          registration_date?: string | null
+          report_date?: string
+          schedule?: string | null
+          speaking_rating?: number | null
+          student_id?: string
+          teacher_comments?: string | null
+          teacher_id?: string
+          teacher_name?: string | null
+          teacher_notes?: string | null
+          updated_at?: string | null
+          vocabulary_rating?: number | null
+          week_number?: number
+          writing_rating?: number | null
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           branch: string
@@ -351,6 +438,7 @@ export type Database = {
           course_level: string | null
           created_at: string
           email: string
+          expiration_date: string | null
           full_name_ar: string
           full_name_en: string
           id: string
@@ -360,7 +448,10 @@ export type Database = {
           phone1: string
           phone2: string | null
           program: string
+          registration_date: string | null
+          stop_postpone_dates: string[] | null
           subscription_status: string | null
+          total_grade: number | null
           updated_at: string
         }
         Insert: {
@@ -369,6 +460,7 @@ export type Database = {
           course_level?: string | null
           created_at?: string
           email: string
+          expiration_date?: string | null
           full_name_ar: string
           full_name_en: string
           id?: string
@@ -378,7 +470,10 @@ export type Database = {
           phone1: string
           phone2?: string | null
           program: string
+          registration_date?: string | null
+          stop_postpone_dates?: string[] | null
           subscription_status?: string | null
+          total_grade?: number | null
           updated_at?: string
         }
         Update: {
@@ -387,6 +482,7 @@ export type Database = {
           course_level?: string | null
           created_at?: string
           email?: string
+          expiration_date?: string | null
           full_name_ar?: string
           full_name_en?: string
           id?: string
@@ -396,8 +492,44 @@ export type Database = {
           phone1?: string
           phone2?: string | null
           program?: string
+          registration_date?: string | null
+          stop_postpone_dates?: string[] | null
           subscription_status?: string | null
+          total_grade?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      teacher_schedules: {
+        Row: {
+          course_name: string
+          created_at: string | null
+          day_of_week: string
+          id: string
+          level: string | null
+          teacher_id: string
+          time_slot: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_name: string
+          created_at?: string | null
+          day_of_week: string
+          id?: string
+          level?: string | null
+          teacher_id: string
+          time_slot: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_name?: string
+          created_at?: string | null
+          day_of_week?: string
+          id?: string
+          level?: string | null
+          teacher_id?: string
+          time_slot?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
