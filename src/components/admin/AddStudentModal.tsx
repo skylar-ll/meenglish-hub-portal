@@ -28,7 +28,23 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     program: "",
     classType: "",
     paymentMethod: "Cash",
+    countryCode1: "+966",
+    countryCode2: "+966",
   });
+
+  const countryCodes = [
+    { value: "+966", label: "+966 (Saudi Arabia)" },
+    { value: "+971", label: "+971 (UAE)" },
+    { value: "+965", label: "+965 (Kuwait)" },
+    { value: "+973", label: "+973 (Bahrain)" },
+    { value: "+974", label: "+974 (Qatar)" },
+    { value: "+968", label: "+968 (Oman)" },
+    { value: "+20", label: "+20 (Egypt)" },
+    { value: "+962", label: "+962 (Jordan)" },
+    { value: "+961", label: "+961 (Lebanon)" },
+    { value: "+1", label: "+1 (USA/Canada)" },
+    { value: "+44", label: "+44 (UK)" },
+  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -42,8 +58,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       const validatedData = studentSignupSchema.parse({
         fullNameAr: formData.fullNameAr,
         fullNameEn: formData.fullNameEn,
-        phone1: formData.phone1,
-        phone2: formData.phone2,
+        phone1: formData.countryCode1 + formData.phone1,
+        phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
         email: formData.email,
         id: formData.id,
         password: formData.password,
@@ -150,6 +166,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         program: "",
         classType: "",
         paymentMethod: "Cash",
+        countryCode1: "+966",
+        countryCode2: "+966",
       });
       
       onStudentAdded();
@@ -222,24 +240,54 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone1">Phone 1 *</Label>
-              <Input
-                id="phone1"
-                type="tel"
-                placeholder="+966 XXX XXX XXX"
-                value={formData.phone1}
-                onChange={(e) => handleInputChange("phone1", e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((code) => (
+                      <SelectItem key={code.value} value={code.value}>
+                        {code.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone1"
+                  type="tel"
+                  placeholder="XXX XXX XXX"
+                  value={formData.phone1}
+                  onChange={(e) => handleInputChange("phone1", e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="phone2">Phone 2 (Optional)</Label>
-              <Input
-                id="phone2"
-                type="tel"
-                placeholder="+966 XXX XXX XXX"
-                value={formData.phone2}
-                onChange={(e) => handleInputChange("phone2", e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((code) => (
+                      <SelectItem key={code.value} value={code.value}>
+                        {code.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone2"
+                  type="tel"
+                  placeholder="XXX XXX XXX"
+                  value={formData.phone2}
+                  onChange={(e) => handleInputChange("phone2", e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
 

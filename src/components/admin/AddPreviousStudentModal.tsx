@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +31,23 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     courses: [] as string[],
     branch: "",
     paymentMethod: "",
+    countryCode1: "+966",
+    countryCode2: "+966",
   });
+
+  const countryCodes = [
+    { value: "+966", label: "+966 (Saudi Arabia)" },
+    { value: "+971", label: "+971 (UAE)" },
+    { value: "+965", label: "+965 (Kuwait)" },
+    { value: "+973", label: "+973 (Bahrain)" },
+    { value: "+974", label: "+974 (Qatar)" },
+    { value: "+968", label: "+968 (Oman)" },
+    { value: "+20", label: "+20 (Egypt)" },
+    { value: "+962", label: "+962 (Jordan)" },
+    { value: "+961", label: "+961 (Lebanon)" },
+    { value: "+1", label: "+1 (USA/Canada)" },
+    { value: "+44", label: "+44 (UK)" },
+  ];
 
   const allCourses = [
     { value: "level-1", label: "Level 1 (Pre1) - مستوى اول", category: "English Program" },
@@ -115,15 +132,16 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     // Validate inputs using zod schema
     try {
       const { studentSignupSchema } = await import("@/lib/validations");
-      studentSignupSchema.parse({
+      const dataToValidate = {
         fullNameAr: formData.fullNameAr,
         fullNameEn: formData.fullNameEn,
-        phone1: formData.phone1,
-        phone2: formData.phone2,
+        phone1: formData.countryCode1 + formData.phone1,
+        phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
         email: formData.email,
         id: formData.id,
         password: formData.password
-      });
+      };
+      studentSignupSchema.parse(dataToValidate);
     } catch (error: any) {
       if (error.errors) {
         toast.error(error.errors[0].message);
@@ -141,8 +159,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       const studentData: any = {
         full_name_ar: formData.fullNameAr,
         full_name_en: formData.fullNameEn,
-        phone1: formData.phone1,
-        phone2: formData.phone2 || null,
+        phone1: formData.countryCode1 + formData.phone1,
+        phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : null,
         email: formData.email,
         national_id: formData.id,
         program: formData.courses.join(', '),
@@ -200,6 +218,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         courses: [],
         branch: "",
         paymentMethod: "",
+        countryCode1: "+966",
+        countryCode2: "+966",
       });
     } catch (error) {
       console.error("Error:", error);
@@ -242,25 +262,55 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
 
             <div className="space-y-2">
               <Label htmlFor="phone1">{t('addPrevStudent.phone1')} *</Label>
-              <Input
-                id="phone1"
-                type="tel"
-                placeholder="+966 XX XXX XXXX"
-                value={formData.phone1}
-                onChange={(e) => setFormData({...formData, phone1: e.target.value})}
-                required
-              />
+              <div className="flex gap-2">
+                <Select value={formData.countryCode1} onValueChange={(value) => setFormData({...formData, countryCode1: value})}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((code) => (
+                      <SelectItem key={code.value} value={code.value}>
+                        {code.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone1"
+                  type="tel"
+                  placeholder="XX XXX XXXX"
+                  value={formData.phone1}
+                  onChange={(e) => setFormData({...formData, phone1: e.target.value})}
+                  required
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="phone2">{t('addPrevStudent.phone2')}</Label>
-              <Input
-                id="phone2"
-                type="tel"
-                placeholder="+966 XX XXX XXXX"
-                value={formData.phone2}
-                onChange={(e) => setFormData({...formData, phone2: e.target.value})}
-              />
+              <div className="flex gap-2">
+                <Select value={formData.countryCode2} onValueChange={(value) => setFormData({...formData, countryCode2: value})}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((code) => (
+                      <SelectItem key={code.value} value={code.value}>
+                        {code.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone2"
+                  type="tel"
+                  placeholder="XX XXX XXXX"
+                  value={formData.phone2}
+                  onChange={(e) => setFormData({...formData, phone2: e.target.value})}
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

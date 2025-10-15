@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,23 @@ const StudentSignUp = () => {
     email: "",
     id: "",
     password: "",
+    countryCode1: "+966",
+    countryCode2: "+966",
   });
+
+  const countryCodes = [
+    { value: "+966", label: "+966 (Saudi Arabia)" },
+    { value: "+971", label: "+971 (UAE)" },
+    { value: "+965", label: "+965 (Kuwait)" },
+    { value: "+973", label: "+973 (Bahrain)" },
+    { value: "+974", label: "+974 (Qatar)" },
+    { value: "+968", label: "+968 (Oman)" },
+    { value: "+20", label: "+20 (Egypt)" },
+    { value: "+962", label: "+962 (Jordan)" },
+    { value: "+961", label: "+961 (Lebanon)" },
+    { value: "+1", label: "+1 (USA/Canada)" },
+    { value: "+44", label: "+44 (UK)" },
+  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -29,8 +46,15 @@ const StudentSignUp = () => {
 
   const handleNext = async () => {
     try {
+      // Combine country code with phone numbers
+      const dataToValidate = {
+        ...formData,
+        phone1: formData.countryCode1 + formData.phone1,
+        phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
+      };
+      
       // Validate with zod schema
-      const validatedData = studentSignupSchema.parse(formData);
+      const validatedData = studentSignupSchema.parse(dataToValidate);
 
       // Store data WITHOUT password in sessionStorage
       const { password, ...dataWithoutPassword } = validatedData;
@@ -97,24 +121,54 @@ const StudentSignUp = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone1">{t('student.phone')} *</Label>
-                <Input
-                  id="phone1"
-                  type="tel"
-                  placeholder="+966 XXX XXX XXX"
-                  value={formData.phone1}
-                  onChange={(e) => handleInputChange("phone1", e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countryCodes.map((code) => (
+                        <SelectItem key={code.value} value={code.value}>
+                          {code.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone1"
+                    type="tel"
+                    placeholder="XXX XXX XXX"
+                    value={formData.phone1}
+                    onChange={(e) => handleInputChange("phone1", e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phone2">{t('student.phoneSecondary')}</Label>
-                <Input
-                  id="phone2"
-                  type="tel"
-                  placeholder="+966 XXX XXX XXX"
-                  value={formData.phone2}
-                  onChange={(e) => handleInputChange("phone2", e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countryCodes.map((code) => (
+                        <SelectItem key={code.value} value={code.value}>
+                          {code.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone2"
+                    type="tel"
+                    placeholder="XXX XXX XXX"
+                    value={formData.phone2}
+                    onChange={(e) => handleInputChange("phone2", e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
 

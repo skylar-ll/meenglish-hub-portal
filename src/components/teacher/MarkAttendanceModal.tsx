@@ -320,7 +320,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
           <div>
             <h2 className="text-xl font-bold">{t('teacher.markAttendance')}</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Weekly attendance records (Sunday - Thursday) - Click status to mark today's attendance
+              Weekly attendance records (Sunday - Thursday)
             </p>
           </div>
           <div className="flex gap-2">
@@ -402,100 +402,102 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendanceData.map((student, index) => (
-                      <TableRow key={student.student_id} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
-                        <TableCell className="sticky left-0 bg-background z-10 border-r-2 p-2">
-                          <div className="text-xs">
-                            <p className="font-medium">{student.full_name_en}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="border-r-2 text-xs p-1 text-center">
-                          {student.phone1}
-                        </TableCell>
-                        {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
-                          <>
-                            {weekDays.map(day => {
-                              const status = student.weeks[weekNum]?.[day] || '';
-                              return (
-                                <TableCell 
-                                  key={`${weekNum}-${day}`} 
-                                  className={`text-center p-1 ${getCellBgColor(weekNum)}`}
-                                >
-                                  <span className={status ? getStatusColor(status) : 'text-muted-foreground text-xs'}>
-                                    {status || '-'}
-                                  </span>
-                                </TableCell>
-                              );
-                            })}
-                            <TableCell 
-                              key={`${weekNum}-total`}
-                              className={`text-center p-1 font-bold border-r-2 ${getCellBgColor(weekNum)}`}
+                    {attendanceData.map((student, index) => {
+                      // Determine the background color for the row based on the current week
+                      const currentDate = new Date();
+                      const startOfWeek = new Date(currentDate);
+                      startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                      const currentWeekKey = startOfWeek.toISOString().split('T')[0];
+                      
+                      // Find the current week number
+                      let currentWeekNum = 1;
+                      for (let w = 1; w <= maxWeek; w++) {
+                        // Check if any attendance record exists for this week
+                        const hasRecordInWeek = Object.keys(student.weeks[w] || {}).length > 0;
+                        if (hasRecordInWeek) {
+                          currentWeekNum = w;
+                        }
+                      }
+                      
+                      return (
+                        <TableRow key={student.student_id}>
+                          <TableCell className="sticky left-0 bg-background z-10 border-r-2 p-2">
+                            <div className="text-xs">
+                              <p className="font-medium">{student.full_name_en}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="border-r-2 text-xs p-1 text-center">
+                            {student.phone1}
+                          </TableCell>
+                          {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
+                            <>
+                              {weekDays.map(day => {
+                                const status = student.weeks[weekNum]?.[day] || '';
+                                return (
+                                  <TableCell 
+                                    key={`${weekNum}-${day}`} 
+                                    className={`text-center p-1 ${getCellBgColor(weekNum)}`}
+                                  >
+                                    <span className={status ? getStatusColor(status) : 'text-muted-foreground text-xs'}>
+                                      {status || '-'}
+                                    </span>
+                                  </TableCell>
+                                );
+                              })}
+                              <TableCell 
+                                key={`${weekNum}-total`}
+                                className={`text-center p-1 font-bold border-r-2 ${getCellBgColor(weekNum)}`}
+                              >
+                                {student.weekTotals[weekNum] || 0}
+                              </TableCell>
+                            </>
+                          ))}
+                          <TableCell className="text-center font-bold border-l-2 border-r-2 p-1">
+                            {student.overallTotal}
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 p-1">
+                            <Badge 
+                              variant={student.attendancePercentage >= 80 ? "default" : "secondary"}
+                              className="text-xs"
                             >
-                              {student.weekTotals[weekNum] || 0}
-                            </TableCell>
-                          </>
-                        ))}
-                        <TableCell className="text-center font-bold border-l-2 border-r-2 p-1">
-                          {student.overallTotal}
-                        </TableCell>
-                        <TableCell className="text-center border-r-2 p-1">
-                          <Badge 
-                            variant={student.attendancePercentage >= 80 ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {student.attendancePercentage}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center border-r-2 p-1 text-xs font-semibold">
-                          {student.attendancePercentage >= 90 ? 'A+' :
-                           student.attendancePercentage >= 80 ? 'A' :
-                           student.attendancePercentage >= 70 ? 'B+' :
-                           student.attendancePercentage >= 60 ? 'B' : 'C'}
-                        </TableCell>
-                        <TableCell className="text-center border-r-2 p-1 text-xs">
-                          {student.attendancePercentage >= 80 ? 'next level' : 'repeat'}
-                        </TableCell>
-                        <TableCell className="text-center border-r-2 p-1 bg-primary/5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleAttendance(student.student_id)}
-                            className={`h-8 px-2 ${getTodayStatusColor(student.todayStatus)}`}
-                          >
-                            {getTodayStatusText(student.todayStatus)}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              {student.attendancePercentage}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 p-1 text-xs font-semibold">
+                            {student.attendancePercentage >= 90 ? 'A+' :
+                             student.attendancePercentage >= 80 ? 'A' :
+                             student.attendancePercentage >= 70 ? 'B+' :
+                             student.attendancePercentage >= 60 ? 'B' : 'C'}
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 p-1 text-xs">
+                            {student.attendancePercentage >= 80 ? 'next level' : 'repeat'}
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 p-1 bg-primary/5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleAttendance(student.student_id)}
+                              className={`h-8 px-2 ${getTodayStatusColor(student.todayStatus)}`}
+                            >
+                              {getTodayStatusText(student.todayStatus)}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
             </ScrollArea>
 
-            <div className="mt-3 space-y-2">
-              <div className="p-3 bg-muted/30 rounded-lg">
-                <div className="flex justify-between items-center text-xs">
-                  <div>
-                    <span className="font-semibold">Legend: </span>
-                    <span className="text-success font-bold mx-1">P</span>= Present
-                    <span className="text-destructive font-bold mx-2">A</span>= Absent
-                    <span className="text-warning font-bold mx-2">L</span>= Late
-                  </div>
-                  <div className="text-muted-foreground">
-                    <span className="font-semibold">Click "TODAY'S STATUS" to mark attendance</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button onClick={handleSave} className="flex-1" disabled={loading}>
-                  <Check className="w-4 h-4 mr-2" />
-                  {loading ? "Saving..." : t('teacher.saveAttendance')}
-                </Button>
-                <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
-                  {t('common.cancel')}
-                </Button>
-              </div>
+            <div className="mt-3 flex gap-3">
+              <Button onClick={handleSave} className="flex-1" disabled={loading}>
+                <Check className="w-4 h-4 mr-2" />
+                {loading ? "Saving..." : "Mark Attendance"}
+              </Button>
+              <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
+                {t('common.cancel')}
+              </Button>
             </div>
           </>
         )}
