@@ -385,6 +385,17 @@ const AdminDashboard = () => {
             <TabsContent value="reports" className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">{t('admin.reportsExport')}</h2>
               <div className="grid md:grid-cols-2 gap-4">
+                <Card 
+                  className="p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate('/admin/reports')}
+                >
+                  <h3 className="font-semibold mb-2">Student Weekly Reports</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    View all student weekly reports submitted by teachers
+                  </p>
+                  <Button className="w-full">View Reports</Button>
+                </Card>
+
                 <Card className="p-6 hover:bg-muted/50 transition-colors cursor-pointer">
                   <h3 className="font-semibold mb-2">{t('admin.studentDataReport')}</h3>
                   <p className="text-sm text-muted-foreground mb-4">

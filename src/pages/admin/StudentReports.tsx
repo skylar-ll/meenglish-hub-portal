@@ -3,120 +3,120 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const StudentReports = () => {
+const AdminStudentReports = () => {
   const navigate = useNavigate();
   const [reports, setReports] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStudents = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate("/student/login");
-          return;
-        }
-
-        const { data: student } = await supabase
+        const { data, error } = await supabase
           .from("students")
           .select("*")
-          .eq("email", session.user.email)
-          .single();
-
-        if (!student) {
-          toast.error("Student record not found");
-          return;
-        }
-
-        setStudentInfo(student);
-
-        const { data: reportsData, error } = await supabase
-          .from("student_weekly_reports")
-          .select("*")
-          .eq("student_id", student.id)
-          .order("week_number", { ascending: false });
+          .order("full_name_en");
 
         if (error) throw error;
-        setReports(reportsData || []);
+        setStudents(data || []);
       } catch (error: any) {
-        console.error("Error fetching reports:", error);
-        toast.error("Failed to load reports");
+        console.error("Error fetching students:", error);
+        toast.error("Failed to load students");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [navigate]);
+    fetchStudents();
+  }, []);
 
-  const calculateAttendancePercentage = () => {
-    if (!reports.length) return 0;
-    const total = reports.reduce((sum, r) => sum + (r.attendance_rating || 0), 0);
-    return ((total / (reports.length * 5)) * 100).toFixed(1);
-  };
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchReports();
+    }
+  }, [selectedStudent]);
 
-  const calculateOverallAverage = () => {
-    if (!reports.length) return 0;
-    const skillRatings = reports.flatMap(r => [
-      r.vocabulary_rating,
-      r.grammar_rating,
-      r.reading_rating,
-      r.writing_rating,
-      r.speaking_rating,
-    ].filter(Boolean));
-    
-    if (!skillRatings.length) return 0;
-    const avg = skillRatings.reduce((sum, val) => sum + val, 0) / skillRatings.length;
-    return ((avg / 5) * 100).toFixed(1);
-  };
+  const fetchReports = async () => {
+    if (!selectedStudent) return;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg">Loading...</p>
-      </div>
-    );
-  }
+    try {
+      setLoading(true);
+      
+      const student = students.find(s => s.id === selectedStudent);
+      setStudentInfo(student);
 
-  const getRatingText = (rating: number) => {
-    if (rating === 5) return "EXCELLENT";
-    if (rating === 4) return "VERY GOOD";
-    if (rating === 3) return "AVERAGE";
-    if (rating === 2) return "BELOW AVERAGE";
-    if (rating === 1) return "POOR";
-    return "N/A";
-  };
+      const { data: reportsData, error } = await supabase
+        .from("student_weekly_reports")
+        .select("*")
+        .eq("student_id", selectedStudent)
+        .order("week_number", { ascending: false });
 
-  const getGradeText = (score: number) => {
-    if (score >= 90) return "excellent";
-    if (score >= 85) return "very good";
-    if (score >= 80) return "good";
-    if (score >= 70) return "fair";
-    return "failed";
+      if (error) throw error;
+      setReports(reportsData || []);
+    } catch (error: any) {
+      console.error("Error fetching reports:", error);
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white p-4">
       <div className="container max-w-5xl mx-auto py-8">
-        <Button variant="ghost" onClick={() => navigate("/student/course")} className="mb-4">
+        <Button variant="ghost" onClick={() => navigate("/admin/dashboard")} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Course
+          Back to Dashboard
         </Button>
 
-        {/* Reports List */}
-        {reports.length === 0 ? (
+        <h1 className="text-3xl font-bold mb-6">Student Reports</h1>
+
+        {/* Student Selector */}
+        <Card className="p-6 mb-6">
+          <label className="block text-sm font-medium mb-2">Select Student</label>
+          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a student..." />
+            </SelectTrigger>
+            <SelectContent>
+              {students.map((student) => (
+                <SelectItem key={student.id} value={student.id}>
+                  {student.full_name_en} - {student.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Card>
+
+        {/* Reports Display */}
+        {!selectedStudent ? (
           <Card className="p-12">
             <div className="text-center">
               <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg text-muted-foreground">No reports available yet</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Your teacher will submit weekly reports here
-              </p>
+              <p className="text-lg text-muted-foreground">Select a student to view their reports</p>
+            </div>
+          </Card>
+        ) : loading ? (
+          <div className="text-center py-12">
+            <p className="text-lg">Loading...</p>
+          </div>
+        ) : reports.length === 0 ? (
+          <Card className="p-12">
+            <div className="text-center">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg text-muted-foreground">No reports available for this student</p>
             </div>
           </Card>
         ) : (
@@ -281,4 +281,4 @@ const StudentReports = () => {
   );
 };
 
-export default StudentReports;
+export default AdminStudentReports;
