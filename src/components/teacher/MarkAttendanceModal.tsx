@@ -361,18 +361,17 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
   if (!isOpen) return null;
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
+  const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-2">
-      <Card className="w-full max-w-[98vw] max-h-[95vh] p-4 flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+      <Card className="w-full max-w-[98vw] h-[95vh] p-6 flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-bold">{t('teacher.markAttendance')}</h2>
+            <h2 className="text-2xl font-bold mb-1">{currentMonth}</h2>
+            <p className="text-lg font-semibold text-muted-foreground">{t('teacher.markAttendance')}</p>
             <div className="flex items-center gap-4 mt-2">
-              <p className="text-xs text-muted-foreground">
-                Weekly attendance records (Sunday - Thursday)
-              </p>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-3 text-sm">
                 <span className="flex items-center gap-1">
                   <span className="font-bold text-success">P</span> = Present
                 </span>
@@ -411,16 +410,16 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 w-full">
-              <div className="min-w-max">
+            <ScrollArea className="flex-1 w-full h-full">
+              <div className="min-w-max pb-4">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-background z-30">
                     <TableRow className="border-b-2">
-                      <TableHead rowSpan={2} className="sticky left-0 bg-background z-20 border-r-2 min-w-[200px]">
-                        <div className="font-bold text-center text-sm">STUDENTS' NAMES</div>
+                      <TableHead className="sticky left-0 bg-background z-40 border-r-2 w-[220px] min-w-[220px]">
+                        <div className="font-bold text-center text-sm py-2">STUDENTS' NAMES</div>
                       </TableHead>
-                      <TableHead rowSpan={2} className="border-r-2 min-w-[130px]">
-                        <div className="font-bold text-center text-sm">PHONE NUMBER</div>
+                      <TableHead className="border-r-2 w-[140px] min-w-[140px]">
+                        <div className="font-bold text-center text-sm py-2">PHONE NUMBER</div>
                       </TableHead>
                       {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
                         <TableHead 
@@ -428,41 +427,41 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                           colSpan={6} 
                           className={`text-center border-r-2 ${getCellBgColor(weekNum)}`}
                         >
-                          <div className="font-bold text-sm">Week {weekNum}</div>
+                          <div className="font-bold text-sm py-2">Week {weekNum}</div>
                         </TableHead>
                       ))}
-                      <TableHead rowSpan={2} className="border-l-2 border-r-2 min-w-[90px]">
-                        <div className="font-bold text-center text-sm">OVERALL TOTAL</div>
+                      <TableHead className="border-l-2 border-r-2 w-[100px] min-w-[100px]">
+                        <div className="font-bold text-center text-sm py-2">OVERALL TOTAL</div>
                       </TableHead>
-                      <TableHead rowSpan={2} className="border-r-2 min-w-[110px]">
-                        <div className="font-bold text-center text-sm">ATTENDANCE %</div>
+                      <TableHead className="border-r-2 w-[120px] min-w-[120px]">
+                        <div className="font-bold text-center text-sm py-2">ATTENDANCE %</div>
                       </TableHead>
-                      <TableHead rowSpan={2} className="border-r-2 min-w-[100px]">
-                        <div className="font-bold text-center text-sm">FINAL GRADE</div>
+                      <TableHead className="border-r-2 w-[110px] min-w-[110px]">
+                        <div className="font-bold text-center text-sm py-2">FINAL GRADE</div>
                       </TableHead>
-                      <TableHead rowSpan={2} className="border-r-2 min-w-[110px]">
-                        <div className="font-bold text-center text-sm">EQUIVALENT</div>
+                      <TableHead className="border-r-2 w-[120px] min-w-[120px]">
+                        <div className="font-bold text-center text-sm py-2">EQUIVALENT</div>
                       </TableHead>
-                      <TableHead rowSpan={2} className="border-r-2 min-w-[130px] bg-primary/10">
-                        <div className="font-bold text-center text-sm">TODAY'S STATUS</div>
+                      <TableHead className="border-r-2 w-[140px] min-w-[140px] bg-primary/10">
+                        <div className="font-bold text-center text-sm py-2">TODAY'S STATUS</div>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableHeader>
+                  <TableHeader className="sticky top-[49px] bg-background z-30">
                     <TableRow className="border-b-2">
                       {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
                         <>
                           {weekDays.map(day => (
                             <TableHead 
                               key={`${weekNum}-${day}-header`} 
-                              className={`text-center p-2 text-xs font-semibold ${getCellBgColor(weekNum)}`}
+                              className={`text-center p-3 text-sm font-semibold ${getCellBgColor(weekNum)} w-[80px] min-w-[80px]`}
                             >
                               {day}
                             </TableHead>
                           ))}
                           <TableHead 
                             key={`${weekNum}-total-header`}
-                            className={`text-center p-2 text-xs font-bold border-r-2 ${getCellBgColor(weekNum)}`}
+                            className={`text-center p-3 text-sm font-bold border-r-2 ${getCellBgColor(weekNum)} w-[80px] min-w-[80px]`}
                           >
                             Total
                           </TableHead>
@@ -488,14 +487,16 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                         }
                       }
                       
+                      const rowBgColor = getCellBgColor(currentWeekNum);
+                      
                       return (
-                        <TableRow key={student.student_id} className="hover:bg-muted/50">
-                          <TableCell className="sticky left-0 bg-background z-10 border-r-2 p-3">
+                        <TableRow key={student.student_id} className="hover:bg-muted/30 border-b">
+                          <TableCell className="sticky left-0 bg-background z-20 border-r-2 p-4">
                             <div className="text-sm">
                               <p className="font-medium">{student.full_name_en}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="border-r-2 text-sm p-2 text-center">
+                          <TableCell className="border-r-2 text-sm p-4 text-center">
                             {student.phone1}
                           </TableCell>
                           {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => (
@@ -505,7 +506,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                                 return (
                                   <TableCell 
                                     key={`${weekNum}-${day}`} 
-                                    className={`text-center p-2 ${getCellBgColor(weekNum)} ${editMode ? 'cursor-pointer hover:opacity-80' : ''}`}
+                                    className={`text-center p-4 ${getCellBgColor(weekNum)} ${editMode ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''} border`}
                                     onClick={() => toggleCellAttendance(student.student_id, weekNum, day)}
                                   >
                                     <span className={status ? getStatusColor(status) : 'text-muted-foreground text-sm'}>
@@ -516,16 +517,16 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                               })}
                               <TableCell 
                                 key={`${weekNum}-total`}
-                                className={`text-center p-2 font-bold border-r-2 ${getCellBgColor(weekNum)} text-sm`}
+                                className={`text-center p-4 font-bold border-r-2 ${getCellBgColor(weekNum)} text-sm border`}
                               >
                                 {student.weekTotals[weekNum] || 0}
                               </TableCell>
                             </>
                           ))}
-                          <TableCell className="text-center font-bold border-l-2 border-r-2 p-2 text-sm">
+                          <TableCell className="text-center font-bold border-l-2 border-r-2 p-4 text-sm border">
                             {student.overallTotal}
                           </TableCell>
-                          <TableCell className="text-center border-r-2 p-2">
+                          <TableCell className="text-center border-r-2 p-4 border">
                             <Badge 
                               variant={student.attendancePercentage >= 80 ? "default" : "secondary"}
                               className="text-sm"
@@ -533,21 +534,21 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                               {student.attendancePercentage}%
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center border-r-2 p-2 text-sm font-semibold">
+                          <TableCell className="text-center border-r-2 p-4 text-sm font-semibold border">
                             {student.attendancePercentage >= 90 ? 'A+' :
                              student.attendancePercentage >= 80 ? 'A' :
                              student.attendancePercentage >= 70 ? 'B+' :
                              student.attendancePercentage >= 60 ? 'B' : 'C'}
                           </TableCell>
-                          <TableCell className="text-center border-r-2 p-2 text-sm">
+                          <TableCell className="text-center border-r-2 p-4 text-sm border">
                             {student.attendancePercentage >= 80 ? 'Next Level' : 'Repeat'}
                           </TableCell>
-                          <TableCell className="text-center border-r-2 p-2 bg-primary/5">
+                          <TableCell className="text-center border-r-2 p-4 bg-primary/5 border">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleAttendance(student.student_id)}
-                              className={`h-9 px-3 text-sm ${getTodayStatusColor(student.todayStatus)}`}
+                              className={`h-9 px-3 text-sm font-semibold ${getTodayStatusColor(student.todayStatus)}`}
                             >
                               {getTodayStatusText(student.todayStatus)}
                             </Button>
@@ -560,12 +561,12 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
               </div>
             </ScrollArea>
 
-            <div className="mt-3 flex gap-3">
-              <Button onClick={handleSave} className="flex-1" disabled={loading}>
+            <div className="mt-4 flex gap-3 pt-4 border-t">
+              <Button onClick={handleSave} className="flex-1 h-11" disabled={loading}>
                 <Check className="w-4 h-4 mr-2" />
                 {loading ? "Saving..." : "Mark Attendance"}
               </Button>
-              <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
+              <Button onClick={onClose} variant="outline" className="flex-1 h-11" disabled={loading}>
                 {t('common.cancel')}
               </Button>
             </div>
