@@ -109,12 +109,15 @@ const TeacherLogin = () => {
 
       if (roleError) throw roleError;
 
-      // Also save to teachers table for backward compatibility
-      await supabase.from("teachers").insert({
+      // Save teacher information to teachers table so admins can see it
+      const { error: teacherError } = await supabase.from("teachers").insert({
+        id: authData.user.id,
         full_name: signupName,
         email: signupEmail,
         student_count: 0,
       });
+
+      if (teacherError) throw teacherError;
 
       toast.success("Account created successfully! Redirecting...");
       // If the session is created automatically, go to dashboard
