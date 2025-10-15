@@ -31,6 +31,26 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
     teacher_comments: "",
   });
 
+  const [selectedComments, setSelectedComments] = useState<string[]>([]);
+  const [finalRemark, setFinalRemark] = useState<string>("");
+
+  const commentOptions = [
+    "He is noisy.",
+    "He has to be early every day.",
+    "He has to do his homework.",
+    "He uses his phone most of the time.",
+    "He keeps logging out from the session.",
+    "He needs to participate in our daily discussions.",
+    "He needs to be more focused in our daily discussions.",
+    "He needs to study the lessons more.",
+    "He needs follow up at home.",
+  ];
+
+  const finalRemarks = [
+    "Keep up the good work!",
+    "He needs to try harder to get better results.",
+  ];
+
   useEffect(() => {
     const loadTeacherInfo = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -65,6 +85,14 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
+      // Combine selected comments and final remark
+      const combinedComments = [
+        ...selectedComments.map(comment => `● ${comment}`),
+        "",
+        "Final remarks:",
+        finalRemark
+      ].filter(Boolean).join("\n");
+
       const reportData = {
         student_id: student.id,
         teacher_id: session.user.id,
@@ -86,7 +114,7 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
         exam_2_score: formData.exam_2_score ? parseFloat(formData.exam_2_score) : null,
         exam_3_score: formData.exam_3_score ? parseFloat(formData.exam_3_score) : null,
         exam_4_score: formData.exam_4_score ? parseFloat(formData.exam_4_score) : null,
-        teacher_comments: formData.teacher_comments,
+        teacher_comments: combinedComments,
       };
 
       const { error } = await supabase
@@ -113,6 +141,8 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
         teacher_comments: "",
       });
       setWeekNumber(1);
+      setSelectedComments([]);
+      setFinalRemark("");
     } catch (error: any) {
       console.error("Error saving report:", error);
       toast.error(error.message || "Failed to save report");
@@ -306,22 +336,46 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
             </p>
           </div>
 
-          {/* Comments - Exactly like PDF */}
-          <div className="space-y-2">
+          {/* Comments - Selectable Options */}
+          <div className="space-y-3 border-2 border-black p-4">
             <h2 className="text-xl font-bold">COMMENTS</h2>
-            <Textarea
-              value={formData.teacher_comments}
-              onChange={(e) => setFormData({ ...formData, teacher_comments: e.target.value })}
-              placeholder="Enter your comments here..."
-              rows={8}
-              className="border-2 border-black resize-none"
-            />
-          </div>
+            <div className="space-y-2">
+              {commentOptions.map((comment) => (
+                <label key={comment} className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                  <input
+                    type="checkbox"
+                    checked={selectedComments.includes(comment)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedComments([...selectedComments, comment]);
+                      } else {
+                        setSelectedComments(selectedComments.filter(c => c !== comment));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 flex-shrink-0"
+                  />
+                  <span className="text-sm">{comment}</span>
+                </label>
+              ))}
+            </div>
 
-          {/* Footer Messages - Like PDF */}
-          <div className="text-center space-y-2">
-            <p className="font-semibold">Keep up the good work!</p>
-            <p className="font-semibold">He needs to try harder to get better results.</p>
+            <div className="mt-4 pt-4 border-t-2 border-black">
+              <h3 className="font-bold mb-2">Final remarks:</h3>
+              <div className="space-y-2">
+                {finalRemarks.map((remark) => (
+                  <label key={remark} className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input
+                      type="radio"
+                      name="finalRemark"
+                      checked={finalRemark === remark}
+                      onChange={() => setFinalRemark(remark)}
+                      className="mt-1 h-4 w-4 flex-shrink-0"
+                    />
+                    <span className="text-sm font-semibold">{remark}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Teacher Name */}
