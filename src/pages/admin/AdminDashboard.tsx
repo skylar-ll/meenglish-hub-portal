@@ -55,7 +55,21 @@ const AdminDashboard = () => {
       if (teachersError) {
         console.error("Error fetching teachers:", teachersError);
       } else {
-        setTeachers(teachersData || []);
+        // Calculate student count for each teacher
+        const teachersWithCount = await Promise.all(
+          (teachersData || []).map(async (teacher) => {
+            const { count } = await supabase
+              .from("students")
+              .select("*", { count: 'exact', head: true })
+              .eq("teacher_id", teacher.id);
+            
+            return {
+              ...teacher,
+              student_count: count || 0
+            };
+          })
+        );
+        setTeachers(teachersWithCount);
       }
     } catch (error) {
       console.error("Error fetching data:", error);

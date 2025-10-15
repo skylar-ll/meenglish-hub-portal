@@ -429,7 +429,22 @@ export type Database = {
           week_number?: number
           writing_rating?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_weekly_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_weekly_reports_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
@@ -451,6 +466,7 @@ export type Database = {
           registration_date: string | null
           stop_postpone_dates: string[] | null
           subscription_status: string | null
+          teacher_id: string | null
           total_grade: number | null
           updated_at: string
         }
@@ -473,6 +489,7 @@ export type Database = {
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
           subscription_status?: string | null
+          teacher_id?: string | null
           total_grade?: number | null
           updated_at?: string
         }
@@ -495,10 +512,19 @@ export type Database = {
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
           subscription_status?: string | null
+          teacher_id?: string | null
           total_grade?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teacher_schedules: {
         Row: {

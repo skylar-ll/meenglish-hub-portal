@@ -37,12 +37,12 @@ const AdminStudentReports = () => {
       if (teachersError) throw teachersError;
       setTeachers(teachersData || []);
 
-      // Fetch all reports with student information
+      // Fetch all reports with student information using the foreign key
       const { data: reportsData, error: reportsError } = await supabase
         .from("student_weekly_reports")
         .select(`
           *,
-          students:student_id (
+          student:students (
             id,
             full_name_en,
             full_name_ar,
@@ -51,7 +51,7 @@ const AdminStudentReports = () => {
             course_level
           )
         `)
-        .order("teacher_name");
+        .order("report_date", { ascending: false });
 
       if (reportsError) throw reportsError;
 
@@ -66,7 +66,7 @@ const AdminStudentReports = () => {
         }
         if (!grouped[teacherName][studentId]) {
           grouped[teacherName][studentId] = {
-            student: report.students,
+            student: report.student,
             reports: []
           };
         }

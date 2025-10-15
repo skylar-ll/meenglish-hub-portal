@@ -57,13 +57,24 @@ const TeacherDashboard = () => {
         return;
       }
 
-      // Fetch students
-      const { data: studentsData } = await supabase
-        .from("students")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Fetch teacher record to get teacher's ID
+      const { data: teacherData } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (teacherData) {
+        // Fetch students assigned to this teacher
+        const { data: studentsData } = await supabase
+          .from("students")
+          .select("*")
+          .eq("teacher_id", teacherData.id)
+          .order("created_at", { ascending: false });
+        
+        setStudents(studentsData || []);
+      }
       
-      setStudents(studentsData || []);
       setLoading(false);
     };
 
