@@ -18,18 +18,17 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
   const [teacherName, setTeacherName] = useState("");
   const [weekNumber, setWeekNumber] = useState(1);
   const [formData, setFormData] = useState({
-    vocabulary_rating: 3,
-    grammar_rating: 3,
-    reading_rating: 3,
-    writing_rating: 3,
-    speaking_rating: 3,
-    attendance_rating: 3,
+    vocabulary_rating: 0,
+    grammar_rating: 0,
+    reading_rating: 0,
+    writing_rating: 0,
+    speaking_rating: 0,
+    attendance_rating: 0,
     exam_1_score: "",
     exam_2_score: "",
     exam_3_score: "",
     exam_4_score: "",
     teacher_comments: "",
-    teacher_notes: "",
   });
 
   useEffect(() => {
@@ -52,6 +51,14 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate that all ratings are filled
+    if (!formData.vocabulary_rating || !formData.grammar_rating || !formData.reading_rating || 
+        !formData.writing_rating || !formData.speaking_rating || !formData.attendance_rating) {
+      toast.error("Please fill all skill ratings");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -69,23 +76,43 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
         expiration_date: student.expiration_date,
         current_grade: student.total_grade,
         teacher_name: teacherName,
-        ...formData,
+        vocabulary_rating: formData.vocabulary_rating,
+        grammar_rating: formData.grammar_rating,
+        reading_rating: formData.reading_rating,
+        writing_rating: formData.writing_rating,
+        speaking_rating: formData.speaking_rating,
+        attendance_rating: formData.attendance_rating,
         exam_1_score: formData.exam_1_score ? parseFloat(formData.exam_1_score) : null,
         exam_2_score: formData.exam_2_score ? parseFloat(formData.exam_2_score) : null,
         exam_3_score: formData.exam_3_score ? parseFloat(formData.exam_3_score) : null,
         exam_4_score: formData.exam_4_score ? parseFloat(formData.exam_4_score) : null,
+        teacher_comments: formData.teacher_comments,
       };
 
       const { error } = await supabase
         .from("student_weekly_reports")
-        .upsert(reportData, {
-          onConflict: "student_id,week_number,report_date",
-        });
+        .insert(reportData);
 
       if (error) throw error;
 
-      toast.success("Weekly report saved successfully");
+      toast.success("Weekly report submitted successfully! Report is now available to admin and student.");
       onClose();
+      
+      // Reset form
+      setFormData({
+        vocabulary_rating: 0,
+        grammar_rating: 0,
+        reading_rating: 0,
+        writing_rating: 0,
+        speaking_rating: 0,
+        attendance_rating: 0,
+        exam_1_score: "",
+        exam_2_score: "",
+        exam_3_score: "",
+        exam_4_score: "",
+        teacher_comments: "",
+      });
+      setWeekNumber(1);
     } catch (error: any) {
       console.error("Error saving report:", error);
       toast.error(error.message || "Failed to save report");
@@ -94,170 +121,222 @@ export const StudentWeeklyReportModal = ({ isOpen, onClose, student }: StudentWe
     }
   };
 
-  const RatingInput = ({ label, value, onChange }: any) => (
-    <div>
-      <Label>{label}</Label>
-      <div className="flex gap-2 mt-1">
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button
-            key={rating}
-            type="button"
-            onClick={() => onChange(rating)}
-            className={`w-10 h-10 rounded-full border-2 font-medium ${
-              value === rating
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-muted-foreground/30 hover:border-primary"
-            }`}
-          >
-            {rating}
-          </button>
-        ))}
-      </div>
-    </div>
+  const RatingCell = ({ skillName, value, onChange }: any) => (
+    <tr>
+      <td className="border border-gray-400 p-2 font-bold bg-gray-50">{skillName}</td>
+      {[1, 2, 3, 4, 5].map((rating) => (
+        <td 
+          key={rating} 
+          className="border border-gray-400 p-2 text-center cursor-pointer hover:bg-blue-50"
+          onClick={() => onChange(rating)}
+        >
+          {value === rating ? "●" : ""}
+        </td>
+      ))}
+    </tr>
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Student Weekly Report - {student?.full_name_en}</DialogTitle>
+          <DialogTitle className="text-center text-2xl font-bold">
+            MODERN EDUCATION LANGUAGE CENTER
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Auto-filled Course Info */}
-          <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-            <h3 className="font-semibold mb-2">Course Information (Auto-filled)</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Course Name</p>
-                <p className="font-medium">{student?.program}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Level</p>
-                <p className="font-medium">{student?.course_level || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Schedule</p>
-                <p className="font-medium">{student?.class_type}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Registration Date</p>
-                <p className="font-medium">{student?.registration_date || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Expiration Date</p>
-                <p className="font-medium">{student?.expiration_date || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Current Grade</p>
-                <p className="font-medium">{student?.total_grade ? `${student.total_grade}%` : "N/A"}</p>
-              </div>
+          {/* Student Info Grid - Exactly like PDF */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm border-2 border-black p-4">
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">NAME:</span>
+              <span className="flex-1 border-b border-black pb-1">{student?.full_name_en}</span>
+            </div>
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">WEEK:</span>
+              <Input
+                type="number"
+                min="1"
+                value={weekNumber}
+                onChange={(e) => setWeekNumber(parseInt(e.target.value))}
+                className="flex-1 h-7 border-0 border-b border-black rounded-none px-2"
+                required
+              />
+            </div>
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">PHONE NUMBER:</span>
+              <span className="flex-1 border-b border-black pb-1">{student?.phone1}</span>
+            </div>
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">LEVEL:</span>
+              <span className="flex-1 border-b border-black pb-1">{student?.course_level || "N/A"}</span>
+            </div>
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">DATE:</span>
+              <span className="flex-1 border-b border-black pb-1">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            <div className="flex items-baseline">
+              <span className="font-bold mr-2">TIME:</span>
+              <span className="flex-1 border-b border-black pb-1">{student?.class_type || "N/A"}</span>
             </div>
           </div>
 
-          {/* Week Number */}
-          <div>
-            <Label>Week Number</Label>
-            <Input
-              type="number"
-              min="1"
-              value={weekNumber}
-              onChange={(e) => setWeekNumber(parseInt(e.target.value))}
-              required
+          {/* Skills Rating Table - Exactly like PDF */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-center">NEEDS IMPROVEMENT</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-2 border-black">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="border border-gray-400 p-2 text-left font-bold">SCORE</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold w-[15%]">POOR</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold w-[15%]">BELOW AVERAGE</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold w-[15%]">AVERAGE</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold w-[15%]">VERY GOOD</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold w-[15%]">EXCELLENT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <RatingCell 
+                    skillName="VOCABULARY" 
+                    value={formData.vocabulary_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, vocabulary_rating: val })}
+                  />
+                  <RatingCell 
+                    skillName="GRAMMAR" 
+                    value={formData.grammar_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, grammar_rating: val })}
+                  />
+                  <RatingCell 
+                    skillName="READING" 
+                    value={formData.reading_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, reading_rating: val })}
+                  />
+                  <RatingCell 
+                    skillName="WRITING" 
+                    value={formData.writing_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, writing_rating: val })}
+                  />
+                  <RatingCell 
+                    skillName="SPEAKING" 
+                    value={formData.speaking_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, speaking_rating: val })}
+                  />
+                  <RatingCell 
+                    skillName="ATTENDANCE" 
+                    value={formData.attendance_rating} 
+                    onChange={(val: number) => setFormData({ ...formData, attendance_rating: val })}
+                  />
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Exam Scores - Exactly like PDF */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-center">Exam Scores</h2>
+            <table className="w-full border-2 border-black mb-3">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border border-gray-400 p-2 text-left font-bold">{student?.course_level || "Level"}</th>
+                  <th className="border border-gray-400 p-2 text-center font-bold">1st Exam</th>
+                  <th className="border border-gray-400 p-2 text-center font-bold">2nd Exam</th>
+                  <th className="border border-gray-400 p-2 text-center font-bold">3rd Exam</th>
+                  <th className="border border-gray-400 p-2 text-center font-bold">4th Exam</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-gray-400 p-2 font-bold">{student?.program || "Course"}</td>
+                  <td className="border border-gray-400 p-2 text-center">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.exam_1_score}
+                      onChange={(e) => setFormData({ ...formData, exam_1_score: e.target.value })}
+                      placeholder="- / 100"
+                      className="w-24 mx-auto text-center"
+                    />
+                  </td>
+                  <td className="border border-gray-400 p-2 text-center">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.exam_2_score}
+                      onChange={(e) => setFormData({ ...formData, exam_2_score: e.target.value })}
+                      placeholder="- / 100"
+                      className="w-24 mx-auto text-center"
+                    />
+                  </td>
+                  <td className="border border-gray-400 p-2 text-center">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.exam_3_score}
+                      onChange={(e) => setFormData({ ...formData, exam_3_score: e.target.value })}
+                      placeholder="- / 100"
+                      className="w-24 mx-auto text-center"
+                    />
+                  </td>
+                  <td className="border border-gray-400 p-2 text-center">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.exam_4_score}
+                      onChange={(e) => setFormData({ ...formData, exam_4_score: e.target.value })}
+                      placeholder="- / 100"
+                      className="w-24 mx-auto text-center"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-xs text-center text-gray-600">
+              100 - 90 = excellent | 89 - 85 = very good | 84 – 80 = good | 79 – 70 = fair | 69 below = failed
+            </p>
+          </div>
+
+          {/* Comments - Exactly like PDF */}
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">COMMENTS</h2>
+            <Textarea
+              value={formData.teacher_comments}
+              onChange={(e) => setFormData({ ...formData, teacher_comments: e.target.value })}
+              placeholder="Enter your comments here..."
+              rows={8}
+              className="border-2 border-black resize-none"
             />
           </div>
 
-          {/* Skill Ratings */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Skill Ratings (1-5)</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <RatingInput
-                label="Vocabulary"
-                value={formData.vocabulary_rating}
-                onChange={(val: number) => setFormData({ ...formData, vocabulary_rating: val })}
-              />
-              <RatingInput
-                label="Grammar"
-                value={formData.grammar_rating}
-                onChange={(val: number) => setFormData({ ...formData, grammar_rating: val })}
-              />
-              <RatingInput
-                label="Reading"
-                value={formData.reading_rating}
-                onChange={(val: number) => setFormData({ ...formData, reading_rating: val })}
-              />
-              <RatingInput
-                label="Writing"
-                value={formData.writing_rating}
-                onChange={(val: number) => setFormData({ ...formData, writing_rating: val })}
-              />
-              <RatingInput
-                label="Speaking"
-                value={formData.speaking_rating}
-                onChange={(val: number) => setFormData({ ...formData, speaking_rating: val })}
-              />
-              <RatingInput
-                label="Attendance"
-                value={formData.attendance_rating}
-                onChange={(val: number) => setFormData({ ...formData, attendance_rating: val })}
-              />
-            </div>
-          </div>
-
-          {/* Exam Scores */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Exam Scores</h3>
-            <div className="grid md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((num) => (
-                <div key={num}>
-                  <Label>Exam {num}</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={(formData as any)[`exam_${num}_score`]}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [`exam_${num}_score`]: e.target.value })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Comments and Notes */}
-          <div className="space-y-4">
-            <div>
-              <Label>Teacher Comments</Label>
-              <Textarea
-                value={formData.teacher_comments}
-                onChange={(e) => setFormData({ ...formData, teacher_comments: e.target.value })}
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label>Teacher Notes</Label>
-              <Textarea
-                value={formData.teacher_notes}
-                onChange={(e) => setFormData({ ...formData, teacher_notes: e.target.value })}
-                rows={3}
-              />
-            </div>
+          {/* Footer Messages - Like PDF */}
+          <div className="text-center space-y-2">
+            <p className="font-semibold">Keep up the good work!</p>
+            <p className="font-semibold">He needs to try harder to get better results.</p>
           </div>
 
           {/* Teacher Name */}
-          <div>
-            <Label>Teacher Name (Auto-filled)</Label>
-            <Input value={teacherName} disabled />
+          <div className="text-right">
+            <p className="text-sm">
+              <span className="font-bold">Prepared by:</span> {teacherName}
+            </p>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Report"}
+            <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? "Submitting..." : "Submit Report"}
             </Button>
           </div>
         </form>
