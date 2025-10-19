@@ -7,11 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft, Settings } from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { EditFormConfigModal } from "./EditFormConfigModal";
 import { InlineEditableField } from "./InlineEditableField";
@@ -28,7 +27,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showEditConfig, setShowEditConfig] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const { courses, branches, paymentMethods, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
@@ -232,25 +230,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
-              <Button
-                variant={isEditMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsEditMode(!isEditMode)}
-                className="ml-4"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                {isEditMode ? "Done Editing" : "Edit Form"}
-              </Button>
-            </div>
-            {isEditMode && (
-              <Alert className="mt-2">
-              <AlertDescription>
-                ✏️ Edit Mode Active — You can rename options in Steps 2–4 (Courses, Branches, Payment Methods). Step 1 inputs are not editable.
-              </AlertDescription>
-              </Alert>
-            )}
+            <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
           </DialogHeader>
 
         {configLoading ? (
@@ -387,55 +367,41 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <div className="space-y-2">
                       {categoryCourses.map((course) => (
                         <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                          {!isEditMode && (
-                            <Checkbox
-                              id={`course-${course.value}`}
-                              checked={formData.courses.includes(course.value)}
-                              onCheckedChange={() => toggleCourse(course.value)}
+                          <Checkbox
+                            id={`course-${course.value}`}
+                            checked={formData.courses.includes(course.value)}
+                            onCheckedChange={() => toggleCourse(course.value)}
+                          />
+                          <div className="flex-1">
+                            <InlineEditableField
+                              id={course.id}
+                              value={course.label}
+                              configType="course"
+                              configKey={course.value}
+                              isEditMode={true}
+                              onUpdate={refetch}
+                              onDelete={refetch}
                             />
-                          )}
-{isEditMode ? (
-  <div className="flex-1">
-    <InlineEditableField
-      id={course.id}
-      value={course.label}
-      configType="course"
-      configKey={course.value}
-      isEditMode={isEditMode}
-      onUpdate={refetch}
-      onDelete={refetch}
-    />
-  </div>
-) : (
-  <Label
-    htmlFor={`course-${course.value}`}
-    className="flex-1 cursor-pointer"
-  >
-    {course.label}
-  </Label>
-)}
+                          </div>
                         </div>
                       ))}
                     </div>
-                    {isEditMode && (
-                      <AddNewFieldButton
-                        configType="course"
-                        categoryName={category}
-                        onAdd={refetch}
-                      />
-                    )}
+                    <AddNewFieldButton
+                      configType="course"
+                      categoryName={category}
+                      onAdd={refetch}
+                    />
                   </div>
                   );
                 })}
 
-                {!isEditMode && formData.courses.length > 0 && (
+                {formData.courses.length > 0 && (
                   <div className="p-3 bg-primary/10 rounded-lg">
                     <p className="text-sm font-medium">Selected: {formData.courses.length} courses</p>
                   </div>
                 )}
 
-                {!isEditMode && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
@@ -445,7 +411,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
-                )}
               </div>
             )}
 
@@ -457,43 +422,34 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   {branches.map((branch) => (
                     <Card
                       key={branch.value}
-                      className={`p-4 transition-all ${
-                        !isEditMode && formData.branch === branch.value
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.branch === branch.value
                           ? "border-primary bg-primary/5"
-                          : isEditMode
-                          ? "hover:border-primary"
-                          : "hover:bg-muted/50 cursor-pointer"
+                          : ""
                       }`}
-                      onClick={() => !isEditMode && handleInputChange("branch", branch.value)}
+                      onClick={() => handleInputChange("branch", branch.value)}
                     >
-                    <p className="font-medium">
-                        {isEditMode ? (
-                          <InlineEditableField
-                            id={branch.id}
-                            value={branch.label}
-                            configType="branch"
-                            configKey={branch.value}
-                            isEditMode={isEditMode}
-                            onUpdate={refetch}
-                            onDelete={refetch}
-                          />
-                        ) : (
-                          branch.label
-                        )}
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={branch.id}
+                          value={branch.label}
+                          configType="branch"
+                          configKey={branch.value}
+                          isEditMode={true}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
                       </p>
                     </Card>
                   ))}
                 </div>
                 
-                {isEditMode && (
-                  <AddNewFieldButton
-                    configType="branch"
-                    onAdd={refetch}
-                  />
-                )}
+                <AddNewFieldButton
+                  configType="branch"
+                  onAdd={refetch}
+                />
 
-                {!isEditMode && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
@@ -503,7 +459,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
-                )}
               </div>
             )}
 
@@ -515,43 +470,34 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   {paymentMethods.map((method) => (
                     <Card
                       key={method.value}
-                      className={`p-4 transition-all ${
-                        !isEditMode && formData.paymentMethod === method.value
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.paymentMethod === method.value
                           ? "border-primary bg-primary/5"
-                          : isEditMode
-                          ? "hover:border-primary"
-                          : "hover:bg-muted/50 cursor-pointer"
+                          : ""
                       }`}
-                      onClick={() => !isEditMode && handleInputChange("paymentMethod", method.value)}
+                      onClick={() => handleInputChange("paymentMethod", method.value)}
                     >
-                    <p className="font-medium">
-                        {isEditMode ? (
-                          <InlineEditableField
-                            id={method.id}
-                            value={method.label}
-                            configType="payment_method"
-                            configKey={method.value}
-                            isEditMode={isEditMode}
-                            onUpdate={refetch}
-                            onDelete={refetch}
-                          />
-                        ) : (
-                          method.label
-                        )}
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={method.id}
+                          value={method.label}
+                          configType="payment_method"
+                          configKey={method.value}
+                          isEditMode={true}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
                       </p>
                     </Card>
                   ))}
                 </div>
 
-                {isEditMode && (
-                  <AddNewFieldButton
-                    configType="payment_method"
-                    onAdd={refetch}
-                  />
-                )}
+                <AddNewFieldButton
+                  configType="payment_method"
+                  onAdd={refetch}
+                />
 
-                {!isEditMode && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
@@ -560,7 +506,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       {loading ? "Creating..." : "Create Student"}
                     </Button>
                   </div>
-                )}
               </div>
             )}
           </div>
