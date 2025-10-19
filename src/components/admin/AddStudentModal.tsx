@@ -26,8 +26,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showEditConfig, setShowEditConfig] = useState(false);
-  const { courses, branches, paymentMethods, loading: configLoading, refetch } = useFormConfigurations();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const { courses, branches, paymentMethods, fieldLabels, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -225,12 +225,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
 
+  // Helper to get field label
+  const getFieldLabel = (key: string) => {
+    const field = fieldLabels.find(f => f.value === key);
+    return field || { id: '', label: key, value: key };
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? "Done Editing" : "Edit Form"}
+              </Button>
+            </div>
           </DialogHeader>
 
         {configLoading ? (
@@ -241,7 +256,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
             {step === 1 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullNameAr">Full Name (Arabic) *</Label>
+                  <Label htmlFor="fullNameAr">
+                    <InlineEditableField
+                      id={getFieldLabel('full_name_ar').id}
+                      value={getFieldLabel('full_name_ar').label}
+                      configType="field_label"
+                      configKey="full_name_ar"
+                      isEditMode={isEditMode}
+                      onUpdate={refetch}
+                      isLabel={true}
+                    />
+                    {" *"}
+                  </Label>
                   <Input
                     id="fullNameAr"
                     dir="rtl"
@@ -252,7 +278,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullNameEn">Full Name (English) *</Label>
+                  <Label htmlFor="fullNameEn">
+                    <InlineEditableField
+                      id={getFieldLabel('full_name_en').id}
+                      value={getFieldLabel('full_name_en').label}
+                      configType="field_label"
+                      configKey="full_name_en"
+                      isEditMode={isEditMode}
+                      onUpdate={refetch}
+                      isLabel={true}
+                    />
+                    {" *"}
+                  </Label>
                   <Input
                     id="fullNameEn"
                     placeholder="Full Name"
@@ -263,7 +300,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone1">Phone *</Label>
+                    <Label htmlFor="phone1">
+                      <InlineEditableField
+                        id={getFieldLabel('phone1').id}
+                        value={getFieldLabel('phone1').label}
+                        configType="field_label"
+                        configKey="phone1"
+                        isEditMode={isEditMode}
+                        onUpdate={refetch}
+                        isLabel={true}
+                      />
+                      {" *"}
+                    </Label>
                     <div className="flex gap-2">
                       <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
                         <SelectTrigger className="w-[140px]">
@@ -289,7 +337,17 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone2">Phone 2 (Optional)</Label>
+                    <Label htmlFor="phone2">
+                      <InlineEditableField
+                        id={getFieldLabel('phone2').id}
+                        value={getFieldLabel('phone2').label}
+                        configType="field_label"
+                        configKey="phone2"
+                        isEditMode={isEditMode}
+                        onUpdate={refetch}
+                        isLabel={true}
+                      />
+                    </Label>
                     <div className="flex gap-2">
                       <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
                         <SelectTrigger className="w-[140px]">
@@ -316,7 +374,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">
+                    <InlineEditableField
+                      id={getFieldLabel('email').id}
+                      value={getFieldLabel('email').label}
+                      configType="field_label"
+                      configKey="email"
+                      isEditMode={isEditMode}
+                      onUpdate={refetch}
+                      isLabel={true}
+                    />
+                    {" *"}
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -327,7 +396,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="id">National ID *</Label>
+                  <Label htmlFor="id">
+                    <InlineEditableField
+                      id={getFieldLabel('national_id').id}
+                      value={getFieldLabel('national_id').label}
+                      configType="field_label"
+                      configKey="national_id"
+                      isEditMode={isEditMode}
+                      onUpdate={refetch}
+                      isLabel={true}
+                    />
+                    {" *"}
+                  </Label>
                   <Input
                     id="id"
                     placeholder="ID Number"
@@ -337,7 +417,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
+                  <Label htmlFor="password">
+                    <InlineEditableField
+                      id={getFieldLabel('password').id}
+                      value={getFieldLabel('password').label}
+                      configType="field_label"
+                      configKey="password"
+                      isEditMode={isEditMode}
+                      onUpdate={refetch}
+                      isLabel={true}
+                    />
+                    {" *"}
+                  </Label>
                   <Input
                     id="password"
                     type="password"
@@ -379,7 +470,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                                 value={course.label}
                                 configType="course"
                                 configKey={course.value}
-                                isEditMode={true}
+                                isEditMode={isEditMode}
                                 onUpdate={refetch}
                                 onDelete={refetch}
                               />
@@ -389,11 +480,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                         </div>
                       ))}
                     </div>
-                    <AddNewFieldButton
-                      configType="course"
-                      categoryName={category}
-                      onAdd={refetch}
-                    />
+                    {isEditMode && (
+                      <AddNewFieldButton
+                        configType="course"
+                        categoryName={category}
+                        onAdd={refetch}
+                      />
+                    )}
                   </div>
                   );
                 })}
@@ -438,7 +531,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                           value={branch.label}
                           configType="branch"
                           configKey={branch.value}
-                          isEditMode={true}
+                          isEditMode={isEditMode}
                           onUpdate={refetch}
                           onDelete={refetch}
                         />
@@ -447,10 +540,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   ))}
                 </div>
                 
-                <AddNewFieldButton
-                  configType="branch"
-                  onAdd={refetch}
-                />
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="branch"
+                    onAdd={refetch}
+                  />
+                )}
 
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
@@ -486,7 +581,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                           value={method.label}
                           configType="payment_method"
                           configKey={method.value}
-                          isEditMode={true}
+                          isEditMode={isEditMode}
                           onUpdate={refetch}
                           onDelete={refetch}
                         />
@@ -495,10 +590,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   ))}
                 </div>
 
-                <AddNewFieldButton
-                  configType="payment_method"
-                  onAdd={refetch}
-                />
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="payment_method"
+                    onAdd={refetch}
+                  />
+                )}
 
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
@@ -515,12 +612,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         )}
       </DialogContent>
     </Dialog>
-
-    {/* Edit Form Config Modal */}
-    <EditFormConfigModal
-      open={showEditConfig}
-      onOpenChange={setShowEditConfig}
-    />
     </>
   );
 };

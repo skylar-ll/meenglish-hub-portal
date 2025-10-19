@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
+import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 const StudentSignUp = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { fieldLabels, loading: configLoading } = useFormConfigurations();
   const [formData, setFormData] = useState({
     fullNameAr: "",
     fullNameEn: "",
@@ -42,6 +44,12 @@ const StudentSignUp = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Helper to get field label
+  const getFieldLabel = (key: string) => {
+    const field = fieldLabels.find(f => f.value === key);
+    return field?.label || key;
   };
 
   const handleNext = async () => {
@@ -96,9 +104,12 @@ const StudentSignUp = () => {
 
         {/* Registration Form */}
         <Card className="p-8 animate-slide-up">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="fullNameAr">{t('student.fullNameAr')} *</Label>
+          {configLoading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="fullNameAr">{getFieldLabel('full_name_ar')} *</Label>
               <Input
                 id="fullNameAr"
                 dir="rtl"
@@ -109,7 +120,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullNameEn">{t('student.fullNameEn')} *</Label>
+              <Label htmlFor="fullNameEn">{getFieldLabel('full_name_en')} *</Label>
               <Input
                 id="fullNameEn"
                 placeholder="Full Name"
@@ -120,7 +131,7 @@ const StudentSignUp = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone1">{t('student.phone')} *</Label>
+                <Label htmlFor="phone1">{getFieldLabel('phone1')} *</Label>
                 <div className="flex gap-2">
                   <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
                     <SelectTrigger className="w-[140px]">
@@ -146,7 +157,7 @@ const StudentSignUp = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone2">{t('student.phoneSecondary')}</Label>
+                <Label htmlFor="phone2">{getFieldLabel('phone2')}</Label>
                 <div className="flex gap-2">
                   <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
                     <SelectTrigger className="w-[140px]">
@@ -173,7 +184,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t('student.email')} *</Label>
+              <Label htmlFor="email">{getFieldLabel('email')} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -184,7 +195,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="id">{t('student.nationalId')} *</Label>
+              <Label htmlFor="id">{getFieldLabel('national_id')} *</Label>
               <Input
                 id="id"
                 placeholder="ID Number"
@@ -194,7 +205,7 @@ const StudentSignUp = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password">{getFieldLabel('password')} *</Label>
               <Input
                 id="password"
                 type="password"
@@ -213,6 +224,7 @@ const StudentSignUp = () => {
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
+        )}
         </Card>
       </div>
     </div>
