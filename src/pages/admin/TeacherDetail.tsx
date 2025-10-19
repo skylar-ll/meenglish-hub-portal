@@ -65,11 +65,18 @@ const TeacherDetail = () => {
           .order("report_date", { ascending: false });
         setReports(reportsData || []);
 
-        // Fetch students assigned to this teacher
+        // Fetch students assigned to this teacher via junction table
+        const { data: studentLinks } = await supabase
+          .from("student_teachers")
+          .select("student_id")
+          .eq("teacher_id", teacherId);
+
+        const studentIds = studentLinks?.map(link => link.student_id) || [];
+        
         const { data: studentsData } = await supabase
           .from("students")
           .select("*")
-          .eq("teacher_id", teacherId)
+          .in("id", studentIds)
           .order("created_at", { ascending: false });
         setStudents(studentsData || []);
 

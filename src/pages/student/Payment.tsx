@@ -84,59 +84,81 @@ const Payment = () => {
       const totalCourseFee = pricingData?.price || (courseDuration * 500);
       const initialPayment = totalCourseFee * 0.5; // 50% at enrollment
 
-      // Determine teacher assignment based on courses
-      const courses = registration.courses || [];
-      const assignTeacher = (courses: string[]) => {
-        // Teacher IDs
-        const teachers = {
-          leo: 'baab3cea-6cb1-477a-bb71-d9fa15c508de',
-          lilly: 'ceb2bf55-50fb-415f-a398-acb3c5d5a669',
-          dorian: 'bdc5b2c6-483f-4d4f-b47b-ee01259371a8'
-        };
+      // Determine which teachers to assign based on courses selected
+      const assignedTeacherIds = new Set<string>();
+      const selectedCourses = registration.courses || [];
+      
+      // Fetch all teachers
+      const { data: teachersData } = await supabase
+        .from('teachers')
+        .select('id, full_name');
 
-        // Check for Dorian's courses first (most specific)
-        if (courses.some(c => ['level-10', 'level-11', 'level-12', 'arabic', 'french', 'chinese'].includes(c))) {
-          return teachers.dorian;
+      const teachers = teachersData || [];
+      const leoId = teachers.find(t => t.full_name.toLowerCase().includes('leo'))?.id;
+      const lillyId = teachers.find(t => t.full_name.toLowerCase().includes('lilly'))?.id;
+      const dorianId = teachers.find(t => t.full_name.toLowerCase().includes('dorian'))?.id;
+      const ayshaId = teachers.find(t => t.full_name.toLowerCase().includes('aysha'))?.id;
+
+      // Check each course and assign appropriate teachers
+      selectedCourses.forEach(course => {
+        const lowerCourse = course.toLowerCase();
+        const courseNum = parseInt(course.match(/\d+/)?.[0] || "0");
+        
+        // Leo: Courses 1-4
+        if ((courseNum >= 1 && courseNum <= 4) && leoId) assignedTeacherIds.add(leoId);
+        
+        // Lilly: Courses 5-9, Spanish, Italian
+        if (((courseNum >= 5 && courseNum <= 9) || lowerCourse.includes('spanish') || lowerCourse.includes('italian')) && lillyId) {
+          assignedTeacherIds.add(lillyId);
         }
         
-        // Check for Lilly's courses
-        if (courses.some(c => ['level-5', 'level-6', 'level-7', 'level-8', 'level-9', 'spanish', 'italian'].includes(c))) {
-          return teachers.lilly;
+        // Dorian: Courses 10-12, Arabic, French, Chinese
+        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('arabic') || lowerCourse.includes('french') || lowerCourse.includes('chinese')) && dorianId) {
+          assignedTeacherIds.add(dorianId);
         }
         
-        // Check for Leo's courses
-        if (courses.some(c => ['level-1', 'level-2', 'level-3', 'level-4'].includes(c))) {
-          return teachers.leo;
+        // Aysha: Courses 10-12, Speaking class
+        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('speaking')) && ayshaId) {
+          assignedTeacherIds.add(ayshaId);
         }
-        
-        // Default to Leo if no match
-        return teachers.leo;
-      };
+      });
 
-      const assignedTeacherId = assignTeacher(courses);
-
-      // Also save to students table for backward compatibility
-      const studentData: any = {
+      const studentPayload: any = {
         full_name_ar: registration.fullNameAr,
         full_name_en: registration.fullNameEn,
         phone1: registration.phone1,
         phone2: registration.phone2 || null,
         email: registration.email,
         national_id: registration.id,
-        program: registration.courses ? registration.courses.join(', ') : '',
-        class_type: registration.courses ? registration.courses.join(', ') : '',
+        program: selectedCourses.join(', '),
+        class_type: selectedCourses.join(', '),
         branch: registration.branch,
         payment_method: selectedMethod,
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         course_duration_months: courseDuration,
-        total_course_fee: totalCourseFee,
-        amount_paid: initialPayment,
-        amount_remaining: initialPayment,
-        teacher_id: assignedTeacherId,
+        total_course_fee: 0,
+        amount_paid: 0,
+        discount_percentage: 0,
       };
-      
-      await supabase.from("students").insert(studentData);
+
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .insert(studentPayload)
+        .select()
+        .single();
+
+      if (studentError) throw studentError;
+
+      // Insert teacher assignments
+      if (assignedTeacherIds.size > 0) {
+        const teacherAssignments = Array.from(assignedTeacherIds).map(teacherId => ({
+          student_id: studentData.id,
+          teacher_id: teacherId
+        }));
+
+        await supabase.from("student_teachers").insert(teacherAssignments);
+      }
 
       // Persist registration data for CoursePage
       const registrationData = {
