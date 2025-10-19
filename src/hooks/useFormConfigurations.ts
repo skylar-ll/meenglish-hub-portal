@@ -11,6 +11,7 @@ interface FormConfiguration {
 }
 
 interface CourseConfig {
+  id: string;
   value: string;
   label: string;
   category: string;
@@ -18,10 +19,10 @@ interface CourseConfig {
 
 export const useFormConfigurations = () => {
   const [courses, setCourses] = useState<CourseConfig[]>([]);
-  const [branches, setBranches] = useState<{ value: string; label: string }[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<{ value: string; label: string }[]>([]);
-  const [programs, setPrograms] = useState<{ value: string; label: string }[]>([]);
-  const [classTypes, setClassTypes] = useState<{ value: string; label: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; value: string; label: string }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; value: string; label: string }[]>([]);
+  const [programs, setPrograms] = useState<{ id: string; value: string; label: string }[]>([]);
+  const [classTypes, setClassTypes] = useState<{ id: string; value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConfigurations = async () => {
@@ -42,6 +43,7 @@ export const useFormConfigurations = () => {
         .map((c) => {
           const parsed = JSON.parse(c.config_value);
           return {
+            id: c.id,
             value: c.config_key,
             label: parsed.label,
             category: parsed.category,
@@ -51,19 +53,19 @@ export const useFormConfigurations = () => {
       // Parse simple configs
       const branchesData = configs
         .filter((c) => c.config_type === "branch")
-        .map((c) => ({ value: c.config_key, label: c.config_value }));
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
 
       const paymentMethodsData = configs
         .filter((c) => c.config_type === "payment_method")
-        .map((c) => ({ value: c.config_key, label: c.config_value }));
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
 
       const programsData = configs
         .filter((c) => c.config_type === "program")
-        .map((c) => ({ value: c.config_key, label: c.config_value }));
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
 
       const classTypesData = configs
         .filter((c) => c.config_type === "class_type")
-        .map((c) => ({ value: c.config_key, label: c.config_value }));
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
 
       setCourses(coursesData);
       setBranches(branchesData);

@@ -225,7 +225,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     }
     acc[course.category].push(course);
     return acc;
-  }, {} as Record<string, Array<{ value: string; label: string; category: string }>>);
+  }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string }>>);
 
   return (
     <>
@@ -385,40 +385,35 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
-                      {categoryCourses.map((course) => {
-                        // Find the config item to get the ID
-                        const configItem = courses.find(c => c.value === course.value);
-                        
-                        return (
-                          <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                            {!isEditMode && (
-                              <Checkbox
-                                id={`course-${course.value}`}
-                                checked={formData.courses.includes(course.value)}
-                                onCheckedChange={() => toggleCourse(course.value)}
+                      {categoryCourses.map((course) => (
+                        <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
+                          {!isEditMode && (
+                            <Checkbox
+                              id={`course-${course.value}`}
+                              checked={formData.courses.includes(course.value)}
+                              onCheckedChange={() => toggleCourse(course.value)}
+                            />
+                          )}
+                          <Label
+                            htmlFor={`course-${course.value}`}
+                            className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
+                          >
+                            {isEditMode ? (
+                              <InlineEditableField
+                                id={course.id}
+                                value={course.label}
+                                configType="course"
+                                configKey={course.value}
+                                isEditMode={isEditMode}
+                                onUpdate={refetch}
+                                onDelete={refetch}
                               />
+                            ) : (
+                              course.label
                             )}
-                            <Label
-                              htmlFor={`course-${course.value}`}
-                              className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
-                            >
-                              {isEditMode && configItem ? (
-                                <InlineEditableField
-                                  id={course.value}
-                                  value={course.label}
-                                  configType="course"
-                                  configKey={course.value}
-                                  isEditMode={isEditMode}
-                                  onUpdate={refetch}
-                                  onDelete={refetch}
-                                />
-                              ) : (
-                                course.label
-                              )}
-                            </Label>
-                          </div>
-                        );
-                      })}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
                     {isEditMode && (
                       <AddNewFieldButton
@@ -469,10 +464,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       }`}
                       onClick={() => !isEditMode && handleInputChange("branch", branch.value)}
                     >
-                      <p className="font-medium">
+                    <p className="font-medium">
                         {isEditMode ? (
                           <InlineEditableField
-                            id={branch.value}
+                            id={branch.id}
                             value={branch.label}
                             configType="branch"
                             configKey={branch.value}
@@ -527,10 +522,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       }`}
                       onClick={() => !isEditMode && handleInputChange("paymentMethod", method.value)}
                     >
-                      <p className="font-medium">
+                    <p className="font-medium">
                         {isEditMode ? (
                           <InlineEditableField
-                            id={method.value}
+                            id={method.id}
                             value={method.label}
                             configType="payment_method"
                             configKey={method.value}

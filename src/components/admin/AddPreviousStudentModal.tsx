@@ -204,7 +204,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     }
     acc[course.category].push(course);
     return acc;
-  }, {} as Record<string, Array<{ value: string; label: string; category: string }>>);
+  }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string }>>);
 
   return (
     <>
@@ -370,39 +370,35 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
-                      {categoryCourses.map((course) => {
-                        const configItem = courses.find(c => c.value === course.value);
-                        
-                        return (
-                          <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                            {!isEditMode && (
-                              <Checkbox
-                                id={`prev-course-${course.value}`}
-                                checked={formData.courses.includes(course.value)}
-                                onCheckedChange={() => toggleCourse(course.value)}
+                      {categoryCourses.map((course) => (
+                        <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
+                          {!isEditMode && (
+                            <Checkbox
+                              id={`prev-course-${course.value}`}
+                              checked={formData.courses.includes(course.value)}
+                              onCheckedChange={() => toggleCourse(course.value)}
+                            />
+                          )}
+                          <Label
+                            htmlFor={`prev-course-${course.value}`}
+                            className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
+                          >
+                            {isEditMode ? (
+                              <InlineEditableField
+                                id={course.id}
+                                value={course.label}
+                                configType="course"
+                                configKey={course.value}
+                                isEditMode={isEditMode}
+                                onUpdate={refetch}
+                                onDelete={refetch}
                               />
+                            ) : (
+                              course.label
                             )}
-                            <Label
-                              htmlFor={`prev-course-${course.value}`}
-                              className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
-                            >
-                              {isEditMode && configItem ? (
-                                <InlineEditableField
-                                  id={course.value}
-                                  value={course.label}
-                                  configType="course"
-                                  configKey={course.value}
-                                  isEditMode={isEditMode}
-                                  onUpdate={refetch}
-                                  onDelete={refetch}
-                                />
-                              ) : (
-                                course.label
-                              )}
-                            </Label>
-                          </div>
-                        );
-                      })}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
                     {isEditMode && (
                       <AddNewFieldButton
@@ -456,7 +452,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                       <p className="font-medium">
                         {isEditMode ? (
                           <InlineEditableField
-                            id={branch.value}
+                            id={branch.id}
                             value={branch.label}
                             configType="branch"
                             configKey={branch.value}
@@ -514,7 +510,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                       <p className="font-medium">
                         {isEditMode ? (
                           <InlineEditableField
-                            id={method.value}
+                            id={method.id}
                             value={method.label}
                             configType="payment_method"
                             configKey={method.value}
