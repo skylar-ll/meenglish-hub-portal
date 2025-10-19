@@ -41,9 +41,29 @@ export const InlineEditableField = ({
 
     setIsSaving(true);
     try {
+      let newConfigValue: string = editValue.trim();
+
+      if (configType === "course") {
+        // Preserve existing JSON structure (label + category)
+        const { data, error: fetchError } = await supabase
+          .from("form_configurations")
+          .select("config_value")
+          .eq("id", id)
+          .single();
+        if (fetchError) throw fetchError;
+
+        try {
+          const parsed = JSON.parse(data?.config_value || "{}");
+          newConfigValue = JSON.stringify({ ...parsed, label: editValue.trim() });
+        } catch {
+          // If parsing fails, fallback to a minimal JSON with default category
+          newConfigValue = JSON.stringify({ label: editValue.trim(), category: "General" });
+        }
+      }
+
       const { error } = await supabase
         .from("form_configurations")
-        .update({ config_value: editValue.trim() })
+        .update({ config_value: newConfigValue })
         .eq("id", id);
 
       if (error) throw error;
@@ -149,7 +169,15 @@ export const InlineEditableField = ({
   }
 
   return (
-    <div className="group flex items-center gap-2">
+    <div
+      className="group flex items-center gap-2 cursor-text"
+      onClick={() => setIsEditing(true)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") setIsEditing(true);
+      }}
+    >
       <span className={isLabel ? "font-medium" : ""}>{value}</span>
       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
         <Button
