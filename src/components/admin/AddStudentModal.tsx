@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { EditFormConfigModal } from "./EditFormConfigModal";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [showEditConfig, setShowEditConfig] = useState(false);
   const { courses, branches, paymentMethods, loading: configLoading } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
@@ -222,11 +224,22 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   }, {} as Record<string, Array<{ value: string; label: string; category: string }>>);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditConfig(true)}
+                className="ml-4"
+              >
+                Edit Form
+              </Button>
+            </div>
+          </DialogHeader>
 
         {configLoading ? (
           <div className="text-center py-8">Loading...</div>
@@ -467,5 +480,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Edit Form Config Modal */}
+    <EditFormConfigModal
+      open={showEditConfig}
+      onOpenChange={setShowEditConfig}
+    />
+    </>
   );
 };

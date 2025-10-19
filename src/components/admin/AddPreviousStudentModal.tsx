@@ -12,6 +12,7 @@ import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { studentSignupSchema } from "@/lib/validations";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { EditFormConfigModal } from "./EditFormConfigModal";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface AddPreviousStudentModalProps {
 const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPreviousStudentModalProps) => {
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
+  const [showEditConfig, setShowEditConfig] = useState(false);
   const { courses, branches, paymentMethods, loading: configLoading } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
@@ -201,11 +203,22 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   }, {} as Record<string, Array<{ value: string; label: string; category: string }>>);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 4</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 4</DialogTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditConfig(true)}
+                className="ml-4"
+              >
+                Edit Form
+              </Button>
+            </div>
+          </DialogHeader>
         
         {configLoading ? (
           <div className="text-center py-8">Loading...</div>
@@ -452,6 +465,13 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Edit Form Config Modal */}
+    <EditFormConfigModal
+      open={showEditConfig}
+      onOpenChange={setShowEditConfig}
+    />
+    </>
   );
 };
 
