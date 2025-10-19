@@ -8,6 +8,7 @@ interface FormConfiguration {
   config_value: string;
   display_order: number;
   is_active: boolean;
+  price: number;
 }
 
 interface CourseConfig {
@@ -15,6 +16,7 @@ interface CourseConfig {
   value: string;
   label: string;
   category: string;
+  price: number;
 }
 
 export const useFormConfigurations = () => {
@@ -47,6 +49,7 @@ export const useFormConfigurations = () => {
             value: c.config_key,
             label: parsed.label,
             category: parsed.category,
+            price: c.price || 0,
           };
         });
 

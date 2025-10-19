@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
@@ -14,28 +15,7 @@ const CourseSelection = () => {
   const { t } = useLanguage();
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const password = location.state?.password;
-
-  const allCourses = [
-    { value: "level-1", label: "Level 1 (Pre1) - مستوى اول", category: "English Program" },
-    { value: "level-2", label: "Level 2 (Pre2) - مستوى ثاني", category: "English Program" },
-    { value: "level-3", label: "Level 3 (Intro A) - مستوى ثالث", category: "English Program" },
-    { value: "level-4", label: "Level 4 (Intro B) - مستوى رابع", category: "English Program" },
-    { value: "level-5", label: "Level 5 (1A) - مستوى خامس", category: "English Program" },
-    { value: "level-6", label: "Level 6 (1B) - مستوى سادس", category: "English Program" },
-    { value: "level-7", label: "Level 7 (2A) - مستوى سابع", category: "English Program" },
-    { value: "level-8", label: "Level 8 (2B) - مستوى ثامن", category: "English Program" },
-    { value: "level-9", label: "Level 9 (3A) - مستوى تاسع", category: "English Program" },
-    { value: "level-10", label: "Level 10 (3B) - مستوى عاشر", category: "English Program" },
-    { value: "level-11", label: "Level 11 (IELTS 1 - STEP 1) - مستوى-11", category: "English Program" },
-    { value: "level-12", label: "Level 12 (IELTS 2 - STEP 2) - مستوى-12", category: "English Program" },
-    { value: "speaking", label: "Speaking Class", category: "Speaking Program" },
-    { value: "private", label: "1:1 Class - Private Class - كلاس فردي", category: "Private Class" },
-    { value: "french", label: "French Language - لغة فرنسية", category: "Other Languages" },
-    { value: "chinese", label: "Chinese Language - لغة صينية", category: "Other Languages" },
-    { value: "spanish", label: "Spanish Language - لغة اسبانية", category: "Other Languages" },
-    { value: "italian", label: "Italian Language - لغة ايطالية", category: "Other Languages" },
-    { value: "arabic", label: "Arabic for Non-Arabic Speakers - عربي لغير الناطقين بها", category: "Other Languages" },
-  ];
+  const { courses, loading } = useFormConfigurations();
 
   const toggleCourse = (courseValue: string) => {
     setSelectedCourses(prev => 
@@ -60,6 +40,15 @@ const CourseSelection = () => {
     navigate("/student/branch-selection", { state: { password } });
   };
 
+  // Group courses by category
+  const coursesByCategory = courses.reduce((acc, course) => {
+    if (!acc[course.category]) {
+      acc[course.category] = [];
+    }
+    acc[course.category].push(course);
+    return acc;
+  }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <div className="container max-w-2xl mx-auto py-8">
@@ -80,59 +69,66 @@ const CourseSelection = () => {
 
         {/* Course Selection Form */}
         <Card className="p-8 animate-slide-up">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <Label className="text-lg font-semibold">Select Your Courses (You can select multiple)</Label>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {["English Program", "Speaking Program", "Private Class", "Other Languages"].map(category => {
-                  const coursesInCategory = allCourses.filter(c => c.category === category);
-                  return (
-                    <div key={category} className="space-y-2">
-                      <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
-                      {coursesInCategory.map((course) => (
-                        <div key={course.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                          <Checkbox
-                            id={course.value}
-                            checked={selectedCourses.includes(course.value)}
-                            onCheckedChange={() => toggleCourse(course.value)}
-                          />
-                          <label
-                            htmlFor={course.value}
-                            className="text-sm flex-1 cursor-pointer"
-                          >
-                            {course.label}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-              {selectedCourses.length > 0 && (
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <p className="text-sm font-medium">Selected: {selectedCourses.length} course(s)</p>
+          {loading ? (
+            <div className="text-center py-8">Loading courses...</div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Your Courses (You can select multiple)</Label>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {Object.keys(coursesByCategory).map(category => {
+                    const coursesInCategory = coursesByCategory[category];
+                    return (
+                      <div key={category} className="space-y-2">
+                        <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
+                        {coursesInCategory.map((course) => (
+                          <div key={course.value} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center space-x-3 flex-1">
+                              <Checkbox
+                                id={course.value}
+                                checked={selectedCourses.includes(course.value)}
+                                onCheckedChange={() => toggleCourse(course.value)}
+                              />
+                              <label
+                                htmlFor={course.value}
+                                className="text-sm flex-1 cursor-pointer"
+                              >
+                                {course.label}
+                              </label>
+                            </div>
+                            <span className="text-sm font-semibold text-primary ml-4">${course.price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-
-            <div className="pt-4 space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold mb-2">{t('student.courseInfo')}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t('student.courseInfoDesc')}
-                </p>
+                {selectedCourses.length > 0 && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected: {selectedCourses.length} course(s)</p>
+                  </div>
+                )}
               </div>
 
-              <Button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                size="lg"
-              >
-                {t('student.next')}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="pt-4 space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold mb-2">{t('student.courseInfo')}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t('student.courseInfoDesc')}
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleNext}
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  size="lg"
+                >
+                  {t('student.next')}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       </div>
     </div>

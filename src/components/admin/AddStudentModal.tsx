@@ -223,7 +223,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     }
     acc[course.category].push(course);
     return acc;
-  }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string }>>);
+  }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
 
   return (
     <>
@@ -366,23 +366,26 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
                       {categoryCourses.map((course) => (
-                        <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                          <Checkbox
-                            id={`course-${course.value}`}
-                            checked={formData.courses.includes(course.value)}
-                            onCheckedChange={() => toggleCourse(course.value)}
-                          />
-                          <div className="flex-1">
-                            <InlineEditableField
-                              id={course.id}
-                              value={course.label}
-                              configType="course"
-                              configKey={course.value}
-                              isEditMode={true}
-                              onUpdate={refetch}
-                              onDelete={refetch}
+                        <div key={course.value} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
+                          <div className="flex items-center space-x-2 flex-1">
+                            <Checkbox
+                              id={`course-${course.value}`}
+                              checked={formData.courses.includes(course.value)}
+                              onCheckedChange={() => toggleCourse(course.value)}
                             />
+                            <div className="flex-1">
+                              <InlineEditableField
+                                id={course.id}
+                                value={course.label}
+                                configType="course"
+                                configKey={course.value}
+                                isEditMode={true}
+                                onUpdate={refetch}
+                                onDelete={refetch}
+                              />
+                            </div>
                           </div>
+                          <span className="text-sm font-semibold text-primary ml-4">${course.price.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>

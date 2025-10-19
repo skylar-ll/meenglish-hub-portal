@@ -9,7 +9,7 @@ import { ExportDataModal } from "@/components/admin/ExportDataModal";
 import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal";
 import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
 import { AddStudentModal } from "@/components/admin/AddStudentModal";
-import { EditFormConfigModal } from "@/components/admin/EditFormConfigModal";
+import { CoursesManagement } from "@/components/admin/CoursesManagement";
 import {
   Table,
   TableBody,
@@ -29,7 +29,6 @@ const AdminDashboard = () => {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showAddNewStudentModal, setShowAddNewStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showEditConfigModal, setShowEditConfigModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,15 +189,6 @@ const AdminDashboard = () => {
         <Card className="p-6 mb-6">
           <div className="flex flex-wrap gap-3 justify-center">
             <Button 
-              onClick={() => setShowEditConfigModal(true)}
-              variant="default"
-              className="gap-2 bg-gradient-to-r from-accent to-primary"
-              size="lg"
-            >
-              <TrendingUp className="w-5 h-5" />
-              Edit Form Details
-            </Button>
-            <Button 
               onClick={() => setShowAddNewStudentModal(true)}
               variant="default"
               className="gap-2 bg-gradient-to-r from-primary to-secondary"
@@ -240,9 +230,10 @@ const AdminDashboard = () => {
         {/* Main Content Tabs */}
         <Card className="p-6">
           <Tabs defaultValue="students">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsList className="grid w-full grid-cols-6 mb-6">
               <TabsTrigger value="students">{t('admin.studentsInfo')}</TabsTrigger>
               <TabsTrigger value="teachers">{t('admin.teachersInfo')}</TabsTrigger>
+              <TabsTrigger value="courses">Courses</TabsTrigger>
               <TabsTrigger value="payments">{t('student.paymentMethod')}</TabsTrigger>
               <TabsTrigger value="analytics">{t('admin.analytics')}</TabsTrigger>
               <TabsTrigger value="reports">{t('admin.reports')}</TabsTrigger>
@@ -339,6 +330,11 @@ const AdminDashboard = () => {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            {/* Courses Tab */}
+            <TabsContent value="courses" className="space-y-4">
+              <CoursesManagement />
             </TabsContent>
 
             {/* Payments Tab */}
@@ -482,12 +478,6 @@ const AdminDashboard = () => {
       <AttendanceRecordsModal
         isOpen={showAttendanceModal}
         onClose={() => setShowAttendanceModal(false)}
-      />
-
-      {/* Edit Form Config Modal */}
-      <EditFormConfigModal
-        open={showEditConfigModal}
-        onOpenChange={setShowEditConfigModal}
       />
     </div>
   );
