@@ -486,6 +486,7 @@ export type Database = {
         Row: {
           branch: string
           class_type: string
+          course_duration_months: number | null
           course_level: string | null
           created_at: string
           email: string
@@ -501,6 +502,7 @@ export type Database = {
           program: string
           registration_date: string | null
           stop_postpone_dates: string[] | null
+          student_id: string | null
           subscription_status: string | null
           teacher_id: string | null
           total_grade: number | null
@@ -509,6 +511,7 @@ export type Database = {
         Insert: {
           branch: string
           class_type: string
+          course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
           email: string
@@ -524,6 +527,7 @@ export type Database = {
           program: string
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
+          student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
           total_grade?: number | null
@@ -532,6 +536,7 @@ export type Database = {
         Update: {
           branch?: string
           class_type?: string
+          course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
           email?: string
@@ -547,6 +552,7 @@ export type Database = {
           program?: string
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
+          student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
           total_grade?: number | null
@@ -654,6 +660,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_student_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

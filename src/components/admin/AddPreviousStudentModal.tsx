@@ -26,7 +26,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
-  const { courses, branches, paymentMethods, fieldLabels, loading: configLoading, refetch } = useFormConfigurations();
+  const { courses, branches, paymentMethods, fieldLabels, courseDurations, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -39,6 +39,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     courses: [] as string[],
     branch: "",
     paymentMethod: "",
+    courseDuration: "",
+    customDuration: "",
     countryCode1: "+966",
     countryCode2: "+966",
   });
@@ -89,6 +91,12 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         return;
       }
       setStep(4);
+    } else if (step === 4) {
+      if (!formData.courseDuration && !formData.customDuration) {
+        toast.error("Please select or enter a course duration");
+        return;
+      }
+      setStep(5);
     }
   };
 
@@ -124,6 +132,10 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     }
 
     try {
+      const durationMonths = formData.customDuration 
+        ? parseInt(formData.customDuration) 
+        : parseInt(formData.courseDuration);
+
       const studentData: any = {
         full_name_ar: formData.fullNameAr,
         full_name_en: formData.fullNameEn,
@@ -137,6 +149,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         payment_method: formData.paymentMethod,
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        course_duration_months: durationMonths,
       };
 
       const { data: insertedStudent, error } = await supabase
@@ -186,6 +199,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         courses: [],
         branch: "",
         paymentMethod: "",
+        courseDuration: "",
+        customDuration: "",
         countryCode1: "+966",
         countryCode2: "+966",
       });
@@ -216,7 +231,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 4</DialogTitle>
+              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 5</DialogTitle>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
@@ -534,8 +549,72 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
               </div>
             )}
 
-            {/* Step 4: Payment Method */}
+            {/* Step 4: Course Duration */}
             {step === 4 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Course Duration</Label>
+                <div className="grid gap-3">
+                  {courseDurations.map((duration) => (
+                    <Card
+                      key={duration.value}
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.courseDuration === duration.value && !formData.customDuration
+                          ? "border-primary bg-primary/5"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setFormData({...formData, courseDuration: duration.value, customDuration: ""});
+                      }}
+                    >
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={duration.id}
+                          value={duration.label}
+                          configType="course_duration"
+                          configKey={duration.value}
+                          isEditMode={isEditMode}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="course_duration"
+                    onAdd={refetch}
+                  />
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="customDuration">Or Enter Custom Duration (Months)</Label>
+                  <Input
+                    id="customDuration"
+                    type="number"
+                    min="1"
+                    placeholder="Enter number of months"
+                    value={formData.customDuration}
+                    onChange={(e) => setFormData({...formData, customDuration: e.target.value, courseDuration: ""})}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    {t('student.back')}
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    {t('student.next')}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Payment Method */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">{t('addPrevStudent.selectPaymentMethod')}</Label>
                 <div className="grid gap-3">
@@ -572,7 +651,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {t('student.back')}
                     </Button>

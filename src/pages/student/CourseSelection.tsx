@@ -37,7 +37,7 @@ const CourseSelection = () => {
       courses: selectedCourses,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(courseData));
-    navigate("/student/branch-selection", { state: { password } });
+    navigate("/student/duration-selection", { state: { password } });
   };
 
   // Group courses by category

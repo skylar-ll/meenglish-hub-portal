@@ -27,7 +27,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const { courses, branches, paymentMethods, fieldLabels, loading: configLoading, refetch } = useFormConfigurations();
+  const { courses, branches, paymentMethods, fieldLabels, courseDurations, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -40,6 +40,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     courses: [] as string[],
     branch: "",
     paymentMethod: "",
+    courseDuration: "",
+    customDuration: "",
     countryCode1: "+966",
     countryCode2: "+966",
   });
@@ -90,6 +92,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         return;
       }
       setStep(4);
+    } else if (step === 4) {
+      if (!formData.courseDuration && !formData.customDuration) {
+        toast.error("Please select or enter a course duration");
+        return;
+      }
+      setStep(5);
     }
   };
 
@@ -145,6 +153,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       }
 
       // Create student record
+      const durationMonths = formData.customDuration 
+        ? parseInt(formData.customDuration) 
+        : parseInt(formData.courseDuration);
+
       const { error: studentError } = await supabase
         .from("students")
         .insert({
@@ -160,6 +172,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           class_type: formData.courses.join(', '),
           payment_method: formData.paymentMethod,
           subscription_status: "active",
+          course_duration_months: durationMonths,
         });
 
       if (studentError) {
@@ -197,6 +210,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         courses: [],
         branch: "",
         paymentMethod: "",
+        courseDuration: "",
+        customDuration: "",
         countryCode1: "+966",
         countryCode2: "+966",
       });
@@ -237,7 +252,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
+              <DialogTitle>Add New Student - Step {step} of 5</DialogTitle>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
@@ -560,8 +575,76 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 4: Payment Method */}
+            {/* Step 4: Course Duration */}
             {step === 4 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Course Duration</Label>
+                <div className="grid gap-3">
+                  {courseDurations.map((duration) => (
+                    <Card
+                      key={duration.value}
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.courseDuration === duration.value && !formData.customDuration
+                          ? "border-primary bg-primary/5"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        handleInputChange("courseDuration", duration.value);
+                        handleInputChange("customDuration", "");
+                      }}
+                    >
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={duration.id}
+                          value={duration.label}
+                          configType="course_duration"
+                          configKey={duration.value}
+                          isEditMode={isEditMode}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="course_duration"
+                    onAdd={refetch}
+                  />
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="customDuration">Or Enter Custom Duration (Months)</Label>
+                  <Input
+                    id="customDuration"
+                    type="number"
+                    min="1"
+                    placeholder="Enter number of months"
+                    value={formData.customDuration}
+                    onChange={(e) => {
+                      handleInputChange("customDuration", e.target.value);
+                      handleInputChange("courseDuration", "");
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Payment Method */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Payment Method</Label>
                 <div className="grid gap-3">
@@ -598,7 +681,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>

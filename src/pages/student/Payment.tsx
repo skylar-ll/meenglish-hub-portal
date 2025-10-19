@@ -87,6 +87,7 @@ const Payment = () => {
         payment_method: selectedMethod,
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        course_duration_months: registration.courseDurationMonths || null,
       };
       
       await supabase.from("students").insert(studentData);
