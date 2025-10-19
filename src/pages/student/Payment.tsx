@@ -73,6 +73,17 @@ const Payment = () => {
 
       if (profileError) throw profileError;
 
+      // Get course pricing to calculate initial payment
+      const courseDuration = registration.courseDurationMonths || 1;
+      const { data: pricingData } = await supabase
+        .from("course_pricing")
+        .select("price")
+        .eq("duration_months", courseDuration)
+        .single();
+
+      const totalCourseFee = pricingData?.price || (courseDuration * 500);
+      const initialPayment = totalCourseFee * 0.5; // 50% at enrollment
+
       // Also save to students table for backward compatibility
       const studentData: any = {
         full_name_ar: registration.fullNameAr,
@@ -87,7 +98,10 @@ const Payment = () => {
         payment_method: selectedMethod,
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        course_duration_months: registration.courseDurationMonths || null,
+        course_duration_months: courseDuration,
+        total_course_fee: totalCourseFee,
+        amount_paid: initialPayment,
+        amount_remaining: initialPayment,
       };
       
       await supabase.from("students").insert(studentData);
