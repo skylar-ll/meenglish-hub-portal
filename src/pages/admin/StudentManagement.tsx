@@ -39,8 +39,8 @@ const StudentManagement = () => {
   }, []);
 
   const checkAdminAccess = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate("/admin/login");
       return;
     }
@@ -48,12 +48,13 @@ const StudentManagement = () => {
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
-      .single();
+      .eq("user_id", session.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
 
-    if (roleData?.role !== "admin") {
+    if (!roleData) {
       toast.error("Access denied");
-      navigate("/");
+      navigate("/admin/login");
     }
   };
 
