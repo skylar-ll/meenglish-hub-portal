@@ -246,9 +246,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
             </div>
             {isEditMode && (
               <Alert className="mt-2">
-                <AlertDescription>
-                  ✏️ Edit Mode Active - Click on any field to edit. Changes save automatically and apply to all forms.
-                </AlertDescription>
+              <AlertDescription>
+                ✏️ Edit Mode Active — You can rename options in Steps 2–4 (Courses, Branches, Payment Methods). Step 1 inputs are not editable.
+              </AlertDescription>
               </Alert>
             )}
           </DialogHeader>
