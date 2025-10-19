@@ -63,7 +63,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       ...prev,
       courses: prev.courses.includes(courseValue)
         ? prev.courses.filter(c => c !== courseValue)
-        : [...prev, courseValue]
+        : [...prev.courses, courseValue]
     }));
   };
 

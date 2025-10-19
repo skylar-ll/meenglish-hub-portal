@@ -480,8 +480,8 @@ const AdminDashboard = () => {
 
       {/* Attendance Records Modal */}
       <AttendanceRecordsModal
-        open={showAttendanceModal}
-        onOpenChange={setShowAttendanceModal}
+        isOpen={showAttendanceModal}
+        onClose={() => setShowAttendanceModal(false)}
       />
 
       {/* Edit Form Config Modal */}
