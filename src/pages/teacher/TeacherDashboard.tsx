@@ -178,6 +178,13 @@ const TeacherDashboard = () => {
             <FileText className="w-6 h-6" />
             <span>{t('teacher.viewQuizzes')}</span>
           </Button>
+          <Button 
+            onClick={() => navigate("/teacher/students")}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+          >
+            <Users className="w-6 h-6" />
+            <span>View All Students</span>
+          </Button>
         </div>
 
         {/* Students List */}

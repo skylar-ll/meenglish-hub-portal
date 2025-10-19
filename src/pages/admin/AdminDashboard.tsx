@@ -224,6 +224,15 @@ const AdminDashboard = () => {
               <TrendingUp className="w-5 h-5" />
               {t('admin.exportData')}
             </Button>
+            <Button 
+              onClick={() => navigate("/admin/students")}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-accent to-primary"
+              size="lg"
+            >
+              <Users className="w-5 h-5" />
+              Manage Payments
+            </Button>
           </div>
         </Card>
 

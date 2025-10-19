@@ -53,6 +53,30 @@ export type Database = {
         }
         Relationships: []
       }
+      course_pricing: {
+        Row: {
+          created_at: string | null
+          duration_months: number
+          id: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_months: number
+          id?: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_months?: number
+          id?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       form_configurations: {
         Row: {
           config_key: string
@@ -91,11 +115,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          amount_paid: number | null
+          amount_remaining: number | null
           branch: string | null
           class_type: string | null
           course_level: string | null
           courses_assigned: string | null
           created_at: string
+          discount_percentage: number | null
           full_name_ar: string | null
           full_name_en: string | null
           id: string
@@ -107,14 +134,18 @@ export type Database = {
           program: string | null
           student_count: number | null
           subscription_status: string | null
+          total_course_fee: number | null
           updated_at: string
         }
         Insert: {
+          amount_paid?: number | null
+          amount_remaining?: number | null
           branch?: string | null
           class_type?: string | null
           course_level?: string | null
           courses_assigned?: string | null
           created_at?: string
+          discount_percentage?: number | null
           full_name_ar?: string | null
           full_name_en?: string | null
           id: string
@@ -126,14 +157,18 @@ export type Database = {
           program?: string | null
           student_count?: number | null
           subscription_status?: string | null
+          total_course_fee?: number | null
           updated_at?: string
         }
         Update: {
+          amount_paid?: number | null
+          amount_remaining?: number | null
           branch?: string | null
           class_type?: string | null
           course_level?: string | null
           courses_assigned?: string | null
           created_at?: string
+          discount_percentage?: number | null
           full_name_ar?: string | null
           full_name_en?: string | null
           id?: string
@@ -145,6 +180,7 @@ export type Database = {
           program?: string | null
           student_count?: number | null
           subscription_status?: string | null
+          total_course_fee?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -484,11 +520,14 @@ export type Database = {
       }
       students: {
         Row: {
+          amount_paid: number | null
+          amount_remaining: number | null
           branch: string
           class_type: string
           course_duration_months: number | null
           course_level: string | null
           created_at: string
+          discount_percentage: number | null
           email: string
           expiration_date: string | null
           full_name_ar: string
@@ -505,15 +544,19 @@ export type Database = {
           student_id: string | null
           subscription_status: string | null
           teacher_id: string | null
+          total_course_fee: number | null
           total_grade: number | null
           updated_at: string
         }
         Insert: {
+          amount_paid?: number | null
+          amount_remaining?: number | null
           branch: string
           class_type: string
           course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
+          discount_percentage?: number | null
           email: string
           expiration_date?: string | null
           full_name_ar: string
@@ -530,15 +573,19 @@ export type Database = {
           student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
+          total_course_fee?: number | null
           total_grade?: number | null
           updated_at?: string
         }
         Update: {
+          amount_paid?: number | null
+          amount_remaining?: number | null
           branch?: string
           class_type?: string
           course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
+          discount_percentage?: number | null
           email?: string
           expiration_date?: string | null
           full_name_ar?: string
@@ -555,6 +602,7 @@ export type Database = {
           student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
+          total_course_fee?: number | null
           total_grade?: number | null
           updated_at?: string
         }

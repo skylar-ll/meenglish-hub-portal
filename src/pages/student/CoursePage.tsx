@@ -232,6 +232,14 @@ const CoursePage = () => {
               <FileText className="w-4 h-4 mr-2" />
               Weekly Reports
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/student/payments")}
+              size="sm"
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Payments
+            </Button>
           </div>
         </div>
       </div>

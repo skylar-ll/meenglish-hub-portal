@@ -34,9 +34,14 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDetail from "./pages/admin/TeacherDetail";
 import AdminStudentReports from "./pages/admin/StudentReports";
+import StudentManagement from "./pages/admin/StudentManagement";
 
 // Student Reports
 import StudentReports from "./pages/student/StudentReports";
+import StudentPayments from "./pages/student/StudentPayments";
+
+// Teacher Features
+import AssignedStudents from "./pages/teacher/AssignedStudents";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +68,7 @@ const App = () => (
           <Route path="/student/quizzes" element={<StudentQuizzes />} />
           <Route path="/student/quiz/:quizId" element={<TakeQuiz />} />
           <Route path="/student/notes" element={<StudentNotes />} />
+          <Route path="/student/payments" element={<StudentPayments />} />
           
           {/* Teacher Portal Routes */}
           <Route path="/teacher/login" element={<TeacherLogin />} />
@@ -70,12 +76,14 @@ const App = () => (
           <Route path="/teacher/quizzes" element={<TeacherQuizzes />} />
           <Route path="/teacher/quizzes/:quizId" element={<QuizAttempts />} />
           <Route path="/teacher/quizzes/:quizId/attempts/:attemptId" element={<QuizAttemptDetail />} />
+          <Route path="/teacher/students" element={<AssignedStudents />} />
           
           {/* Admin Portal Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/teacher/:teacherId" element={<TeacherDetail />} />
           <Route path="/admin/reports" element={<AdminStudentReports />} />
+          <Route path="/admin/students" element={<StudentManagement />} />
           
           {/* Student Reports */}
           <Route path="/student/reports" element={<StudentReports />} />
