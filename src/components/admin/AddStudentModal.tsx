@@ -394,24 +394,26 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                               onCheckedChange={() => toggleCourse(course.value)}
                             />
                           )}
-                          <Label
-                            htmlFor={`course-${course.value}`}
-                            className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
-                          >
-                            {isEditMode ? (
-                              <InlineEditableField
-                                id={course.id}
-                                value={course.label}
-                                configType="course"
-                                configKey={course.value}
-                                isEditMode={isEditMode}
-                                onUpdate={refetch}
-                                onDelete={refetch}
-                              />
-                            ) : (
-                              course.label
-                            )}
-                          </Label>
+{isEditMode ? (
+  <div className="flex-1">
+    <InlineEditableField
+      id={course.id}
+      value={course.label}
+      configType="course"
+      configKey={course.value}
+      isEditMode={isEditMode}
+      onUpdate={refetch}
+      onDelete={refetch}
+    />
+  </div>
+) : (
+  <Label
+    htmlFor={`course-${course.value}`}
+    className="flex-1 cursor-pointer"
+  >
+    {course.label}
+  </Label>
+)}
                         </div>
                       ))}
                     </div>

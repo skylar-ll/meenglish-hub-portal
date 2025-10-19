@@ -171,11 +171,17 @@ export const InlineEditableField = ({
   return (
     <div
       className="group flex items-center gap-2 cursor-text"
-      onClick={() => setIsEditing(true)}
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+      }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "Enter") setIsEditing(true);
+        if (e.key === "Enter") {
+          e.stopPropagation();
+          setIsEditing(true);
+        }
       }}
     >
       <span className={isLabel ? "font-medium" : ""}>{value}</span>
