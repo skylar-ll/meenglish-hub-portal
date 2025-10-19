@@ -341,19 +341,9 @@ const AdminDashboard = () => {
                       s.teacherIds?.includes(teacher.id)
                     );
                     
-                    // Define courses for each teacher based on their name
-                    const teacherName = teacher.full_name.toLowerCase();
-                    let assignedCourses: string[] = [];
-                    
-                    if (teacherName.includes('leo')) {
-                      assignedCourses = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
-                    } else if (teacherName.includes('lilly')) {
-                      assignedCourses = ['Level 5', 'Level 6', 'Level 7', 'Level 8', 'Level 9', 'Spanish', 'Italian'];
-                    } else if (teacherName.includes('dorian')) {
-                      assignedCourses = ['Level 10', 'Level 11', 'Level 12', 'Arabic', 'French', 'Chinese'];
-                    } else if (teacherName.includes('aysha')) {
-                      assignedCourses = ['Level 10', 'Level 11', 'Level 12', 'Speaking Classes'];
-                    }
+                    // Get courses from the courses_assigned field (or empty string if null)
+                    const coursesString = teacher.courses_assigned || '';
+                    const assignedCourses = coursesString ? coursesString.split(',').map(c => c.trim()).filter(c => c) : [];
                     
                     return (
                       <Card 
