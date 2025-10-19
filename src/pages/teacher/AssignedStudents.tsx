@@ -115,8 +115,8 @@ const AssignedStudents = () => {
                 <TableBody>
                   {students.map((student) => (
                     <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.student_id}</TableCell>
-                      <TableCell>{student.full_name_en}</TableCell>
+                      <TableCell className="font-medium text-primary">{student.student_id || "N/A"}</TableCell>
+                      <TableCell className="font-medium">{student.full_name_en}</TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.program}</TableCell>
                       <TableCell>{student.course_duration_months} months</TableCell>

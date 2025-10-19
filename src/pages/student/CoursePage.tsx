@@ -126,6 +126,7 @@ const CoursePage = () => {
               classType: student.class_type,
               branch: student.branch,
               courseLevel: student.course_level,
+              studentId: student.student_id,
             };
             sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
             setCourseData(registrationData);
@@ -257,6 +258,7 @@ const CoursePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h2 className="text-2xl font-bold mb-1">{courseData.fullNameEn}</h2>
+              <p className="text-sm text-primary font-medium mb-2">Student ID: {courseData.studentId || "N/A"}</p>
               <p className="text-lg text-muted-foreground mb-4" dir="rtl">
                 {courseData.fullNameAr}
               </p>
