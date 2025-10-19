@@ -23,6 +23,7 @@ const TeacherDashboard = () => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teacherName, setTeacherName] = useState<string>("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -57,22 +58,45 @@ const TeacherDashboard = () => {
         return;
       }
 
-      // Fetch teacher record to get teacher's ID
+      // Fetch teacher record to get teacher's name
       const { data: teacherData } = await supabase
         .from("teachers")
-        .select("id")
+        .select("id, full_name, email")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
 
       if (teacherData) {
-        // Fetch students assigned to this teacher
-        const { data: studentsData } = await supabase
-          .from("students")
-          .select("*")
-          .eq("teacher_id", teacherData.id)
-          .order("created_at", { ascending: false });
+        setTeacherName(teacherData.full_name);
+
+        // Fetch students assigned to this teacher via junction table
+        const { data: assignedStudents } = await supabase
+          .from("student_teachers")
+          .select(`
+            student_id,
+            students (
+              id,
+              full_name_en,
+              full_name_ar,
+              branch,
+              program,
+              class_type,
+              course_level,
+              total_grade,
+              email
+            )
+          `)
+          .eq("teacher_id", teacherData.id);
+
+        // Extract student data and add the courses they're taking from this teacher
+        const studentsData = assignedStudents?.map((item: any) => ({
+          ...item.students,
+          courses_with_teacher: item.students.program || item.students.class_type
+        })) || [];
         
-        setStudents(studentsData || []);
+        setStudents(studentsData);
+      } else {
+        // If no teacher record, use email as name
+        setTeacherName(session.user.email?.split('@')[0] || "Teacher");
       }
       
       setLoading(false);
@@ -120,7 +144,7 @@ const TeacherDashboard = () => {
               {t('teacher.backHome')}
             </Button>
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
-              {t('teacher.dashboard')}
+              {teacherName ? `${teacherName}'s Dashboard` : t('teacher.dashboard')}
             </h1>
           </div>
           <Button variant="outline" onClick={handleLogout}>
@@ -219,8 +243,8 @@ const TeacherDashboard = () => {
 
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">{t('teacher.course')}</p>
-                      <p className="font-medium">{student.program}</p>
+                      <p className="text-muted-foreground">Courses with {teacherName}</p>
+                      <p className="font-medium">{student.courses_with_teacher || student.program || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Level</p>
