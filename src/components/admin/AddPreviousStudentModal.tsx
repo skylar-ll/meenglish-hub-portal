@@ -136,6 +136,35 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         ? parseInt(formData.customDuration) 
         : parseInt(formData.courseDuration);
 
+      // Determine teacher assignment based on courses
+      const assignTeacher = (courses: string[]) => {
+        const teachers = {
+          leo: 'baab3cea-6cb1-477a-bb71-d9fa15c508de',
+          lilly: 'ceb2bf55-50fb-415f-a398-acb3c5d5a669',
+          dorian: 'bdc5b2c6-483f-4d4f-b47b-ee01259371a8'
+        };
+
+        // Check for Dorian's courses first (most specific)
+        if (courses.some(c => ['level-10', 'level-11', 'level-12', 'arabic', 'french', 'chinese'].includes(c))) {
+          return teachers.dorian;
+        }
+        
+        // Check for Lilly's courses
+        if (courses.some(c => ['level-5', 'level-6', 'level-7', 'level-8', 'level-9', 'spanish', 'italian'].includes(c))) {
+          return teachers.lilly;
+        }
+        
+        // Check for Leo's courses
+        if (courses.some(c => ['level-1', 'level-2', 'level-3', 'level-4'].includes(c))) {
+          return teachers.leo;
+        }
+        
+        // Default to Leo if no match
+        return teachers.leo;
+      };
+
+      const assignedTeacherId = assignTeacher(formData.courses);
+
       const studentData: any = {
         full_name_ar: formData.fullNameAr,
         full_name_en: formData.fullNameEn,
@@ -150,6 +179,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         course_duration_months: durationMonths,
+        teacher_id: assignedTeacherId,
       };
 
       const { data: insertedStudent, error } = await supabase

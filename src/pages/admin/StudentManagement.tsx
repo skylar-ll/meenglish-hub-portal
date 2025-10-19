@@ -4,11 +4,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Edit, Trash2, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface Teacher {
+  id: string;
+  full_name: string;
+}
 
 interface Student {
   id: string;
@@ -21,21 +27,25 @@ interface Student {
   amount_remaining: number;
   discount_percentage: number;
   teacher_id: string | null;
+  program: string;
 }
 
 const StudentManagement = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState({
     amount_paid: 0,
     discount_percentage: 0,
+    teacher_id: null as string | null,
   });
 
   useEffect(() => {
     checkAdminAccess();
     fetchStudents();
+    fetchTeachers();
   }, []);
 
   const checkAdminAccess = async () => {
@@ -74,11 +84,26 @@ const StudentManagement = () => {
     }
   };
 
+  const fetchTeachers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("teachers")
+        .select("id, full_name")
+        .order("full_name");
+
+      if (error) throw error;
+      setTeachers(data || []);
+    } catch (error: any) {
+      toast.error("Failed to load teachers");
+    }
+  };
+
   const handleEdit = (student: Student) => {
     setEditingStudent(student);
     setFormData({
       amount_paid: student.amount_paid,
       discount_percentage: student.discount_percentage,
+      teacher_id: student.teacher_id,
     });
   };
 
@@ -91,6 +116,7 @@ const StudentManagement = () => {
         .update({
           amount_paid: formData.amount_paid,
           discount_percentage: formData.discount_percentage,
+          teacher_id: formData.teacher_id,
         })
         .eq("id", editingStudent.id);
 
@@ -102,6 +128,12 @@ const StudentManagement = () => {
     } catch (error: any) {
       toast.error("Failed to update student");
     }
+  };
+
+  const getTeacherName = (teacherId: string | null) => {
+    if (!teacherId) return "Not Assigned";
+    const teacher = teachers.find(t => t.id === teacherId);
+    return teacher?.full_name || "Unknown";
   };
 
   const handleDelete = async (id: string) => {
@@ -149,6 +181,8 @@ const StudentManagement = () => {
                     <TableHead>Student ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Courses</TableHead>
+                    <TableHead>Teacher</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Total Fee</TableHead>
                     <TableHead>Paid</TableHead>
@@ -160,9 +194,11 @@ const StudentManagement = () => {
                 <TableBody>
                   {students.map((student) => (
                     <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.student_id}</TableCell>
-                      <TableCell>{student.full_name_en}</TableCell>
+                      <TableCell className="font-medium text-primary">{student.student_id}</TableCell>
+                      <TableCell className="font-medium">{student.full_name_en}</TableCell>
                       <TableCell>{student.email}</TableCell>
+                      <TableCell className="text-sm">{student.program}</TableCell>
+                      <TableCell className="font-medium text-primary">{getTeacherName(student.teacher_id)}</TableCell>
                       <TableCell>{student.course_duration_months}m</TableCell>
                       <TableCell>${student.total_course_fee}</TableCell>
                       <TableCell className="text-success">${student.amount_paid}</TableCell>
@@ -199,10 +235,26 @@ const StudentManagement = () => {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5" />
-                Edit Payment Details
+                Edit Student Details
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
+              <div>
+                <Label htmlFor="teacher">Assigned Teacher</Label>
+                <select
+                  id="teacher"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
+                  value={formData.teacher_id || ""}
+                  onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value || null })}
+                >
+                  <option value="">Not Assigned</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <Label htmlFor="amount_paid">Amount Paid ($)</Label>
                 <Input
@@ -224,7 +276,7 @@ const StudentManagement = () => {
                 />
               </div>
               <Button onClick={handleUpdate} className="w-full">
-                Update Payment Details
+                Update Student Details
               </Button>
             </div>
           </DialogContent>

@@ -321,22 +321,41 @@ const AdminDashboard = () => {
                 <div className="text-center py-8 text-muted-foreground">{t('common.noTeachersYet')}</div>
               ) : (
                 <div className="grid gap-4">
-                  {teachers.map((teacher) => (
-                    <Card 
-                      key={teacher.id} 
-                      className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => navigate(`/admin/teacher/${teacher.id}`)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-semibold text-primary hover:underline">{teacher.full_name}</h3>
-                          <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                          <p className="text-sm mt-2">{t('admin.assignedCourses')}: {teacher.courses_assigned || t('common.notAssigned')}</p>
+                  {teachers.map((teacher) => {
+                    // Get students assigned to this teacher
+                    const teacherStudents = students.filter(s => s.teacher_id === teacher.id);
+                    // Extract unique courses from those students
+                    const assignedCourses = [...new Set(
+                      teacherStudents
+                        .map(s => s.program)
+                        .filter(Boolean)
+                        .flatMap(p => p.split(',').map(c => c.trim()))
+                    )];
+                    
+                    return (
+                      <Card 
+                        key={teacher.id} 
+                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => navigate(`/admin/teacher/${teacher.id}`)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-primary hover:underline">{teacher.full_name}</h3>
+                            <p className="text-sm text-muted-foreground">{teacher.email}</p>
+                            <p className="text-sm mt-2">
+                              <span className="font-medium">{t('admin.assignedCourses')}: </span>
+                              {assignedCourses.length > 0 ? (
+                                <span className="text-foreground">{assignedCourses.join(', ')}</span>
+                              ) : (
+                                <span className="text-muted-foreground">{t('common.notAssigned')}</span>
+                              )}
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="ml-2">{teacherStudents.length} {t('admin.students')}</Badge>
                         </div>
-                        <Badge variant="secondary">{teacher.student_count} {t('admin.students')}</Badge>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
