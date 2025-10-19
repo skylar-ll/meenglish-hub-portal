@@ -19,7 +19,7 @@ const BranchSelection = () => {
 
   const handleNext = () => {
     if (!selectedBranch) {
-      toast.error(t('student.branchSelection.selectBranch'));
+      toast.error(t('student.selectBranchError'));
       return;
     }
 
@@ -43,7 +43,7 @@ const BranchSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/course-selection")}
+            onClick={() => navigate("/student/duration-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -63,7 +63,7 @@ const BranchSelection = () => {
           ) : (
             <div className="space-y-6">
               <Label className="text-lg font-semibold">
-                {t('student.branchSelection.selectBranch')}
+                {t('student.selectBranch')}
               </Label>
 
               <div className="grid gap-4">

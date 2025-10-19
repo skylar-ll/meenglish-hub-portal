@@ -42,7 +42,7 @@ const CourseDurationSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/course-selection")}
+            onClick={() => navigate("/student/teacher-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

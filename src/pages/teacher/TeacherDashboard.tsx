@@ -58,10 +58,10 @@ const TeacherDashboard = () => {
         return;
       }
 
-      // Fetch teacher record to get teacher's name
+      // Fetch teacher record to get teacher's name and courses
       const { data: teacherData } = await supabase
         .from("teachers")
-        .select("id, full_name, email")
+        .select("id, full_name, email, courses_assigned")
         .eq("id", session.user.id)
         .maybeSingle();
 
@@ -87,11 +87,26 @@ const TeacherDashboard = () => {
           `)
           .eq("teacher_id", teacherData.id);
 
-        // Extract student data and add the courses they're taking from this teacher
-        const studentsData = assignedStudents?.map((item: any) => ({
-          ...item.students,
-          courses_with_teacher: item.students.program || item.students.class_type
-        })) || [];
+        // Get teacher's courses to filter student courses
+        const teacherCourses = teacherData.courses_assigned?.toLowerCase().split(',').map(c => c.trim()) || [];
+
+        // Extract student data and filter courses to show only ones this teacher teaches
+        const studentsData = assignedStudents?.map((item: any) => {
+          const allStudentCourses = (item.students.program || item.students.class_type || "").split(',').map(c => c.trim());
+          
+          // Filter to only courses this teacher teaches
+          const matchingCourses = allStudentCourses.filter(studentCourse => {
+            const studentCourseLower = studentCourse.toLowerCase();
+            return teacherCourses.some(tc => 
+              studentCourseLower.includes(tc) || tc.includes(studentCourseLower)
+            );
+          });
+
+          return {
+            ...item.students,
+            courses_with_teacher: matchingCourses.join(', ') || 'No matching courses'
+          };
+        }) || [];
         
         setStudents(studentsData);
       } else {
@@ -243,8 +258,8 @@ const TeacherDashboard = () => {
 
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Courses with {teacherName}</p>
-                      <p className="font-medium">{student.courses_with_teacher || student.program || "N/A"}</p>
+                      <p className="text-muted-foreground">Courses</p>
+                      <p className="font-medium">{student.courses_with_teacher}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Level</p>

@@ -84,42 +84,38 @@ const Payment = () => {
       const totalCourseFee = pricingData?.price || (courseDuration * 500);
       const initialPayment = totalCourseFee * 0.5; // 50% at enrollment
 
-      // Determine which teachers to assign based on courses selected
-      const assignedTeacherIds = new Set<string>();
+      // Use teacher selections from registration or auto-assign
       const selectedCourses = registration.courses || [];
-      
-      // Fetch all teachers
+      const teacherSelections = registration.teacherSelections || {};
+      const assignedTeacherIds = new Set<string>();
+
+      // Fetch all teachers to handle auto-assignment for courses without explicit selection
       const { data: teachersData } = await supabase
         .from('teachers')
-        .select('id, full_name');
+        .select('id, full_name, courses_assigned');
 
       const teachers = teachersData || [];
-      const leoId = teachers.find(t => t.full_name.toLowerCase().includes('leo'))?.id;
-      const lillyId = teachers.find(t => t.full_name.toLowerCase().includes('lilly'))?.id;
-      const dorianId = teachers.find(t => t.full_name.toLowerCase().includes('dorian'))?.id;
-      const ayshaId = teachers.find(t => t.full_name.toLowerCase().includes('aysha'))?.id;
 
-      // Check each course and assign appropriate teachers
-      selectedCourses.forEach(course => {
-        const lowerCourse = course.toLowerCase();
-        const courseNum = parseInt(course.match(/\d+/)?.[0] || "0");
-        
-        // Leo: Courses 1-4
-        if ((courseNum >= 1 && courseNum <= 4) && leoId) assignedTeacherIds.add(leoId);
-        
-        // Lilly: Courses 5-9, Spanish, Italian
-        if (((courseNum >= 5 && courseNum <= 9) || lowerCourse.includes('spanish') || lowerCourse.includes('italian')) && lillyId) {
-          assignedTeacherIds.add(lillyId);
-        }
-        
-        // Dorian: Courses 10-12, Arabic, French, Chinese
-        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('arabic') || lowerCourse.includes('french') || lowerCourse.includes('chinese')) && dorianId) {
-          assignedTeacherIds.add(dorianId);
-        }
-        
-        // Aysha: Courses 10-12, Speaking class
-        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('speaking')) && ayshaId) {
-          assignedTeacherIds.add(ayshaId);
+      // For each course, use the selected teacher or find one automatically
+      selectedCourses.forEach((course: string) => {
+        // If student explicitly selected a teacher for this course
+        if (teacherSelections[course]) {
+          assignedTeacherIds.add(teacherSelections[course]);
+        } else {
+          // Auto-assign based on teacher's courses_assigned
+          const availableTeachers = teachers.filter((teacher) => {
+            const teacherCourses = teacher.courses_assigned?.toLowerCase().split(',').map(c => c.trim()) || [];
+            const courseLower = course.toLowerCase();
+            return teacherCourses.some(tc => tc.includes(courseLower) || courseLower.includes(tc));
+          });
+
+          // If exactly one teacher teaches this course, assign them
+          if (availableTeachers.length === 1) {
+            assignedTeacherIds.add(availableTeachers[0].id);
+          } else if (availableTeachers.length > 0) {
+            // If multiple teachers teach this but student didn't select, assign the first one
+            assignedTeacherIds.add(availableTeachers[0].id);
+          }
         }
       });
 

@@ -47,7 +47,7 @@ const translations = {
     'student.courseInfoDesc': 'Each English course consists of 8 parts. Your progress will be tracked throughout the program.',
     'student.selectBothError': 'Please select both program level and class type',
     'student.branchSelection': 'Branch Selection',
-    'student.selectBranch': 'Select Your Preferred Branch',
+    'student.selectBranch': 'Branch',
     'student.selectBranchError': 'Please select a branch',
     'student.paymentMethod': 'Payment Method',
     'student.selectPayment': 'Select Payment Method',

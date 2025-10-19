@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import StudentSignUp from "./pages/student/StudentSignUp";
 import StudentLogin from "./pages/student/StudentLogin";
 import CourseSelection from "./pages/student/CourseSelection";
+import TeacherSelection from "./pages/student/TeacherSelection";
 import CourseDurationSelection from "./pages/student/CourseDurationSelection";
 import BranchSelection from "./pages/student/BranchSelection";
 import Payment from "./pages/student/Payment";
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/student/login" element={<StudentLogin />} />
           <Route path="/student/signup" element={<StudentSignUp />} />
           <Route path="/student/course-selection" element={<CourseSelection />} />
+          <Route path="/student/teacher-selection" element={<TeacherSelection />} />
           <Route path="/student/duration-selection" element={<CourseDurationSelection />} />
           <Route path="/student/branch-selection" element={<BranchSelection />} />
           <Route path="/student/payment" element={<Payment />} />
