@@ -66,12 +66,12 @@ const TeacherDetail = () => {
         setReports(reportsData || []);
 
         // Fetch students assigned to this teacher via junction table
-        const { data: studentLinks } = await supabase
+        const { data: teacherStudentLinks } = await supabase
           .from("student_teachers")
           .select("student_id")
           .eq("teacher_id", teacherId);
 
-        const studentIds = studentLinks?.map(link => link.student_id) || [];
+        const studentIds = teacherStudentLinks?.map(link => link.student_id) || [];
         
         const { data: studentsData } = await supabase
           .from("students")
@@ -80,13 +80,8 @@ const TeacherDetail = () => {
           .order("created_at", { ascending: false });
         setStudents(studentsData || []);
 
-        // Update teacher's student count
-        const { count } = await supabase
-          .from("students")
-          .select("*", { count: 'exact', head: true })
-          .eq("teacher_id", teacherId);
-        
-        setTeacher({ ...teacherData, student_count: count || 0 });
+        // Update teacher's student count using junction table
+        setTeacher({ ...teacherData, student_count: teacherStudentLinks?.length || 0 });
 
       } catch (error) {
         console.error("Error fetching data:", error);

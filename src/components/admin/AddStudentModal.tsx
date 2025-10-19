@@ -157,36 +157,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         ? parseInt(formData.customDuration) 
         : parseInt(formData.courseDuration);
 
-      // Determine teacher assignment based on courses
-      const assignTeacher = (courses: string[]) => {
-        const teachers = {
-          leo: 'baab3cea-6cb1-477a-bb71-d9fa15c508de',
-          lilly: 'ceb2bf55-50fb-415f-a398-acb3c5d5a669',
-          dorian: 'bdc5b2c6-483f-4d4f-b47b-ee01259371a8'
-        };
+      // Determine which teachers to assign based on courses
+      const assignedTeacherIds = new Set<string>();
+      
+      const { data: teachersData } = await supabase.from('teachers').select('id, full_name');
+      const teachers = teachersData || [];
+      const leoId = teachers.find(t => t.full_name.toLowerCase().includes('leo'))?.id;
+      const lillyId = teachers.find(t => t.full_name.toLowerCase().includes('lilly'))?.id;
+      const dorianId = teachers.find(t => t.full_name.toLowerCase().includes('dorian'))?.id;
+      const ayshaId = teachers.find(t => t.full_name.toLowerCase().includes('aysha'))?.id;
 
-        // Check for Dorian's courses first (most specific)
-        if (courses.some(c => ['level-10', 'level-11', 'level-12', 'arabic', 'french', 'chinese'].includes(c))) {
-          return teachers.dorian;
-        }
+      formData.courses.forEach(course => {
+        const lowerCourse = course.toLowerCase();
+        const courseNum = parseInt(course.match(/\d+/)?.[0] || "0");
         
-        // Check for Lilly's courses
-        if (courses.some(c => ['level-5', 'level-6', 'level-7', 'level-8', 'level-9', 'spanish', 'italian'].includes(c))) {
-          return teachers.lilly;
-        }
-        
-        // Check for Leo's courses
-        if (courses.some(c => ['level-1', 'level-2', 'level-3', 'level-4'].includes(c))) {
-          return teachers.leo;
-        }
-        
-        // Default to Leo if no match
-        return teachers.leo;
-      };
+        if ((courseNum >= 1 && courseNum <= 4) && leoId) assignedTeacherIds.add(leoId);
+        if (((courseNum >= 5 && courseNum <= 9) || lowerCourse.includes('spanish') || lowerCourse.includes('italian')) && lillyId) assignedTeacherIds.add(lillyId);
+        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('arabic') || lowerCourse.includes('french') || lowerCourse.includes('chinese')) && dorianId) assignedTeacherIds.add(dorianId);
+        if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('speaking')) && ayshaId) assignedTeacherIds.add(ayshaId);
+      });
 
-      const assignedTeacherId = assignTeacher(formData.courses);
-
-      const { error: studentError } = await supabase
+      const { data: studentData, error: studentError } = await supabase
         .from("students")
         .insert({
           id: authData.user.id,
@@ -202,12 +193,23 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           payment_method: formData.paymentMethod,
           subscription_status: "active",
           course_duration_months: durationMonths,
-          teacher_id: assignedTeacherId,
-        });
+        })
+        .select()
+        .single();
 
-      if (studentError) {
+      if (studentError || !studentData) {
         toast.error("Failed to create student record");
         return;
+      }
+
+      // Insert teacher assignments
+      if (assignedTeacherIds.size > 0) {
+        const teacherAssignments = Array.from(assignedTeacherIds).map(teacherId => ({
+          student_id: studentData.id,
+          teacher_id: teacherId
+        }));
+
+        await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
       // Update profile

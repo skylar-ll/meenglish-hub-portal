@@ -45,7 +45,21 @@ const AdminDashboard = () => {
       if (studentsError) {
         console.error("Error fetching students:", studentsError);
       } else {
-        setStudents(studentsData || []);
+        // Fetch teacher assignments for each student
+        const studentsWithTeachers = await Promise.all(
+          (studentsData || []).map(async (student) => {
+            const { data: teacherLinks } = await supabase
+              .from("student_teachers")
+              .select("teacher_id")
+              .eq("student_id", student.id);
+
+            return {
+              ...student,
+              teacherIds: teacherLinks?.map(link => link.teacher_id) || []
+            };
+          })
+        );
+        setStudents(studentsWithTeachers);
       }
 
       const { data: teachersData, error: teachersError } = await supabase
@@ -56,17 +70,17 @@ const AdminDashboard = () => {
       if (teachersError) {
         console.error("Error fetching teachers:", teachersError);
       } else {
-        // Calculate student count for each teacher
+        // Calculate student count for each teacher using junction table
         const teachersWithCount = await Promise.all(
           (teachersData || []).map(async (teacher) => {
-            const { count } = await supabase
-              .from("students")
-              .select("*", { count: 'exact', head: true })
+            const { data: studentLinks } = await supabase
+              .from("student_teachers")
+              .select("student_id")
               .eq("teacher_id", teacher.id);
             
             return {
               ...teacher,
-              student_count: count || 0
+              student_count: studentLinks?.length || 0
             };
           })
         );
@@ -322,8 +336,10 @@ const AdminDashboard = () => {
               ) : (
                 <div className="grid gap-4">
                   {teachers.map((teacher) => {
-                    // Get students assigned to this teacher
-                    const teacherStudents = students.filter(s => s.teacher_id === teacher.id);
+                    // Get students assigned to this teacher using junction table
+                    const teacherStudents = students.filter(s => 
+                      s.teacherIds?.includes(teacher.id)
+                    );
                     // Extract unique courses from those students
                     const assignedCourses = [...new Set(
                       teacherStudents
@@ -348,6 +364,14 @@ const AdminDashboard = () => {
                                 <span className="text-foreground">{assignedCourses.join(', ')}</span>
                               ) : (
                                 <span className="text-muted-foreground">{t('common.notAssigned')}</span>
+                              )}
+                            </p>
+                            <p className="text-sm mt-1">
+                              <span className="font-medium">{t('admin.students')}: </span>
+                              {teacherStudents.length > 0 ? (
+                                <span className="text-foreground">{teacherStudents.map(s => s.full_name_en).join(', ')}</span>
+                              ) : (
+                                <span className="text-muted-foreground">None</span>
                               )}
                             </p>
                           </div>
