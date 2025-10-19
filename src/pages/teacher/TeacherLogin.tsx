@@ -21,7 +21,22 @@ const TeacherLogin = () => {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const availableCourses = [
+    "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6",
+    "Level 7", "Level 8", "Level 9", "Level 10", "Level 11", "Level 12",
+    "Spanish", "Italian", "Arabic", "French", "Chinese", "Speaking Classes"
+  ];
+
+  const toggleCourse = (course: string) => {
+    setSelectedCourses(prev => 
+      prev.includes(course) 
+        ? prev.filter(c => c !== course)
+        : [...prev, course]
+    );
+  };
 
   const handleLogin = async () => {
     try {
@@ -81,6 +96,11 @@ const TeacherLogin = () => {
         email: signupEmail,
         password: signupPassword,
       });
+
+      if (selectedCourses.length === 0) {
+        toast.error("Please select at least one course");
+        return;
+      }
     } catch (error: any) {
       toast.error(error.errors[0].message);
       return;
@@ -115,6 +135,7 @@ const TeacherLogin = () => {
         full_name: signupName,
         email: signupEmail,
         student_count: 0,
+        courses_assigned: selectedCourses.join(", "),
       });
 
       if (teacherError) throw teacherError;
@@ -237,6 +258,31 @@ const TeacherLogin = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     Min 8 characters
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Courses You Will Teach</Label>
+                  <div className="border rounded-md p-3 max-h-48 overflow-y-auto bg-background">
+                    <div className="grid grid-cols-2 gap-2">
+                      {availableCourses.map((course) => (
+                        <label
+                          key={course}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCourses.includes(course)}
+                            onChange={() => toggleCourse(course)}
+                            className="w-4 h-4 rounded border-primary"
+                          />
+                          <span className="text-sm">{course}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select the courses you will teach ({selectedCourses.length} selected)
                   </p>
                 </div>
 
