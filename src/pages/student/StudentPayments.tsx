@@ -2,15 +2,27 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CreditCard, Calendar, DollarSign } from "lucide-react";
+import { ArrowLeft, CreditCard, Calendar, DollarSign, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const StudentPayments = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentData, setPaymentData] = useState({
     studentId: "",
     studentName: "",
@@ -54,6 +66,36 @@ const StudentPayments = () => {
       toast.error("Failed to load payment data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePayRemaining = async () => {
+    setProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/student/login");
+        return;
+      }
+
+      // Update the payment status
+      const { error } = await supabase
+        .from("students")
+        .update({
+          amount_paid: paymentData.totalCourseFee,
+          amount_remaining: 0,
+        })
+        .eq("email", user.email);
+
+      if (error) throw error;
+
+      toast.success("Payment successful! Your balance is now fully paid.");
+      setShowPaymentDialog(false);
+      fetchPaymentData();
+    } catch (error: any) {
+      toast.error("Payment failed. Please try again.");
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -139,10 +181,55 @@ const StudentPayments = () => {
                   <li>• Contact admin for payment arrangements</li>
                 </ul>
               </div>
+
+              {paymentData.amountRemaining > 0 && (
+                <div className="mt-6">
+                  <Button
+                    onClick={() => setShowPaymentDialog(true)}
+                    className="w-full bg-gradient-to-r from-success to-success/80 hover:opacity-90 transition-opacity"
+                    size="lg"
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Pay Remaining Balance (${paymentData.amountRemaining.toFixed(2)})
+                  </Button>
+                </div>
+              )}
+
+              {paymentData.amountRemaining === 0 && (
+                <div className="mt-6 p-4 bg-success/10 rounded-lg border border-success/20 flex items-center gap-3">
+                  <CheckCircle className="w-6 h-6 text-success" />
+                  <div>
+                    <h3 className="font-semibold text-success">Fully Paid</h3>
+                    <p className="text-sm text-muted-foreground">Your course fee has been paid in full.</p>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         )}
       </div>
+
+      <AlertDialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to pay the remaining balance of ${paymentData.amountRemaining.toFixed(2)}.
+              This will complete your course fee payment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePayRemaining}
+              disabled={processing}
+              className="bg-gradient-to-r from-success to-success/80"
+            >
+              {processing ? "Processing..." : "Confirm Payment"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
