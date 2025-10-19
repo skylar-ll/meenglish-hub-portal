@@ -6,13 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, Settings } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { studentSignupSchema } from "@/lib/validations";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { EditFormConfigModal } from "./EditFormConfigModal";
+import { InlineEditableField } from "./InlineEditableField";
+import { AddNewFieldButton } from "./AddNewFieldButton";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -24,7 +27,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [showEditConfig, setShowEditConfig] = useState(false);
-  const { courses, branches, paymentMethods, loading: configLoading } = useFormConfigurations();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const { courses, branches, paymentMethods, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -210,14 +214,22 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
             <div className="flex items-center justify-between">
               <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 4</DialogTitle>
               <Button
-                variant="outline"
+                variant={isEditMode ? "default" : "outline"}
                 size="sm"
-                onClick={() => setShowEditConfig(true)}
+                onClick={() => setIsEditMode(!isEditMode)}
                 className="ml-4"
               >
-                Edit Form
+                <Settings className="h-4 w-4 mr-2" />
+                {isEditMode ? "Done Editing" : "Edit Form"}
               </Button>
             </div>
+            {isEditMode && (
+              <Alert className="mt-2">
+                <AlertDescription>
+                  ✏️ Edit Mode Active - Click on any field to edit. Changes save automatically and apply to all forms.
+                </AlertDescription>
+              </Alert>
+            )}
           </DialogHeader>
         
         {configLoading ? (
@@ -358,42 +370,69 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
-                      {categoryCourses.map((course) => (
-                        <div key={course.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`prev-course-${course.value}`}
-                            checked={formData.courses.includes(course.value)}
-                            onCheckedChange={() => toggleCourse(course.value)}
-                          />
-                          <Label
-                            htmlFor={`prev-course-${course.value}`}
-                            className="cursor-pointer flex-1"
-                          >
-                            {course.label}
-                          </Label>
-                        </div>
-                      ))}
+                      {categoryCourses.map((course) => {
+                        const configItem = courses.find(c => c.value === course.value);
+                        
+                        return (
+                          <div key={course.value} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
+                            {!isEditMode && (
+                              <Checkbox
+                                id={`prev-course-${course.value}`}
+                                checked={formData.courses.includes(course.value)}
+                                onCheckedChange={() => toggleCourse(course.value)}
+                              />
+                            )}
+                            <Label
+                              htmlFor={`prev-course-${course.value}`}
+                              className={`flex-1 ${!isEditMode ? 'cursor-pointer' : ''}`}
+                            >
+                              {isEditMode && configItem ? (
+                                <InlineEditableField
+                                  id={course.value}
+                                  value={course.label}
+                                  configType="course"
+                                  configKey={course.value}
+                                  isEditMode={isEditMode}
+                                  onUpdate={refetch}
+                                  onDelete={refetch}
+                                />
+                              ) : (
+                                course.label
+                              )}
+                            </Label>
+                          </div>
+                        );
+                      })}
                     </div>
+                    {isEditMode && (
+                      <AddNewFieldButton
+                        configType="course"
+                        categoryName={category}
+                        onAdd={refetch}
+                      />
+                    )}
                   </div>
                   );
                 })}
 
-                {formData.courses.length > 0 && (
+                {!isEditMode && formData.courses.length > 0 && (
                   <div className="p-3 bg-primary/10 rounded-lg">
                     <p className="text-sm font-medium">{t('addPrevStudent.selected')}: {formData.courses.length} {t('addPrevStudent.courses')}</p>
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {t('student.back')}
-                  </Button>
-                  <Button onClick={handleNext} className="flex-1">
-                    {t('student.next')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
+                {!isEditMode && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      {t('student.back')}
+                    </Button>
+                    <Button onClick={handleNext} className="flex-1">
+                      {t('student.next')}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -405,28 +444,53 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                   {branches.map((branch) => (
                     <Card
                       key={branch.value}
-                      className={`p-4 cursor-pointer transition-all ${
-                        formData.branch === branch.value
+                      className={`p-4 transition-all ${
+                        !isEditMode && formData.branch === branch.value
                           ? "border-primary bg-primary/5"
-                          : "hover:bg-muted/50"
+                          : isEditMode
+                          ? "hover:border-primary"
+                          : "hover:bg-muted/50 cursor-pointer"
                       }`}
-                      onClick={() => setFormData({...formData, branch: branch.value})}
+                      onClick={() => !isEditMode && setFormData({...formData, branch: branch.value})}
                     >
-                      <p className="font-medium">{branch.label}</p>
+                      <p className="font-medium">
+                        {isEditMode ? (
+                          <InlineEditableField
+                            id={branch.value}
+                            value={branch.label}
+                            configType="branch"
+                            configKey={branch.value}
+                            isEditMode={isEditMode}
+                            onUpdate={refetch}
+                            onDelete={refetch}
+                          />
+                        ) : (
+                          branch.label
+                        )}
+                      </p>
                     </Card>
                   ))}
                 </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {t('student.back')}
-                  </Button>
-                  <Button onClick={handleNext} className="flex-1">
-                    {t('student.next')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="branch"
+                    onAdd={refetch}
+                  />
+                )}
+
+                {!isEditMode && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      {t('student.back')}
+                    </Button>
+                    <Button onClick={handleNext} className="flex-1">
+                      {t('student.next')}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -438,27 +502,52 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                   {paymentMethods.map((method) => (
                     <Card
                       key={method.value}
-                      className={`p-4 cursor-pointer transition-all ${
-                        formData.paymentMethod === method.value
+                      className={`p-4 transition-all ${
+                        !isEditMode && formData.paymentMethod === method.value
                           ? "border-primary bg-primary/5"
-                          : "hover:bg-muted/50"
+                          : isEditMode
+                          ? "hover:border-primary"
+                          : "hover:bg-muted/50 cursor-pointer"
                       }`}
-                      onClick={() => setFormData({...formData, paymentMethod: method.value})}
+                      onClick={() => !isEditMode && setFormData({...formData, paymentMethod: method.value})}
                     >
-                      <p className="font-medium">{method.label}</p>
+                      <p className="font-medium">
+                        {isEditMode ? (
+                          <InlineEditableField
+                            id={method.value}
+                            value={method.label}
+                            configType="payment_method"
+                            configKey={method.value}
+                            isEditMode={isEditMode}
+                            onUpdate={refetch}
+                            onDelete={refetch}
+                          />
+                        ) : (
+                          method.label
+                        )}
+                      </p>
                     </Card>
                   ))}
                 </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {t('student.back')}
-                  </Button>
-                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary">
-                    {t('addPrevStudent.addStudent')}
-                  </Button>
-                </div>
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="payment_method"
+                    onAdd={refetch}
+                  />
+                )}
+
+                {!isEditMode && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      {t('student.back')}
+                    </Button>
+                    <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary">
+                      {t('addPrevStudent.addStudent')}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>
