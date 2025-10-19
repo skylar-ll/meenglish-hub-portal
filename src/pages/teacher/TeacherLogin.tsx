@@ -90,24 +90,27 @@ const TeacherLogin = () => {
   };
 
   const handleSignup = async () => {
+    // Validate BEFORE any async operations
     try {
       teacherSignupSchema.parse({
         fullName: signupName,
         email: signupEmail,
         password: signupPassword,
       });
-
-      if (selectedCourses.length === 0) {
-        toast.error("Please select at least one course");
-        return;
-      }
     } catch (error: any) {
       toast.error(error.errors[0].message);
       return;
     }
 
+    // Check courses selection
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course you will teach");
+      return;
+    }
+
     setLoading(true);
     try {
+      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
@@ -127,31 +130,47 @@ const TeacherLogin = () => {
         .from("user_roles")
         .insert({ user_id: authData.user.id, role: "teacher" });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error("Role assignment error:", roleError);
+        throw new Error("Failed to assign teacher role: " + roleError.message);
+      }
 
-      // Save teacher information to teachers table so admins can see it
-      const { error: teacherError } = await supabase.from("teachers").insert({
-        id: authData.user.id,
-        full_name: signupName,
-        email: signupEmail,
-        student_count: 0,
-        courses_assigned: selectedCourses.join(", "),
-      });
+      // Prepare courses string
+      const coursesString = selectedCourses.join(", ");
+      console.log("Saving courses:", coursesString); // Debug log
 
-      if (teacherError) throw teacherError;
+      // Save teacher information to teachers table
+      const { error: teacherError, data: teacherData } = await supabase
+        .from("teachers")
+        .insert({
+          id: authData.user.id,
+          full_name: signupName,
+          email: signupEmail,
+          student_count: 0,
+          courses_assigned: coursesString,
+        })
+        .select();
 
-      toast.success("Account created successfully! Redirecting...");
-      // If the session is created automatically, go to dashboard
+      if (teacherError) {
+        console.error("Teacher record error:", teacherError);
+        throw new Error("Failed to create teacher record: " + teacherError.message);
+      }
+
+      console.log("Teacher record created:", teacherData); // Debug log
+
+      toast.success(`Account created! Assigned courses: ${coursesString}`);
+      
+      // Check for active session and redirect
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/teacher/dashboard");
+        setTimeout(() => navigate("/teacher/dashboard"), 1500);
       } else {
         // Fallback: show login tab if auto-login not enabled
-        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-        loginTab?.click();
+        setActiveTab("login");
+        toast.info("Please log in with your new account");
       }
     } catch (error: any) {
-      console.error("Error during signup:", error);
+      console.error("Signup error:", error);
       toast.error(error.message || "Failed to create account");
     } finally {
       setLoading(false);
