@@ -1,12 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
+import { ArrowRight, ArrowLeft } from "lucide-react";
+import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -15,7 +20,11 @@ interface AddStudentModalProps {
 }
 
 export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStudentModalProps) => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const { courses, branches, paymentMethods, loading: configLoading } = useFormConfigurations();
+  
   const [formData, setFormData] = useState({
     fullNameAr: "",
     fullNameEn: "",
@@ -24,10 +33,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     email: "",
     id: "",
     password: "",
+    courses: [] as string[],
     branch: "",
-    program: "",
-    classType: "",
-    paymentMethod: "Cash",
+    paymentMethod: "",
     countryCode1: "+966",
     countryCode2: "+966",
   });
@@ -50,11 +58,47 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const toggleCourse = (courseValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      courses: prev.courses.includes(courseValue)
+        ? prev.courses.filter(c => c !== courseValue)
+        : [...prev, courseValue]
+    }));
+  };
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (formData.courses.length === 0) {
+        toast.error("Please select at least one course");
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      if (!formData.branch) {
+        toast.error("Please select a branch");
+        return;
+      }
+      setStep(4);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!formData.paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Validate required fields
+      // Validate form data
       const validatedData = studentSignupSchema.parse({
         fullNameAr: formData.fullNameAr,
         fullNameEn: formData.fullNameEn,
@@ -65,12 +109,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         password: formData.password,
       });
 
-      if (!formData.branch || !formData.program || !formData.classType) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-
-      // 1. Create auth user
+      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
@@ -83,17 +122,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         },
       });
 
-      if (authError) {
-        toast.error(`Authentication error: ${authError.message}`);
+      if (authError || !authData.user) {
+        toast.error(`Authentication error: ${authError?.message}`);
         return;
       }
 
-      if (!authData.user) {
-        toast.error("Failed to create user account");
-        return;
-      }
-
-      // 2. Assign student role
+      // Assign student role
       const { error: roleError } = await supabase
         .from("user_roles")
         .insert({
@@ -102,12 +136,11 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         });
 
       if (roleError) {
-        console.error("Role assignment error:", roleError);
         toast.error("Failed to assign student role");
         return;
       }
 
-      // 3. Create student record
+      // Create student record
       const { error: studentError } = await supabase
         .from("students")
         .insert({
@@ -119,20 +152,19 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           email: validatedData.email,
           national_id: validatedData.id,
           branch: formData.branch,
-          program: formData.program,
-          class_type: formData.classType,
+          program: formData.courses.join(', '),
+          class_type: formData.courses.join(', '),
           payment_method: formData.paymentMethod,
           subscription_status: "active",
         });
 
       if (studentError) {
-        console.error("Student record error:", studentError);
         toast.error("Failed to create student record");
         return;
       }
 
-      // 4. Update profile (if needed)
-      const { error: profileError } = await supabase
+      // Update profile
+      await supabase
         .from("profiles")
         .update({
           full_name_en: validatedData.fullNameEn,
@@ -141,15 +173,11 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           phone2: validatedData.phone2 || null,
           national_id: validatedData.id,
           branch: formData.branch,
-          program: formData.program,
-          class_type: formData.classType,
+          program: formData.courses.join(', '),
+          class_type: formData.courses.join(', '),
           payment_method: formData.paymentMethod,
         })
         .eq("id", authData.user.id);
-
-      if (profileError) {
-        console.error("Profile update warning:", profileError);
-      }
 
       toast.success("Student account created successfully!");
       
@@ -162,13 +190,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         email: "",
         id: "",
         password: "",
+        courses: [],
         branch: "",
-        program: "",
-        classType: "",
-        paymentMethod: "Cash",
+        paymentMethod: "",
         countryCode1: "+966",
         countryCode2: "+966",
       });
+      setStep(1);
       
       onStudentAdded();
       onOpenChange(false);
@@ -184,192 +212,259 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     }
   };
 
+  // Group courses by category
+  const coursesByCategory = courses.reduce((acc, course) => {
+    if (!acc[course.category]) {
+      acc[course.category] = [];
+    }
+    acc[course.category].push(course);
+    return acc;
+  }, {} as Record<string, Array<{ value: string; label: string; category: string }>>);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
+          <DialogTitle>Add New Student - Step {step} of 4</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullNameAr">Full Name (Arabic) *</Label>
-              <Input
-                id="fullNameAr"
-                dir="rtl"
-                placeholder="الاسم الكامل"
-                value={formData.fullNameAr}
-                onChange={(e) => handleInputChange("fullNameAr", e.target.value)}
-              />
-            </div>
+        {configLoading ? (
+          <div className="text-center py-8">Loading...</div>
+        ) : (
+          <div className="space-y-4 py-4">
+            {/* Step 1: Basic Information */}
+            {step === 1 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullNameAr">Full Name (Arabic) *</Label>
+                  <Input
+                    id="fullNameAr"
+                    dir="rtl"
+                    placeholder="الاسم الكامل"
+                    value={formData.fullNameAr}
+                    onChange={(e) => handleInputChange("fullNameAr", e.target.value)}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="fullNameEn">Full Name (English) *</Label>
-              <Input
-                id="fullNameEn"
-                placeholder="Full Name"
-                value={formData.fullNameEn}
-                onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
-              />
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fullNameEn">Full Name (English) *</Label>
+                  <Input
+                    id="fullNameEn"
+                    placeholder="Full Name"
+                    value={formData.fullNameEn}
+                    onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@example.com"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-            />
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone1">Phone *</Label>
+                    <div className="flex gap-2">
+                      <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryCodes.map((code) => (
+                            <SelectItem key={code.value} value={code.value}>
+                              {code.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="phone1"
+                        type="tel"
+                        placeholder="XXX XXX XXX"
+                        value={formData.phone1}
+                        onChange={(e) => handleInputChange("phone1", e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Min 8 characters"
-              value={formData.password}
-              onChange={(e) => handleInputChange("password", e.target.value)}
-            />
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone2">Phone 2 (Optional)</Label>
+                    <div className="flex gap-2">
+                      <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryCodes.map((code) => (
+                            <SelectItem key={code.value} value={code.value}>
+                              {code.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="phone2"
+                        type="tel"
+                        placeholder="XXX XXX XXX"
+                        value={formData.phone2}
+                        onChange={(e) => handleInputChange("phone2", e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone1">Phone 1 *</Label>
-              <div className="flex gap-2">
-                <Select value={formData.countryCode1} onValueChange={(value) => handleInputChange("countryCode1", value)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countryCodes.map((code) => (
-                      <SelectItem key={code.value} value={code.value}>
-                        {code.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  id="phone1"
-                  type="tel"
-                  placeholder="XXX XXX XXX"
-                  value={formData.phone1}
-                  onChange={(e) => handleInputChange("phone1", e.target.value)}
-                  className="flex-1"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="id">National ID *</Label>
+                  <Input
+                    id="id"
+                    placeholder="ID Number"
+                    value={formData.id}
+                    onChange={(e) => handleInputChange("id", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter password (min 8 characters)"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                  />
+                </div>
+
+                <Button onClick={handleNext} className="w-full">
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
               </div>
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="phone2">Phone 2 (Optional)</Label>
-              <div className="flex gap-2">
-                <Select value={formData.countryCode2} onValueChange={(value) => handleInputChange("countryCode2", value)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countryCodes.map((code) => (
-                      <SelectItem key={code.value} value={code.value}>
-                        {code.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  id="phone2"
-                  type="tel"
-                  placeholder="XXX XXX XXX"
-                  value={formData.phone2}
-                  onChange={(e) => handleInputChange("phone2", e.target.value)}
-                  className="flex-1"
-                />
+            {/* Step 2: Course Selection */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Courses (Multiple selection allowed)</Label>
+
+                {Object.keys(coursesByCategory).map((category) => {
+                  const categoryCourses = coursesByCategory[category];
+                  return (
+                  <div key={category} className="space-y-3">
+                    <h3 className="font-semibold text-primary">{category}</h3>
+                    <div className="space-y-2">
+                      {categoryCourses.map((course) => (
+                        <div key={course.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`course-${course.value}`}
+                            checked={formData.courses.includes(course.value)}
+                            onCheckedChange={() => toggleCourse(course.value)}
+                          />
+                          <Label
+                            htmlFor={`course-${course.value}`}
+                            className="cursor-pointer flex-1"
+                          >
+                            {course.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  );
+                })}
+
+                {formData.courses.length > 0 && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected: {formData.courses.length} courses</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="nationalId">National ID *</Label>
-            <Input
-              id="nationalId"
-              placeholder="ID Number"
-              value={formData.id}
-              onChange={(e) => handleInputChange("id", e.target.value)}
-            />
-          </div>
+            {/* Step 3: Branch Selection */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Branch</Label>
+                <div className="grid gap-3">
+                  {branches.map((branch) => (
+                    <Card
+                      key={branch.value}
+                      className={`p-4 cursor-pointer transition-all ${
+                        formData.branch === branch.value
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => handleInputChange("branch", branch.value)}
+                    >
+                      <p className="font-medium">{branch.label}</p>
+                    </Card>
+                  ))}
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch *</Label>
-            <Select value={formData.branch} onValueChange={(value) => handleInputChange("branch", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="online">Online Classes - صفوف اونلاين</SelectItem>
-                <SelectItem value="dammam">Dammam Branch - فرع الدمام</SelectItem>
-                <SelectItem value="dhahran">Dhahran Branch - فرع الظهران</SelectItem>
-                <SelectItem value="khobar">Khobar Branch - فرع الخبر</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="program">Program *</Label>
-            <Select value={formData.program} onValueChange={(value) => handleInputChange("program", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Program" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="General English">General English</SelectItem>
-                <SelectItem value="Business English">Business English</SelectItem>
-                <SelectItem value="IELTS Preparation">IELTS Preparation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Step 4: Payment Method */}
+            {step === 4 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Payment Method</Label>
+                <div className="grid gap-3">
+                  {paymentMethods.map((method) => (
+                    <Card
+                      key={method.value}
+                      className={`p-4 cursor-pointer transition-all ${
+                        formData.paymentMethod === method.value
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => handleInputChange("paymentMethod", method.value)}
+                    >
+                      <p className="font-medium">{method.label}</p>
+                    </Card>
+                  ))}
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="classType">Class Type *</Label>
-            <Select value={formData.classType} onValueChange={(value) => handleInputChange("classType", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Class Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Group">Group</SelectItem>
-                <SelectItem value="Private">Private</SelectItem>
-              </SelectContent>
-            </Select>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
+                    {loading ? "Creating..." : "Create Student"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Payment Method</Label>
-            <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange("paymentMethod", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Payment Method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="card">Card - بطاقة</SelectItem>
-                <SelectItem value="cash">Cash - كاش</SelectItem>
-                <SelectItem value="card-cash">Card/Cash - بطاقة/كاش</SelectItem>
-                <SelectItem value="transfer">Transfer - تحويل</SelectItem>
-                <SelectItem value="tamara">Tamara - تمارا</SelectItem>
-                <SelectItem value="tabby">Tabby - تابي</SelectItem>
-                <SelectItem value="stcpay">Stcpay - اس تي سي باي</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex gap-3 justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Creating..." : "Create Student"}
-          </Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

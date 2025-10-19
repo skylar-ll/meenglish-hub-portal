@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      form_configurations: {
+        Row: {
+          config_key: string
+          config_type: string
+          config_value: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_type: string
+          config_value: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_type?: string
+          config_value?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           branch: string | null
