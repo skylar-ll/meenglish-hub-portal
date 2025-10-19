@@ -185,11 +185,11 @@ export const InlineEditableField = ({
       }}
     >
       <span className={isLabel ? "font-medium" : ""}>{value}</span>
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+      <div className="opacity-100 transition-opacity flex gap-1">
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => setIsEditing(true)}
+          onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
           className="h-6 w-6 p-0"
         >
           <Pencil className="h-3 w-3" />
@@ -198,7 +198,7 @@ export const InlineEditableField = ({
           <Button
             size="sm"
             variant="ghost"
-            onClick={handleDelete}
+            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
             className="h-6 w-6 p-0"
           >
             <Trash2 className="h-3 w-3 text-red-600" />
