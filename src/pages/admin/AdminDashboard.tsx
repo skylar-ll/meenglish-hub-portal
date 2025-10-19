@@ -340,13 +340,20 @@ const AdminDashboard = () => {
                     const teacherStudents = students.filter(s => 
                       s.teacherIds?.includes(teacher.id)
                     );
-                    // Extract unique courses from those students
-                    const assignedCourses = [...new Set(
-                      teacherStudents
-                        .map(s => s.program)
-                        .filter(Boolean)
-                        .flatMap(p => p.split(',').map(c => c.trim()))
-                    )];
+                    
+                    // Define courses for each teacher based on their name
+                    const teacherName = teacher.full_name.toLowerCase();
+                    let assignedCourses: string[] = [];
+                    
+                    if (teacherName.includes('leo')) {
+                      assignedCourses = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
+                    } else if (teacherName.includes('lilly')) {
+                      assignedCourses = ['Level 5', 'Level 6', 'Level 7', 'Level 8', 'Level 9', 'Spanish', 'Italian'];
+                    } else if (teacherName.includes('dorian')) {
+                      assignedCourses = ['Level 10', 'Level 11', 'Level 12', 'Arabic', 'French', 'Chinese'];
+                    } else if (teacherName.includes('aysha')) {
+                      assignedCourses = ['Level 10', 'Level 11', 'Level 12', 'Speaking Classes'];
+                    }
                     
                     return (
                       <Card 
