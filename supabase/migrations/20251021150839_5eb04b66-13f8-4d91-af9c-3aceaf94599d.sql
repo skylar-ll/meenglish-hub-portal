@@ -1,0 +1,21 @@
+-- Add program entries for StudentManagement dropdown (these are simpler, non-JSON values)
+INSERT INTO form_configurations (config_type, config_key, config_value, display_order, is_active) VALUES
+('program', 'level-1', 'level-1 (pre1) مستوى اول', 1, true),
+('program', 'level-2', 'level-2 (pre2) مستوى ثاني', 2, true),
+('program', 'level-3', 'level-3 (intro A) مستوى ثالث', 3, true),
+('program', 'level-4', 'level-4 (intro B) مستوى رابع', 4, true),
+('program', 'level-5', 'level-5 (1A) مستوى خامس', 5, true),
+('program', 'level-6', 'level-6 (1B) مستوى سادس', 6, true),
+('program', 'level-7', 'level-7 (2A) مستوى سابع', 7, true),
+('program', 'level-8', 'level-8 (2B) مستوى ثامن', 8, true),
+('program', 'level-9', 'level-9 (3A) مستوى تاسع', 9, true),
+('program', 'level-10', 'level-10 (3B) مستوى عاشر', 10, true),
+('program', 'level-11', 'level-11 (IELTS 1 - STEP 1) مستوى-11', 11, true),
+('program', 'level-12', 'level-12 (IELTS 2 - STEP 2) مستوى -12', 12, true),
+('program', 'speaking-class', 'Speaking class', 13, true),
+('program', 'private-class', '1:1 class - privet class كلاس فردي', 14, true),
+('program', 'french', 'French language لغة فرنسية', 15, true),
+('program', 'chinese', 'Chinese Language لغة صينية', 16, true),
+('program', 'spanish', 'Spanish language لغة اسبانية', 17, true),
+('program', 'italian', 'Italian Language لغة ايطالية', 18, true),
+('program', 'arabic-non-native', 'Arabic for Non-Arabic Speakers عربي لغير الناطقين بها', 19, true);
