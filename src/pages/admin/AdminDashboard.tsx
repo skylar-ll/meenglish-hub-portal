@@ -247,6 +247,15 @@ const AdminDashboard = () => {
               <Users className="w-5 h-5" />
               Manage Payments
             </Button>
+            <Button 
+              onClick={() => navigate("/admin/student-management")}
+              variant="outline"
+              className="gap-2"
+              size="lg"
+            >
+              <Users className="w-5 h-5" />
+              Student Management
+            </Button>
           </div>
         </Card>
 
