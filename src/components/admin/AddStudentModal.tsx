@@ -27,7 +27,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const { courses, branches, paymentMethods, fieldLabels, courseDurations, loading: configLoading, refetch } = useFormConfigurations();
+  const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -38,6 +38,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     id: "",
     password: "",
     courses: [] as string[],
+    timing: "",
     branch: "",
     paymentMethod: "",
     courseDuration: "",
@@ -87,17 +88,23 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       }
       setStep(3);
     } else if (step === 3) {
-      if (!formData.branch) {
-        toast.error("Please select a branch");
+      if (!formData.timing) {
+        toast.error("Please select a timing");
         return;
       }
       setStep(4);
     } else if (step === 4) {
+      if (!formData.branch) {
+        toast.error("Please select a branch");
+        return;
+      }
+      setStep(5);
+    } else if (step === 5) {
       if (!formData.courseDuration && !formData.customDuration) {
         toast.error("Please select or enter a course duration");
         return;
       }
-      setStep(5);
+      setStep(6);
     }
   };
 
@@ -240,6 +247,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         id: "",
         password: "",
         courses: [],
+        timing: "",
         branch: "",
         paymentMethod: "",
         courseDuration: "",
@@ -556,8 +564,58 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 3: Branch Selection */}
+            {/* Step 3: Timing Selection */}
             {step === 3 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Timing</Label>
+                <div className="grid gap-3">
+                  {timings.map((timing) => (
+                    <Card
+                      key={timing.value}
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.timing === timing.value
+                          ? "border-primary bg-primary/5"
+                          : ""
+                      }`}
+                      onClick={() => handleInputChange("timing", timing.value)}
+                    >
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={timing.id}
+                          value={timing.label}
+                          configType="timing"
+                          configKey={timing.value}
+                          isEditMode={isEditMode}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+                
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="timing"
+                    onAdd={refetch}
+                  />
+                )}
+
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button onClick={handleNext} className="flex-1">
+                      Next
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+              </div>
+            )}
+
+            {/* Step 4: Branch Selection */}
+            {step === 4 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Branch</Label>
                 <div className="grid gap-3">
@@ -594,7 +652,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>
@@ -606,8 +664,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 4: Course Duration */}
-            {step === 4 && (
+            {/* Step 5: Course Duration */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Course Duration</Label>
                 <div className="grid gap-3">
@@ -665,7 +723,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
 
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
@@ -677,8 +735,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 5: Payment Method */}
-            {step === 5 && (
+            {/* Step 6: Payment Method */}
+            {step === 6 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Payment Method</Label>
                 <div className="grid gap-3">

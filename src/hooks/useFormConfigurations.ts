@@ -27,6 +27,7 @@ export const useFormConfigurations = () => {
   const [classTypes, setClassTypes] = useState<{ id: string; value: string; label: string }[]>([]);
   const [fieldLabels, setFieldLabels] = useState<{ id: string; value: string; label: string }[]>([]);
   const [courseDurations, setCourseDurations] = useState<{ id: string; value: string; label: string; price: number }[]>([]);
+  const [timings, setTimings] = useState<{ id: string; value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConfigurations = async () => {
@@ -80,6 +81,10 @@ export const useFormConfigurations = () => {
         .filter((c) => c.config_type === "course_duration")
         .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value, price: c.price || 0 }));
 
+      const timingsData = configs
+        .filter((c) => c.config_type === "timing")
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
+
       setCourses(coursesData);
       setBranches(branchesData);
       setPaymentMethods(paymentMethodsData);
@@ -87,6 +92,7 @@ export const useFormConfigurations = () => {
       setClassTypes(classTypesData);
       setFieldLabels(fieldLabelsData);
       setCourseDurations(courseDurationsData);
+      setTimings(timingsData);
     } catch (error) {
       console.error("Error fetching form configurations:", error);
     } finally {
@@ -126,6 +132,7 @@ export const useFormConfigurations = () => {
     classTypes,
     fieldLabels,
     courseDurations,
+    timings,
     loading,
     refetch: fetchConfigurations,
   };
