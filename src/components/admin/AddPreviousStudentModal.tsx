@@ -476,10 +476,10 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
                       {categoryCourses.map((course) => (
-                        <div key={course.value} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
+                        <div key={course.value} className="flex items-center p-2 rounded hover:bg-muted/50">
                           <div className="flex items-center space-x-2 flex-1">
                             <Checkbox
-                              id={`prev-course-${course.value}`}
+                              id={`course-${course.value}`}
                               checked={formData.courses.includes(course.value)}
                               onCheckedChange={() => toggleCourse(course.value)}
                             />
@@ -495,7 +495,6 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                               />
                             </div>
                           </div>
-                          <span className="text-sm font-semibold text-primary ml-4">${course.price.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -596,17 +595,20 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                         setFormData({...formData, courseDuration: duration.value, customDuration: ""});
                       }}
                     >
-                      <p className="font-medium">
-                        <InlineEditableField
-                          id={duration.id}
-                          value={duration.label}
-                          configType="course_duration"
-                          configKey={duration.value}
-                          isEditMode={isEditMode}
-                          onUpdate={refetch}
-                          onDelete={refetch}
-                        />
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">
+                          <InlineEditableField
+                            id={duration.id}
+                            value={duration.label}
+                            configType="course_duration"
+                            configKey={duration.value}
+                            isEditMode={isEditMode}
+                            onUpdate={refetch}
+                            onDelete={refetch}
+                          />
+                        </p>
+                        <span className="text-sm font-semibold text-primary">${duration.price.toFixed(2)}</span>
+                      </div>
                     </Card>
                   ))}
                 </div>

@@ -26,7 +26,7 @@ export const useFormConfigurations = () => {
   const [programs, setPrograms] = useState<{ id: string; value: string; label: string }[]>([]);
   const [classTypes, setClassTypes] = useState<{ id: string; value: string; label: string }[]>([]);
   const [fieldLabels, setFieldLabels] = useState<{ id: string; value: string; label: string }[]>([]);
-  const [courseDurations, setCourseDurations] = useState<{ id: string; value: string; label: string }[]>([]);
+  const [courseDurations, setCourseDurations] = useState<{ id: string; value: string; label: string; price: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConfigurations = async () => {
@@ -78,7 +78,7 @@ export const useFormConfigurations = () => {
 
       const courseDurationsData = configs
         .filter((c) => c.config_type === "course_duration")
-        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
+        .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value, price: c.price || 0 }));
 
       setCourses(coursesData);
       setBranches(branchesData);
