@@ -43,6 +43,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     paymentMethod: "",
     courseDuration: "",
     customDuration: "",
+    customDurationUnit: "months",
     countryCode1: "+966",
     countryCode2: "+966",
   });
@@ -252,6 +253,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         paymentMethod: "",
         courseDuration: "",
         customDuration: "",
+        customDurationUnit: "months",
         countryCode1: "+966",
         countryCode2: "+966",
       });
@@ -708,19 +710,36 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="customDuration">Or Enter Custom Duration (Months)</Label>
-                  <Input
-                    id="customDuration"
-                    type="number"
-                    min="1"
-                    placeholder="Enter number of months"
-                    value={formData.customDuration}
-                    onChange={(e) => {
-                      handleInputChange("customDuration", e.target.value);
-                      handleInputChange("courseDuration", "");
-                    }}
-                  />
+                  <Label>Or Enter Custom Duration</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="customDuration"
+                      type="number"
+                      min="1"
+                      placeholder="Enter number"
+                      className="flex-1"
+                      value={formData.customDuration}
+                      onChange={(e) => {
+                        handleInputChange("customDuration", e.target.value);
+                        handleInputChange("courseDuration", "");
+                      }}
+                    />
+                    <Select
+                      value={formData.customDurationUnit}
+                      onValueChange={(value) => handleInputChange("customDurationUnit", value)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="weeks">Weeks</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
 
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1">

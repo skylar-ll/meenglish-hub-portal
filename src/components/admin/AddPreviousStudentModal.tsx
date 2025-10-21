@@ -42,6 +42,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     paymentMethod: "",
     courseDuration: "",
     customDuration: "",
+    customDurationUnit: "months",
     countryCode1: "+966",
     countryCode2: "+966",
   });
@@ -239,6 +240,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         paymentMethod: "",
         courseDuration: "",
         customDuration: "",
+        customDurationUnit: "months",
         countryCode1: "+966",
         countryCode2: "+966",
       });
@@ -679,16 +681,33 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="customDuration">Or Enter Custom Duration (Months)</Label>
-                  <Input
-                    id="customDuration"
-                    type="number"
-                    min="1"
-                    placeholder="Enter number of months"
-                    value={formData.customDuration}
-                    onChange={(e) => setFormData({...formData, customDuration: e.target.value, courseDuration: ""})}
-                  />
+                  <Label>Or Enter Custom Duration</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="customDuration"
+                      type="number"
+                      min="1"
+                      placeholder="Enter number"
+                      className="flex-1"
+                      value={formData.customDuration}
+                      onChange={(e) => setFormData({...formData, customDuration: e.target.value, courseDuration: ""})}
+                    />
+                    <Select
+                      value={formData.customDurationUnit}
+                      onValueChange={(value) => setFormData({...formData, customDurationUnit: value})}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="weeks">Weeks</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
 
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
