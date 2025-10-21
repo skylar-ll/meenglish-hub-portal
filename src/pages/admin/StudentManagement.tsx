@@ -30,12 +30,14 @@ const StudentManagement = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [courses, setCourses] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAdminAccess();
     fetchStudents();
     fetchTeachers();
+    fetchCourses();
   }, []);
 
   const checkAdminAccess = async () => {
@@ -108,6 +110,28 @@ const StudentManagement = () => {
       setTeachers(data || []);
     } catch (error: any) {
       toast.error("Failed to load teachers");
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("form_configurations")
+        .select("config_key, config_value")
+        .eq("config_type", "program")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (error) throw error;
+      
+      const courseOptions = (data || []).map(course => ({
+        value: course.config_value,
+        label: course.config_value
+      }));
+      
+      setCourses(courseOptions);
+    } catch (error: any) {
+      toast.error("Failed to load courses");
     }
   };
 
@@ -234,7 +258,8 @@ const StudentManagement = () => {
                         <InlineStudentField
                           value={student.program}
                           onSave={(value) => handleFieldUpdate(student.id, "program", value)}
-                          type="text"
+                          type="select"
+                          options={courses}
                         />
                       </td>
                       <td className="p-3">

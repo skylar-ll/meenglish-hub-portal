@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Check, X, Edit } from "lucide-react";
 
 interface InlineStudentFieldProps {
@@ -89,6 +90,31 @@ export const InlineStudentField = ({
             <X className="w-3 h-3" />
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (type === "select" && !isMulti && options) {
+    return (
+      <div className="flex items-center gap-1">
+        <Select value={editValue} onValueChange={setEditValue}>
+          <SelectTrigger className="h-8 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={handleSave} className="h-8 w-8 p-0">
+          <Check className="w-3 h-3" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
+          <X className="w-3 h-3" />
+        </Button>
       </div>
     );
   }
