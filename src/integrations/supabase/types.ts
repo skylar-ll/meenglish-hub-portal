@@ -53,6 +53,90 @@ export type Database = {
         }
         Relationships: []
       }
+      billing: {
+        Row: {
+          amount_paid: number
+          amount_remaining: number
+          commercial_registration: string | null
+          contract_number: string | null
+          course_package: string
+          course_start_date: string
+          created_at: string
+          discount_percentage: number
+          fee_after_discount: number
+          first_payment: number | null
+          id: string
+          language: string
+          level_count: number
+          phone: string
+          registration_date: string
+          second_payment: number | null
+          signature_url: string | null
+          signed_pdf_url: string | null
+          student_id: string
+          student_name_ar: string
+          student_name_en: string
+          time_slot: string | null
+          total_fee: number
+          training_license: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          amount_remaining?: number
+          commercial_registration?: string | null
+          contract_number?: string | null
+          course_package: string
+          course_start_date: string
+          created_at?: string
+          discount_percentage?: number
+          fee_after_discount?: number
+          first_payment?: number | null
+          id?: string
+          language?: string
+          level_count?: number
+          phone: string
+          registration_date?: string
+          second_payment?: number | null
+          signature_url?: string | null
+          signed_pdf_url?: string | null
+          student_id: string
+          student_name_ar: string
+          student_name_en: string
+          time_slot?: string | null
+          total_fee?: number
+          training_license?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          amount_remaining?: number
+          commercial_registration?: string | null
+          contract_number?: string | null
+          course_package?: string
+          course_start_date?: string
+          created_at?: string
+          discount_percentage?: number
+          fee_after_discount?: number
+          first_payment?: number | null
+          id?: string
+          language?: string
+          level_count?: number
+          phone?: string
+          registration_date?: string
+          second_payment?: number | null
+          signature_url?: string | null
+          signed_pdf_url?: string | null
+          student_id?: string
+          student_name_ar?: string
+          student_name_en?: string
+          time_slot?: string | null
+          total_fee?: number
+          training_license?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_pricing: {
         Row: {
           created_at: string | null
@@ -558,6 +642,7 @@ export type Database = {
         Row: {
           amount_paid: number | null
           amount_remaining: number | null
+          billing_id: string | null
           branch: string
           class_type: string
           course_duration_months: number | null
@@ -580,6 +665,7 @@ export type Database = {
           student_id: string | null
           subscription_status: string | null
           teacher_id: string | null
+          timing: string | null
           total_course_fee: number | null
           total_grade: number | null
           updated_at: string
@@ -587,6 +673,7 @@ export type Database = {
         Insert: {
           amount_paid?: number | null
           amount_remaining?: number | null
+          billing_id?: string | null
           branch: string
           class_type: string
           course_duration_months?: number | null
@@ -609,6 +696,7 @@ export type Database = {
           student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
+          timing?: string | null
           total_course_fee?: number | null
           total_grade?: number | null
           updated_at?: string
@@ -616,6 +704,7 @@ export type Database = {
         Update: {
           amount_paid?: number | null
           amount_remaining?: number | null
+          billing_id?: string | null
           branch?: string
           class_type?: string
           course_duration_months?: number | null
@@ -638,11 +727,19 @@ export type Database = {
           student_id?: string | null
           subscription_status?: string | null
           teacher_id?: string | null
+          timing?: string | null
           total_course_fee?: number | null
           total_grade?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "students_billing_id_fkey"
+            columns: ["billing_id"]
+            isOneToOne: false
+            referencedRelation: "billing"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_teacher_id_fkey"
             columns: ["teacher_id"]
