@@ -219,33 +219,58 @@ const BillingForm = () => {
       // Get registration data with all info
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
 
-      // Create student record
-      const { data: studentData, error: studentError } = await supabase
+      // Create or update student record (avoid duplicates)
+      const { data: existingStudent } = await supabase
         .from("students")
-        .insert({
-          id: user.id,
-          full_name_ar: billData.clientNameAr,
-          full_name_en: billData.clientName,
-          phone1: billData.contactNumber,
-          phone2: billData.phone2 || null,
-          email: billData.email,
-          national_id: billData.nationalId,
-          branch: billData.branch,
-          program: billData.courseName,
-          class_type: billData.courseName,
-          payment_method: registration.paymentMethod || "Cash",
-          subscription_status: "active",
-          course_duration_months: billData.levelCount,
-          timing: billData.timeSlot,
-          billing_id: billing.id,
-          registration_date: billingRecord.registration_date,
-          expiration_date: format(
-            addDays(toZonedTime(new Date(), ksaTimezone), billData.levelCount * 30),
-            "yyyy-MM-dd"
-          ),
-        })
-        .select()
-        .single();
+        .select("id")
+        .eq("email", billData.email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let studentData: any = null;
+      let studentError: any = null;
+
+      const studentPayload = {
+        full_name_ar: billData.clientNameAr,
+        full_name_en: billData.clientName,
+        phone1: billData.contactNumber,
+        phone2: billData.phone2 || null,
+        email: billData.email,
+        national_id: billData.nationalId,
+        branch: billData.branch,
+        program: billData.courseName,
+        class_type: billData.courseName,
+        payment_method: registration.paymentMethod || "Cash",
+        subscription_status: "active",
+        course_duration_months: billData.levelCount,
+        timing: billData.timeSlot,
+        billing_id: billing.id,
+        registration_date: billingRecord.registration_date,
+        expiration_date: format(
+          addDays(toZonedTime(new Date(), ksaTimezone), billData.levelCount * 30),
+          "yyyy-MM-dd"
+        ),
+      };
+
+      if (existingStudent?.id) {
+        const { data, error } = await supabase
+          .from("students")
+          .update(studentPayload)
+          .eq("id", existingStudent.id)
+          .select()
+          .single();
+        studentData = data;
+        studentError = error;
+      } else {
+        const { data, error } = await supabase
+          .from("students")
+          .insert({ id: user.id, ...studentPayload })
+          .select()
+          .single();
+        studentData = data;
+        studentError = error;
+      }
 
       if (studentError || !studentData) {
         toast.error("Failed to create student record");
@@ -289,10 +314,10 @@ const BillingForm = () => {
       navigate("/student/payments");
     } catch (error: any) {
       console.error("Error completing registration:", error);
-      if (error.errors) {
+      if (error?.errors?.[0]?.message) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error("Failed to complete registration");
+        toast.error(error?.message || "Failed to complete registration");
       }
     } finally {
       setSubmitting(false);
