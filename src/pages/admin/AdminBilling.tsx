@@ -41,6 +41,7 @@ interface BillingRecord {
   amount_paid: number;
   amount_remaining: number;
   signed_pdf_url: string | null;
+  signature_url: string | null;
   language: string;
 }
 
@@ -197,93 +198,122 @@ const AdminBilling = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6">
           {billings.map((billing) => (
-            <Card key={billing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="p-6 space-y-4">
-                {/* Header with Student Info */}
-                <div className="border-b pb-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg">{billing.student_name_en}</h3>
-                      <p className="text-sm text-muted-foreground">{billing.student_name_ar}</p>
-                    </div>
-                    <FileText className="w-6 h-6 text-primary" />
+            <Card key={billing.id} className="overflow-hidden">
+              <div className="p-8">
+                {/* Form Header */}
+                <div className="text-center border-b pb-4 mb-6">
+                  <h2 className="text-2xl font-bold mb-2">Modern Education Institute of Language</h2>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Training License No.: 5300751</p>
+                    <p>Commercial Registration No.: 2050122590</p>
                   </div>
-                  <p className="text-xs font-mono text-muted-foreground">ID: {billing.student_id || 'N/A'}</p>
                 </div>
 
-                {/* Course Details */}
-                <div className="space-y-2">
+                {/* Student Info Grid */}
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <p className="text-xs text-muted-foreground">Course Package</p>
-                    <p className="font-semibold text-sm">{billing.course_package}</p>
+                    <p className="text-sm text-muted-foreground mb-1">Student Name (English)</p>
+                    <p className="font-semibold text-lg">{billing.student_name_en}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Time Slot</p>
-                      <p className="font-medium text-sm">{billing.time_slot || 'TBD'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Levels</p>
-                      <p className="font-medium text-sm">{billing.level_count}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Student Name (Arabic)</p>
+                    <p className="font-semibold text-lg">{billing.student_name_ar}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Registration</p>
-                      <p className="font-medium text-sm">{new Date(billing.registration_date).toLocaleDateString()}</p>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Student ID</p>
+                    <p className="font-mono font-semibold">{billing.student_id || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Contact Number</p>
+                    <p className="font-semibold">{billing.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Course Package</p>
+                    <p className="font-semibold">{billing.course_package}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Time Slot</p>
+                    <p className="font-semibold">{billing.time_slot || 'TBD'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Registration Date</p>
+                    <p className="font-semibold">{new Date(billing.registration_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Course Start Date</p>
+                    <p className="font-semibold">{new Date(billing.course_start_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {/* Financial Details */}
+                <div className="bg-muted/30 rounded-lg p-6 mb-6">
+                  <h3 className="font-bold text-lg mb-4">Financial Details</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Level Count</span>
+                      <span className="font-bold">{billing.level_count}</span>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Start Date</p>
-                      <p className="font-medium text-sm">{new Date(billing.course_start_date).toLocaleDateString()}</p>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Total Fee</span>
+                      <span className="font-bold">${billing.total_fee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="font-bold text-green-600">{billing.discount_percentage}%</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Fee After Discount</span>
+                      <span className="font-bold">${billing.fee_after_discount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Amount Paid</span>
+                      <span className="font-bold text-green-600">${billing.amount_paid.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Amount Remaining</span>
+                      <span className="font-bold text-destructive">${billing.amount_remaining.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Financial Info */}
-                <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Total Fee</span>
-                    <span className="font-bold">${billing.total_fee.toFixed(2)}</span>
+                {/* Student Signature */}
+                {billing.signature_url && (
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold mb-3">Student Signature:</p>
+                    <div className="border-2 border-dashed rounded-lg p-4 bg-background inline-block">
+                      <img 
+                        src={billing.signature_url} 
+                        alt="Student Signature" 
+                        className="max-w-sm h-24 object-contain"
+                      />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Discount ({billing.discount_percentage}%)</span>
-                    <span className="text-sm text-green-600">-${(billing.total_fee * billing.discount_percentage / 100).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-xs text-muted-foreground">Amount Paid</span>
-                    <span className="font-semibold text-green-600">${billing.amount_paid.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Remaining</span>
-                    <span className="font-semibold text-destructive">${billing.amount_remaining.toFixed(2)}</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-3 pt-4 border-t">
                   <Button
-                    className="flex-1"
                     variant="default"
                     onClick={() => handleDownloadPDF(billing)}
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    View PDF
+                    Download PDF
                   </Button>
                   <Button
-                    size="icon"
                     variant="outline"
                     onClick={() => handleEditClick(billing)}
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Billing
                   </Button>
                   <Button
-                    size="icon"
                     variant="destructive"
                     onClick={() => handleDelete(billing.id)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
                   </Button>
                 </div>
               </div>
