@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { supabase } from "@/integrations/supabase/client";
 
 const CourseDurationSelection = () => {
   const navigate = useNavigate();
@@ -15,8 +15,29 @@ const CourseDurationSelection = () => {
   const { t } = useLanguage();
   const [selectedDuration, setSelectedDuration] = useState("");
   const [customDuration, setCustomDuration] = useState("");
+  const [coursePricing, setCoursePricing] = useState<Array<{ duration_months: number; price: number }>>([]);
+  const [loading, setLoading] = useState(true);
   const password = location.state?.password;
-  const { courseDurations, loading } = useFormConfigurations();
+
+  useEffect(() => {
+    fetchCoursePricing();
+  }, []);
+
+  const fetchCoursePricing = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('course_pricing')
+        .select('*')
+        .order('duration_months', { ascending: true });
+      
+      if (error) throw error;
+      setCoursePricing(data || []);
+    } catch (error: any) {
+      toast.error('Failed to load pricing');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNext = () => {
     if (!selectedDuration && !customDuration) {
@@ -65,20 +86,23 @@ const CourseDurationSelection = () => {
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Duration</Label>
                 <div className="grid gap-3">
-                  {courseDurations.map((duration) => (
+                  {coursePricing.map((pricing) => (
                     <Card
-                      key={duration.value}
+                      key={pricing.duration_months}
                       className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
-                        selectedDuration === duration.value && !customDuration
+                        selectedDuration === pricing.duration_months.toString() && !customDuration
                           ? "border-primary bg-primary/5"
                           : ""
                       }`}
                       onClick={() => {
-                        setSelectedDuration(duration.value);
+                        setSelectedDuration(pricing.duration_months.toString());
                         setCustomDuration("");
                       }}
                     >
-                      <p className="font-medium">{duration.label}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{pricing.duration_months} {pricing.duration_months === 1 ? 'Month' : 'Months'}</p>
+                        <p className="text-lg font-bold text-primary">{pricing.price.toLocaleString()} SAR</p>
+                      </div>
                     </Card>
                   ))}
                 </div>
