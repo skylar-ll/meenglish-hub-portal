@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, Pencil, Check, X } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { EditFormConfigModal } from "./EditFormConfigModal";
 import { InlineEditableField } from "./InlineEditableField";
@@ -28,6 +28,37 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
+  const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+
+  const startEditPrice = (id: string, current: number | null | undefined) => {
+    setPriceValues((prev) => ({ ...prev, [id]: String(current ?? 0) }));
+    setPriceEditing((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const cancelEditPrice = (id: string) => {
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const savePrice = async (id: string) => {
+    const raw = priceValues[id];
+    const numeric = parseFloat(raw);
+    if (isNaN(numeric)) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    const { error } = await supabase
+      .from("form_configurations")
+      .update({ price: numeric })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to update price");
+      return;
+    }
+    toast.success("Price updated");
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+    refetch();
+  };
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -294,7 +325,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Add New Student - Step {step} of 5</DialogTitle>
+              <DialogTitle>Add New Student - Step {step} of 6</DialogTitle>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
@@ -696,7 +727,33 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                             onDelete={refetch}
                           />
                         </p>
-                        <span className="text-sm font-semibold text-primary">${duration.price.toFixed(2)}</span>
+                        <div className="flex items-center gap-2">
+                          {priceEditing[duration.id] ? (
+                            <>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={priceValues[duration.id] ?? String(duration.price ?? 0)}
+                                onChange={(e) => setPriceValues((prev) => ({ ...prev, [duration.id]: e.target.value }))}
+                                className="h-8 w-24 text-right"
+                              />
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); savePrice(duration.id); }}>
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); cancelEditPrice(duration.id); }}>
+                                <X className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-sm font-semibold text-primary">${(duration.price ?? 0).toFixed(2)}</span>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(duration.id, duration.price); }}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -792,7 +849,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>
