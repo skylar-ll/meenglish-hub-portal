@@ -34,7 +34,7 @@ const BranchSelection = () => {
     registrationData.branch = selectedBranch;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/payment", { state: { password } });
+    navigate("/student/billing-form", { state: { password } });
   };
 
   return (
