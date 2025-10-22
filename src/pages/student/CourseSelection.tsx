@@ -82,21 +82,18 @@ const CourseSelection = () => {
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => (
-                          <div key={course.value} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center space-x-3 flex-1">
-                              <Checkbox
-                                id={course.value}
-                                checked={selectedCourses.includes(course.value)}
-                                onCheckedChange={() => toggleCourse(course.value)}
-                              />
-                              <label
-                                htmlFor={course.value}
-                                className="text-sm flex-1 cursor-pointer"
-                              >
-                                {course.label}
-                              </label>
-                            </div>
-                            <span className="text-sm font-semibold text-primary ml-4">${course.price.toFixed(2)}</span>
+                          <div key={course.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={course.value}
+                              checked={selectedCourses.includes(course.value)}
+                              onCheckedChange={() => toggleCourse(course.value)}
+                            />
+                            <label
+                              htmlFor={course.value}
+                              className="text-sm flex-1 cursor-pointer"
+                            >
+                              {course.label}
+                            </label>
                           </div>
                         ))}
                       </div>

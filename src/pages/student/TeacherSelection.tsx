@@ -101,7 +101,7 @@ const TeacherSelection = () => {
     registration.teacherSelections = selectedTeachers;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
-    navigate("/student/duration-selection", { state: { password } });
+    navigate("/student/timing-selection", { state: { password } });
   };
 
   const handleSkip = () => {
