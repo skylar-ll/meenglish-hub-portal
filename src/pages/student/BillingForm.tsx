@@ -170,17 +170,20 @@ const BillingForm = () => {
         authData = signInData;
       }
 
-      // Assign student role
+      // Assign student role (upsert to handle existing roles)
       const { error: roleError } = await supabase
         .from("user_roles")
-        .insert({
+        .upsert({
           user_id: authData.user.id,
           role: "student",
+        }, {
+          onConflict: "user_id,role",
+          ignoreDuplicates: true
         });
 
       if (roleError) {
-        toast.error("Failed to assign student role");
-        return;
+        console.error("Role assignment error:", roleError);
+        // Continue anyway - role might already exist
       }
 
       // Upload signature
