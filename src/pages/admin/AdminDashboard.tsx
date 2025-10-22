@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, X } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -258,114 +258,6 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </Card>
-
-        {/* Billing Forms Modal */}
-        {showBillingForms && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-6xl max-h-[90vh] overflow-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-primary" />
-                    <h2 className="text-2xl font-bold">Billing Forms</h2>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowBillingForms(false)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-
-                {loadingBilling ? (
-                  <div className="text-center py-12">Loading billing forms...</div>
-                ) : billingForms.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No billing forms submitted yet
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {billingForms.map((billing) => (
-                      <Card key={billing.id} className="p-6">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Student ID</p>
-                              <p className="font-semibold">{billing.students.student_id || "N/A"}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Name (EN)</p>
-                              <p className="font-semibold">{billing.student_name_en}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Name (AR)</p>
-                              <p className="font-semibold" dir="rtl">{billing.student_name_ar}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Email</p>
-                              <p className="font-medium">{billing.students.email}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Phone</p>
-                              <p className="font-medium">{billing.phone}</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Course Package</p>
-                              <p className="font-semibold">{billing.course_package}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total Fee</p>
-                              <p className="font-semibold text-primary">${billing.total_fee}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Amount Paid</p>
-                              <p className="font-semibold text-success">${billing.amount_paid}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Amount Remaining</p>
-                              <p className="font-semibold text-destructive">${billing.amount_remaining}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Registration Date</p>
-                              <p className="font-medium">
-                                {new Date(billing.registration_date).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="pt-2">
-                              <Button
-                                onClick={async () => {
-                                  try {
-                                    if (!billing.signed_pdf_url) return;
-                                    const { data, error } = await (await import("@/integrations/supabase/client")).supabase.storage
-                                      .from('billing-pdfs')
-                                      .createSignedUrl(billing.signed_pdf_url, 60 * 60);
-                                    if (error || !data?.signedUrl) throw error || new Error('No signed URL');
-                                    window.open(data.signedUrl, '_blank');
-                                  } catch (e) {
-                                    const { toast } = await import('sonner');
-                                    toast.error('Unable to open form');
-                                  }
-                                }}
-                                className="w-full bg-gradient-to-r from-primary to-secondary"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                View Signed Form
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
 
         {/* Main Content Tabs */}
         <Card className="p-6">
