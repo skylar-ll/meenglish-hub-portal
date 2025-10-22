@@ -609,11 +609,9 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                             ) : (
                               <>
                                 <span className="text-sm font-semibold text-primary">${(course.price ?? 0).toFixed(2)}</span>
-                                {isEditMode && (
-                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(course.id, course.price); }}>
-                                    <Pencil className="h-3 w-3" />
-                                  </Button>
-                                )}
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(course.id, course.price); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
                               </>
                             )}
                           </div>
@@ -858,11 +856,9 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                           ) : (
                             <>
                               <span className="text-sm font-semibold text-primary">${(duration.price ?? 0).toFixed(2)}</span>
-                              {isEditMode && (
-                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(duration.id, duration.price); }}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(duration.id, duration.price); }}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
                             </>
                           )}
                         </div>
