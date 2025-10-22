@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CourseDurationSelection = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const [selectedDuration, setSelectedDuration] = useState("");
   const [customDuration, setCustomDuration] = useState("");
   const [coursePricing, setCoursePricing] = useState<Array<{ duration_months: number; price: number }>>([]);
   const [loading, setLoading] = useState(true);
-  const password = location.state?.password;
 
   useEffect(() => {
     fetchCoursePricing();
@@ -53,7 +51,7 @@ const CourseDurationSelection = () => {
       courseDurationMonths: durationMonths,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(durationData));
-    navigate("/student/branch-selection", { state: { password } });
+    navigate("/student/branch-selection");
   };
 
   return (

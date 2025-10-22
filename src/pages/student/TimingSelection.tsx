@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,12 +17,10 @@ interface TimingOption {
 
 const TimingSelection = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const [timingOptions, setTimingOptions] = useState<TimingOption[]>([]);
   const [selectedTiming, setSelectedTiming] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const password = location.state?.password;
 
   useEffect(() => {
     fetchTimingOptions();
@@ -59,7 +57,7 @@ const TimingSelection = () => {
     registration.timing = selectedTiming;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
-    navigate("/student/duration-selection", { state: { password } });
+    navigate("/student/duration-selection");
   };
 
   if (loading) {
@@ -76,7 +74,7 @@ const TimingSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/teacher-selection", { state: { password } })}
+            onClick={() => navigate("/student/teacher-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

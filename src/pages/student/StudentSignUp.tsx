@@ -64,14 +64,51 @@ const StudentSignUp = () => {
       // Validate with zod schema
       const validatedData = studentSignupSchema.parse(dataToValidate);
 
-      // Store data WITHOUT password in sessionStorage
-      const { password, ...dataWithoutPassword } = validatedData;
-      sessionStorage.setItem("studentRegistration", JSON.stringify(dataWithoutPassword));
-      
-      // Store password separately in memory only (component state passed via navigation)
-      navigate("/student/course-selection", { 
-        state: { password } 
+      // Create user account immediately to avoid passing password through navigation
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/student/course`,
+          data: {
+            full_name_en: validatedData.fullNameEn,
+            full_name_ar: validatedData.fullNameAr,
+          },
+        },
       });
+
+      if (authError || !authData.user) {
+        toast.error(`Authentication error: ${authError?.message}`);
+        return;
+      }
+
+      // Assign student role immediately
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: authData.user.id,
+          role: "student",
+        });
+
+      if (roleError) {
+        // Only fail if it's not a duplicate role error
+        if (!roleError.message.includes("duplicate") && !roleError.message.includes("unique")) {
+          toast.error("Failed to assign student role");
+          return;
+        }
+      }
+
+      // Store registration data WITHOUT password in sessionStorage
+      const { password, ...dataWithoutPassword } = validatedData;
+      sessionStorage.setItem("studentRegistration", JSON.stringify({
+        ...dataWithoutPassword,
+        userId: authData.user.id, // Store user ID for later use
+      }));
+      
+      toast.success("Account created successfully! Please complete your registration.");
+      
+      // Navigate without password - user is now authenticated
+      navigate("/student/course-selection");
     } catch (error: any) {
       if (error.errors) {
         toast.error(error.errors[0].message);

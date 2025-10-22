@@ -11,10 +11,8 @@ import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
-  const password = location.state?.password;
   const { courses, loading } = useFormConfigurations();
 
   const toggleCourse = (courseValue: string) => {
@@ -37,7 +35,7 @@ const CourseSelection = () => {
       courses: selectedCourses,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(courseData));
-    navigate("/student/teacher-selection", { state: { password } });
+    navigate("/student/teacher-selection");
   };
 
   // Group courses by category

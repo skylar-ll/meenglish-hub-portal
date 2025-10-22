@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,12 +21,10 @@ interface CourseTeachers {
 
 const TeacherSelection = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const [courseTeachers, setCourseTeachers] = useState<CourseTeachers[]>([]);
   const [selectedTeachers, setSelectedTeachers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const password = location.state?.password;
 
   useEffect(() => {
     fetchTeachersForCourses();
@@ -101,7 +99,7 @@ const TeacherSelection = () => {
     registration.teacherSelections = selectedTeachers;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
-    navigate("/student/timing-selection", { state: { password } });
+    navigate("/student/timing-selection");
   };
 
   useEffect(() => {
@@ -110,9 +108,9 @@ const TeacherSelection = () => {
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
       registration.teacherSelections = selectedTeachers;
       sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
-      navigate("/student/timing-selection", { state: { password } });
+      navigate("/student/timing-selection");
     }
-  }, [loading, courseTeachers.length, navigate, password, selectedTeachers]);
+  }, [loading, courseTeachers.length, navigate, selectedTeachers]);
 
   if (loading) {
     return (

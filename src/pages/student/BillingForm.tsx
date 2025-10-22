@@ -12,12 +12,10 @@ import { studentSignupSchema } from "@/lib/validations";
 
 const BillingForm = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [billData, setBillData] = useState<any>(null);
-  const password = location.state?.password;
   const ksaTimezone = "Asia/Riyadh";
 
   useEffect(() => {
@@ -31,8 +29,11 @@ const BillingForm = () => {
       // Get registration data from sessionStorage
       const registrationData = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
       
-      if (!registrationData.fullNameEn || !registrationData.courses || !password) {
-        toast.error("Registration data not found. Please start over.");
+      // Verify user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!registrationData.fullNameEn || !registrationData.courses || !user) {
+        toast.error("Registration data not found or session expired. Please start over.");
         navigate("/student/signup");
         return;
       }
@@ -121,74 +122,61 @@ const BillingForm = () => {
       return;
     }
 
-    if (!billData || !password) {
+    if (!billData) {
       toast.error("Missing registration data");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Validate form data
-      const validatedData = studentSignupSchema.parse({
-        fullNameAr: billData.clientNameAr,
-        fullNameEn: billData.clientName,
-        phone1: billData.contactNumber,
-        phone2: billData.phone2,
-        email: billData.email,
-        id: billData.nationalId,
-        password: password,
-      });
-
-      // Check if user already exists by trying to sign in first
-      let authData;
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: validatedData.email,
-        password: validatedData.password,
-      });
-
-      if (signInError) {
-        // User doesn't exist, create new account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: validatedData.email,
-          password: validatedData.password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/student/course`,
-            data: {
-              full_name_en: validatedData.fullNameEn,
-              full_name_ar: validatedData.fullNameAr,
-            },
-          },
-        });
-
-        if (signUpError || !signUpData.user) {
-          toast.error(`Authentication error: ${signUpError?.message}`);
-          return;
-        }
-        authData = signUpData;
-      } else {
-        // User already exists, use existing session
-        authData = signInData;
+      // Get current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        toast.error("Session expired. Please start registration again.");
+        navigate("/student/signup");
+        return;
       }
 
-      // Assign student role (upsert to handle existing roles)
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .upsert({
-          user_id: authData.user.id,
-          role: "student",
-        }, {
-          onConflict: "user_id,role",
-          ignoreDuplicates: true
-        });
+      // Verify student role is assigned - retry if needed
+      let roleVerified = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: roleData, error: roleCheckError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "student")
+          .single();
 
-      if (roleError) {
-        console.error("Role assignment error:", roleError);
-        // Continue anyway - role might already exist
+        if (!roleCheckError && roleData) {
+          roleVerified = true;
+          break;
+        }
+
+        // If role not found, try to create it
+        if (attempt < 2) {
+          await supabase
+            .from("user_roles")
+            .insert({
+              user_id: user.id,
+              role: "student",
+            })
+            .select()
+            .single();
+          
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (!roleVerified) {
+        toast.error("Failed to verify student role. Please contact support.");
+        return;
       }
 
       // Upload signature
       const signatureBlob = await fetch(signature).then(r => r.blob());
-      const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
+      const signatureFileName = `${user.id}/signature_${Date.now()}.png`;
       
       const { data: signatureUpload, error: signatureError } = await supabase.storage
         .from('signatures')
@@ -202,9 +190,9 @@ const BillingForm = () => {
 
       // Create billing record
       const billingRecord = {
-        student_id: authData.user.id,
-        student_name_en: validatedData.fullNameEn,
-        student_name_ar: validatedData.fullNameAr,
+        student_id: user.id,
+        student_name_en: billData.clientName,
+        student_name_ar: billData.clientNameAr,
         phone: billData.contactNumber,
         course_package: billData.courseName,
         registration_date: format(toZonedTime(new Date(), ksaTimezone), "yyyy-MM-dd"),
@@ -235,13 +223,13 @@ const BillingForm = () => {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .insert({
-          id: authData.user.id,
-          full_name_ar: validatedData.fullNameAr,
-          full_name_en: validatedData.fullNameEn,
-          phone1: validatedData.phone1,
-          phone2: validatedData.phone2 || null,
-          email: validatedData.email,
-          national_id: validatedData.id,
+          id: user.id,
+          full_name_ar: billData.clientNameAr,
+          full_name_en: billData.clientName,
+          phone1: billData.contactNumber,
+          phone2: billData.phone2 || null,
+          email: billData.email,
+          national_id: billData.nationalId,
           branch: billData.branch,
           program: billData.courseName,
           class_type: billData.courseName,
@@ -281,16 +269,16 @@ const BillingForm = () => {
       await supabase
         .from("profiles")
         .update({
-          full_name_en: validatedData.fullNameEn,
-          full_name_ar: validatedData.fullNameAr,
-          phone1: validatedData.phone1,
-          phone2: validatedData.phone2 || null,
-          national_id: validatedData.id,
+          full_name_en: billData.clientName,
+          full_name_ar: billData.clientNameAr,
+          phone1: billData.contactNumber,
+          phone2: billData.phone2 || null,
+          national_id: billData.nationalId,
           branch: billData.branch,
           program: billData.courseName,
           payment_method: registration.paymentMethod || "Cash",
         })
-        .eq("id", authData.user.id);
+        .eq("id", user.id);
 
       // Clear registration data
       sessionStorage.removeItem("studentRegistration");
@@ -325,7 +313,7 @@ const BillingForm = () => {
         <div className="mb-8 text-center">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/branch-selection", { state: { password } })}
+            onClick={() => navigate("/student/branch-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -587,7 +575,7 @@ const BillingForm = () => {
         <div className="mt-6 flex gap-4">
           <Button
             variant="outline"
-            onClick={() => navigate("/student/branch-selection", { state: { password } })}
+            onClick={() => navigate("/student/branch-selection")}
             className="flex-1"
             disabled={submitting}
           >

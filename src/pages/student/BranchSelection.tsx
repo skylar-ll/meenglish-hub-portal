@@ -10,12 +10,9 @@ import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const [selectedBranch, setSelectedBranch] = useState("");
   const { branches, loading } = useFormConfigurations();
-
-  const password = location.state?.password;
 
   const handleNext = () => {
     if (!selectedBranch) {
@@ -34,7 +31,7 @@ const BranchSelection = () => {
     registrationData.branch = selectedBranch;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/billing-form", { state: { password } });
+    navigate("/student/billing-form");
   };
 
   return (
