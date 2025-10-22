@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, Pencil, Check, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { studentSignupSchema } from "@/lib/validations";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
@@ -29,6 +29,37 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
+  const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+
+  const startEditPrice = (id: string, current: number | null | undefined) => {
+    setPriceValues((prev) => ({ ...prev, [id]: String(current ?? 0) }));
+    setPriceEditing((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const cancelEditPrice = (id: string) => {
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const savePrice = async (id: string) => {
+    const raw = priceValues[id];
+    const numeric = parseFloat(raw);
+    if (isNaN(numeric)) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    const { error } = await supabase
+      .from("form_configurations")
+      .update({ price: numeric })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to update price");
+      return;
+    }
+    toast.success("Price updated");
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+    refetch();
+  };
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -557,8 +588,34 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                               />
                             </div>
                           </div>
-                          <div className="text-sm font-semibold text-primary">
-                            ${course.price.toFixed(2)}
+                          <div className="flex items-center gap-2">
+                            {priceEditing[course.id] ? (
+                              <>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={priceValues[course.id] ?? String(course.price ?? 0)}
+                                  onChange={(e) => setPriceValues((prev) => ({ ...prev, [course.id]: e.target.value }))}
+                                  className="h-8 w-24 text-right"
+                                />
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); savePrice(course.id); }}>
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); cancelEditPrice(course.id); }}>
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm font-semibold text-primary">${(course.price ?? 0).toFixed(2)}</span>
+                                {isEditMode && (
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(course.id, course.price); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -780,7 +837,35 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                             onDelete={refetch}
                           />
                         </p>
-                        <span className="text-sm font-semibold text-primary">${duration.price.toFixed(2)}</span>
+                        <div className="flex items-center gap-2">
+                          {priceEditing[duration.id] ? (
+                            <>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={priceValues[duration.id] ?? String(duration.price ?? 0)}
+                                onChange={(e) => setPriceValues((prev) => ({ ...prev, [duration.id]: e.target.value }))}
+                                className="h-8 w-24 text-right"
+                              />
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); savePrice(duration.id); }}>
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); cancelEditPrice(duration.id); }}>
+                                <X className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-sm font-semibold text-primary">${(duration.price ?? 0).toFixed(2)}</span>
+                              {isEditMode && (
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); startEditPrice(duration.id, duration.price); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   ))}
