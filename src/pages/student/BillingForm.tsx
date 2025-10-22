@@ -122,22 +122,35 @@ const BillingForm = () => {
         password: password,
       });
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Check if user already exists by trying to sign in first
+      let authData;
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: validatedData.email,
         password: validatedData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/student/course`,
-          data: {
-            full_name_en: validatedData.fullNameEn,
-            full_name_ar: validatedData.fullNameAr,
-          },
-        },
       });
 
-      if (authError || !authData.user) {
-        toast.error(`Authentication error: ${authError?.message}`);
-        return;
+      if (signInError) {
+        // User doesn't exist, create new account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: validatedData.email,
+          password: validatedData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/student/course`,
+            data: {
+              full_name_en: validatedData.fullNameEn,
+              full_name_ar: validatedData.fullNameAr,
+            },
+          },
+        });
+
+        if (signUpError || !signUpData.user) {
+          toast.error(`Authentication error: ${signUpError?.message}`);
+          return;
+        }
+        authData = signUpData;
+      } else {
+        // User already exists, use existing session
+        authData = signInData;
       }
 
       // Assign student role
@@ -418,24 +431,113 @@ const BillingForm = () => {
             </div>
 
             {/* Terms */}
-            <div className="p-4 bg-muted/30 rounded-lg text-sm space-y-2">
-              <h3 className="font-bold">Program Terms and Conditions</h3>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Fees include registration, placement test, textbooks, and VAT for Saudi citizens</li>
-                <li>Students must attend on time according to schedule</li>
-                <li>Perfect attendance certificate for 100% attendance</li>
-                <li>Discount coupons for high achievement grades</li>
-                <li>Failed levels must be re-studied (paid re-enrollment)</li>
-                <li>No refunds under any circumstances</li>
-                <li>Postponement allowed up to 3 months with prior notice</li>
-                <li>Mode switching between on-site and online is allowed per policy</li>
-              </ul>
+            <div className="p-4 bg-muted/30 rounded-lg text-sm space-y-3">
+              <h3 className="font-bold text-lg mb-3">Program Terms and Conditions</h3>
+              
+              <div className="space-y-2">
+                <h4 className="font-semibold">Attendance and Postponement</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>Additional classes, workshops, and learning activities are free or discounted for institute members during their subscription period.</li>
+                  <li>Fees include registration, placement test, textbooks, and VAT for Saudi citizens.</li>
+                  <li>Students must attend on time as per the schedule.</li>
+                  <li>A perfect-attendance certificate is granted for 100% attendance.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Discount Rewards</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>A discount coupon is granted for high achievement (+A grade or specified IELTS score).</li>
+                  <li>Coupons apply only to private courses and cannot be combined.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Re-Study</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>If a student fails to reach the required passing grade, they must re-study that level (re-enrollment is paid).</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Absence Policy</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>Absence beyond the allowed percentage cancels eligibility for a completion certificate.</li>
+                  <li>Missed classes cannot be compensated financially.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Postponement Rules</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>Postponement allowed up to 3 months; contact the institute one week before start date.</li>
+                  <li>If the institute delays a course beyond 3 months, the student may request a refund for remaining paid levels.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Payment and Cancellation</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>Fees must be paid on time; late payment may result in cancellation.</li>
+                  <li>Abusive behavior (verbal / physical) results in immediate termination without refund and may be reported to authorities.</li>
+                  <li>No refund of paid fees under any circumstance.</li>
+                  <li>Cancellation cannot transfer the course to another person.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Mode Change</h4>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                  <li>Students may switch between on-site and online study as per institute policy.</li>
+                  <li>When converted to online, remaining months transfer as is; any fee difference is settled.</li>
+                  <li>Transfer between branches is not allowed if outstanding payments exist.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2 mt-4 pt-4 border-t">
+                <h4 className="font-semibold">General</h4>
+                <p className="text-muted-foreground">To confirm agreement, student must sign and send this document by email or the registration WhatsApp number with proof of payment.</p>
+                
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <p className="text-sm font-medium mb-1">Email:</p>
+                    <p className="font-semibold">{billData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-1">Phone:</p>
+                    <p className="font-semibold">{billData.contactNumber}</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <p className="text-sm font-medium mb-1">Date (Student):</p>
+                    <p className="font-semibold">{billData.billDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-1">Date (Institute):</p>
+                    <p className="font-semibold">{billData.billDate}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Signature */}
-        <SignatureCanvas onSave={handleSignatureSave} language="en" />
+        {/* Signatures Section */}
+        <Card className="p-6 mb-6">
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold mb-4">Student Signature</h3>
+              <SignatureCanvas onSave={handleSignatureSave} language="en" />
+            </div>
+            
+            <div className="pt-6 border-t">
+              <h3 className="font-semibold mb-2">Institute Signature</h3>
+              <p className="text-sm text-muted-foreground">To be signed by institute representative after processing</p>
+            </div>
+          </div>
+        </Card>
 
         <div className="mt-6 flex gap-4">
           <Button
