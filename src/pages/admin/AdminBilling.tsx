@@ -286,11 +286,11 @@ const AdminBilling = () => {
                       <span>✍️</span>
                       Please sign below to agree to the terms and conditions
                     </p>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20">
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20 min-h-[300px] flex items-center justify-center">
                       <img 
                         src={billing.signature_url} 
                         alt="Student Signature" 
-                        className="w-full max-w-2xl h-48 object-contain mx-auto"
+                        className="max-w-full max-h-[280px] object-contain"
                       />
                     </div>
                   </div>
