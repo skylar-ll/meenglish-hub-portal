@@ -197,75 +197,107 @@ const AdminBilling = () => {
           </div>
         </div>
 
-        <Card className="p-6">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Registration Date</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Time Slot</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Levels</TableHead>
-                  <TableHead>Total Fee</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Remaining</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {billings.map((billing) => (
-                  <TableRow key={billing.id}>
-                    <TableCell className="font-mono text-sm">{billing.student_id || 'N/A'}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold">{billing.student_name_en}</p>
-                        <p className="text-sm text-muted-foreground">{billing.student_name_ar}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{new Date(billing.registration_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(billing.course_start_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{billing.time_slot || 'TBD'}</TableCell>
-                    <TableCell>{billing.course_package}</TableCell>
-                    <TableCell className="text-center">{billing.level_count}</TableCell>
-                    <TableCell className="font-semibold">${billing.total_fee.toFixed(2)}</TableCell>
-                    <TableCell className="text-success">${billing.amount_paid.toFixed(2)}</TableCell>
-                    <TableCell className="text-destructive">${billing.amount_remaining.toFixed(2)}</TableCell>
-                    <TableCell>{billing.discount_percentage}%</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadPDF(billing)}
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditClick(billing)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(billing.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {billings.map((billing) => (
+            <Card key={billing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <div className="p-6 space-y-4">
+                {/* Header with Student Info */}
+                <div className="border-b pb-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">{billing.student_name_en}</h3>
+                      <p className="text-sm text-muted-foreground">{billing.student_name_ar}</p>
+                    </div>
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <p className="text-xs font-mono text-muted-foreground">ID: {billing.student_id || 'N/A'}</p>
+                </div>
+
+                {/* Course Details */}
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Course Package</p>
+                    <p className="font-semibold text-sm">{billing.course_package}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Time Slot</p>
+                      <p className="font-medium text-sm">{billing.time_slot || 'TBD'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Levels</p>
+                      <p className="font-medium text-sm">{billing.level_count}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Registration</p>
+                      <p className="font-medium text-sm">{new Date(billing.registration_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Start Date</p>
+                      <p className="font-medium text-sm">{new Date(billing.course_start_date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Info */}
+                <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Total Fee</span>
+                    <span className="font-bold">${billing.total_fee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Discount ({billing.discount_percentage}%)</span>
+                    <span className="text-sm text-green-600">-${(billing.total_fee * billing.discount_percentage / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">Amount Paid</span>
+                    <span className="font-semibold text-green-600">${billing.amount_paid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Remaining</span>
+                    <span className="font-semibold text-destructive">${billing.amount_remaining.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1"
+                    variant="default"
+                    onClick={() => handleDownloadPDF(billing)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    View PDF
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => handleEditClick(billing)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => handleDelete(billing.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {billings.length === 0 && (
+          <Card className="p-12 text-center">
+            <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold mb-2">No Billing Forms Yet</h3>
+            <p className="text-muted-foreground">Billing forms will appear here when students complete registration.</p>
+          </Card>
+        )}
 
         {/* Edit Dialog */}
         <Dialog open={!!editingBilling} onOpenChange={() => setEditingBilling(null)}>
