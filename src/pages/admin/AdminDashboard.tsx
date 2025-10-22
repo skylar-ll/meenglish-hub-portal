@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -244,8 +244,8 @@ const AdminDashboard = () => {
               className="gap-2 bg-gradient-to-r from-accent to-primary"
               size="lg"
             >
-              <Users className="w-5 h-5" />
-              Manage Payments
+              <FileText className="w-5 h-5" />
+              Billing Forms
             </Button>
             <Button 
               onClick={() => navigate("/admin/student-management")}

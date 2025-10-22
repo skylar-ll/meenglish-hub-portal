@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CreditCard, Calendar, DollarSign, CheckCircle } from "lucide-react";
+import { ArrowLeft, CreditCard, Calendar, DollarSign, CheckCircle, FileText, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -31,6 +31,7 @@ const StudentPayments = () => {
     amountRemaining: 0,
     courseDuration: 0,
     discountPercentage: 0,
+    billingFormUrl: "",
   });
 
   useEffect(() => {
@@ -47,11 +48,18 @@ const StudentPayments = () => {
 
       const { data: student, error } = await supabase
         .from("students")
-        .select("student_id, full_name_en, total_course_fee, amount_paid, amount_remaining, course_duration_months, discount_percentage")
+        .select("id, student_id, full_name_en, total_course_fee, amount_paid, amount_remaining, course_duration_months, discount_percentage")
         .eq("email", user.email)
         .single();
 
       if (error) throw error;
+
+      // Fetch billing form if exists
+      const { data: billing } = await supabase
+        .from("billing")
+        .select("signed_pdf_url")
+        .eq("student_id", student.id)
+        .maybeSingle();
 
       setPaymentData({
         studentId: student.student_id || "N/A",
@@ -61,6 +69,7 @@ const StudentPayments = () => {
         amountRemaining: student.amount_remaining || 0,
         courseDuration: student.course_duration_months || 0,
         discountPercentage: student.discount_percentage || 0,
+        billingFormUrl: billing?.signed_pdf_url || "",
       });
     } catch (error: any) {
       toast.error("Failed to load payment data");
@@ -205,6 +214,27 @@ const StudentPayments = () => {
                 </div>
               )}
             </Card>
+
+            {paymentData.billingFormUrl && (
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div>
+                      <h3 className="text-lg font-semibold">Billing Form</h3>
+                      <p className="text-sm text-muted-foreground">Your signed registration form</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => window.open(paymentData.billingFormUrl, '_blank')}
+                    className="bg-gradient-to-r from-primary to-secondary"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    View Form
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
         )}
       </div>
