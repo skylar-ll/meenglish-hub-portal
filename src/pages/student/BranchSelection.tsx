@@ -50,10 +50,10 @@ const BranchSelection = () => {
             {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            {t('student.branchSelection.title')}
+            Branch
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {t('student.branchSelection.subtitle')}
+            Select your preferred branch location
           </p>
         </div>
 

@@ -49,6 +49,22 @@ const BillingForm = () => {
         console.error("Pricing error:", pricingError);
       }
 
+      // Fetch teacher details if any
+      let teacherDetails: any[] = [];
+      if (registrationData.teacherSelections) {
+        const teacherIds = Object.values(registrationData.teacherSelections) as string[];
+        const uniqueTeacherIds = [...new Set(teacherIds)];
+        
+        const { data: teachers, error: teacherError } = await supabase
+          .from('teachers')
+          .select('id, full_name, email, phone, courses_assigned')
+          .in('id', uniqueTeacherIds);
+
+        if (!teacherError && teachers) {
+          teacherDetails = teachers;
+        }
+      }
+
       // Get current date in KSA timezone
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
@@ -82,6 +98,7 @@ const BillingForm = () => {
         email: registrationData.email,
         nationalId: registrationData.id,
         phone2: registrationData.phone2 || "",
+        teachers: teacherDetails,
       };
 
       setBillData(billingData);
@@ -275,10 +292,10 @@ const BillingForm = () => {
       // Clear registration data
       sessionStorage.removeItem("studentRegistration");
 
-      toast.success("Registration completed successfully! Please check your email to verify your account.");
+      toast.success("Registration completed successfully! Redirecting to payment...");
       
-      // Navigate to student course page
-      navigate("/student/course");
+      // Navigate to student payment page
+      navigate("/student/payments");
     } catch (error: any) {
       console.error("Error completing registration:", error);
       if (error.errors) {
@@ -349,6 +366,31 @@ const BillingForm = () => {
                 <p className="font-semibold">{billData.timeSlot}</p>
               </div>
             </div>
+
+            {/* Teacher Details */}
+            {billData.teachers && billData.teachers.length > 0 && (
+              <div className="mt-4 p-4 bg-muted/20 rounded-lg">
+                <h4 className="font-semibold mb-3">Assigned Teachers</h4>
+                <div className="space-y-3">
+                  {billData.teachers.map((teacher: any) => (
+                    <div key={teacher.id} className="grid md:grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Teacher Name</p>
+                        <p className="font-medium">{teacher.full_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Email</p>
+                        <p className="font-medium">{teacher.email || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Courses</p>
+                        <p className="font-medium">{teacher.courses_assigned || "N/A"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Dates */}
             <div className="grid md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
