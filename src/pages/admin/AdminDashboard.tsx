@@ -29,12 +29,9 @@ const AdminDashboard = () => {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showAddNewStudentModal, setShowAddNewStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showBillingForms, setShowBillingForms] = useState(false);
-  const [billingForms, setBillingForms] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingBilling, setLoadingBilling] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -133,44 +130,6 @@ const AdminDashboard = () => {
     const { supabase } = await import("@/integrations/supabase/client");
     await supabase.auth.signOut();
     navigate("/");
-  };
-
-  const fetchBillingForms = async () => {
-    setLoadingBilling(true);
-    try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      
-      const { data: billingData, error } = await supabase
-        .from("billing")
-        .select(`
-          *,
-          students!inner(
-            id,
-            student_id,
-            full_name_en,
-            full_name_ar,
-            email,
-            phone1,
-            registration_date
-          )
-        `)
-        .not("signed_pdf_url", "is", null)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setBillingForms(billingData || []);
-    } catch (error) {
-      console.error("Error fetching billing forms:", error);
-      const { toast } = await import("sonner");
-      toast.error("Failed to load billing forms");
-    } finally {
-      setLoadingBilling(false);
-    }
-  };
-
-  const handleShowBillingForms = () => {
-    setShowBillingForms(true);
-    fetchBillingForms();
   };
 
   const stats = [
@@ -280,7 +239,7 @@ const AdminDashboard = () => {
               {t('admin.exportData')}
             </Button>
             <Button 
-              onClick={handleShowBillingForms}
+              onClick={() => navigate("/admin/billing")}
               variant="default"
               className="gap-2 bg-gradient-to-r from-accent to-primary"
               size="lg"
@@ -378,7 +337,19 @@ const AdminDashboard = () => {
                             </div>
                             <div className="pt-2">
                               <Button
-                                onClick={() => window.open(billing.signed_pdf_url, '_blank')}
+                                onClick={async () => {
+                                  try {
+                                    if (!billing.signed_pdf_url) return;
+                                    const { data, error } = await (await import("@/integrations/supabase/client")).supabase.storage
+                                      .from('billing-pdfs')
+                                      .createSignedUrl(billing.signed_pdf_url, 60 * 60);
+                                    if (error || !data?.signedUrl) throw error || new Error('No signed URL');
+                                    window.open(data.signedUrl, '_blank');
+                                  } catch (e) {
+                                    const { toast } = await import('sonner');
+                                    toast.error('Unable to open form');
+                                  }
+                                }}
                                 className="w-full bg-gradient-to-r from-primary to-secondary"
                               >
                                 <Download className="w-4 h-4 mr-2" />

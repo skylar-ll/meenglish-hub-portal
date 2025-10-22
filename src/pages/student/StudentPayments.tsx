@@ -31,7 +31,7 @@ const StudentPayments = () => {
     amountRemaining: 0,
     courseDuration: 0,
     discountPercentage: 0,
-    billingFormUrl: "",
+    billingFormPath: "",
   });
 
   useEffect(() => {
@@ -69,7 +69,7 @@ const StudentPayments = () => {
         amountRemaining: student.amount_remaining || 0,
         courseDuration: student.course_duration_months || 0,
         discountPercentage: student.discount_percentage || 0,
-        billingFormUrl: billing?.signed_pdf_url || "",
+        billingFormPath: billing?.signed_pdf_url || "",
       });
     } catch (error: any) {
       toast.error("Failed to load payment data");
@@ -215,7 +215,7 @@ const StudentPayments = () => {
               )}
             </Card>
 
-            {paymentData.billingFormUrl && (
+            {paymentData.billingFormPath && (
               <Card className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -226,7 +226,17 @@ const StudentPayments = () => {
                     </div>
                   </div>
                   <Button
-                    onClick={() => window.open(paymentData.billingFormUrl, '_blank')}
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.storage
+                          .from('billing-pdfs')
+                          .createSignedUrl(paymentData.billingFormPath, 60 * 60);
+                        if (error || !data?.signedUrl) throw error || new Error('No signed URL');
+                        window.open(data.signedUrl, '_blank');
+                      } catch (e) {
+                        toast.error('Unable to open billing form');
+                      }
+                    }}
                     className="bg-gradient-to-r from-primary to-secondary"
                   >
                     <Download className="w-4 h-4 mr-2" />

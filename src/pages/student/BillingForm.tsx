@@ -9,6 +9,7 @@ import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { ArrowLeft, FileText, Calendar } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
+import jsPDF from "jspdf";
 
 const BillingForm = () => {
   const navigate = useNavigate();
@@ -215,6 +216,51 @@ const BillingForm = () => {
         .single();
 
       if (billingError) throw billingError;
+
+      // Generate and upload signed PDF of the billing form
+      try {
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        doc.setFontSize(16);
+        doc.text('Modern Education Institute of Language', 40, 40);
+        doc.setFontSize(12);
+        doc.text(`Student: ${billData.clientName} (${billData.clientNameAr})`, 40, 70);
+        doc.text(`Email: ${billData.email}`, 40, 90);
+        doc.text(`Phone: ${billData.contactNumber}`, 40, 110);
+        doc.text(`Course/Package: ${billData.courseName}`, 40, 130);
+        doc.text(`Time Slot: ${billData.timeSlot}`, 40, 150);
+        doc.text(`Level Count: ${billData.levelCount}`, 40, 170);
+        doc.text(`Registration Date: ${billingRecord.registration_date}`, 40, 190);
+        doc.text(`Course Start Date: ${billingRecord.course_start_date}`, 40, 210);
+        doc.text(`Total Fee: ${billData.totalFee}  |  Discount: ${billData.discountPercent}%`, 40, 230);
+        doc.text(`Fee After Discount: ${billData.feeAfterDiscount}`, 40, 250);
+        doc.text(`First Payment: ${billData.firstPayment}  |  Second Payment: ${billData.secondPayment}`, 40, 270);
+
+        // Add signature image if present
+        if (signature) {
+          try {
+            doc.text('Student Signature:', 40, 310);
+            // Draw signature image 300x100 px
+            doc.addImage(signature, 'PNG', 40, 320, 300, 100);
+          } catch (e) {
+            console.warn('Failed to add signature image to PDF', e);
+          }
+        }
+
+        const pdfBlob = doc.output('blob');
+        const pdfPath = `${user.id}/billing_${billing.id}.pdf`;
+        const { error: pdfUploadError } = await supabase.storage
+          .from('billing-pdfs')
+          .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+        if (pdfUploadError) throw pdfUploadError;
+
+        // Save storage path to the billing record
+        await supabase
+          .from('billing')
+          .update({ signed_pdf_url: pdfPath })
+          .eq('id', billing.id);
+      } catch (pdfErr) {
+        console.error('PDF generation/upload failed:', pdfErr);
+      }
 
       // Get registration data with all info
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");

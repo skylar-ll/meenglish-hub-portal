@@ -148,11 +148,20 @@ const AdminBilling = () => {
     }
   };
 
-  const handleDownloadPDF = (billing: BillingRecord) => {
-    if (billing.signed_pdf_url) {
-      window.open(billing.signed_pdf_url, '_blank');
-    } else {
-      toast.info('PDF not available yet');
+  const handleDownloadPDF = async (billing: BillingRecord) => {
+    try {
+      if (!billing.signed_pdf_url) {
+        toast.info('PDF not available yet');
+        return;
+      }
+      // Treat signed_pdf_url as storage path and create a signed URL (bucket is private)
+      const { data, error } = await supabase.storage
+        .from('billing-pdfs')
+        .createSignedUrl(billing.signed_pdf_url, 60 * 60); // 1 hour
+      if (error || !data?.signedUrl) throw error || new Error('No signed URL');
+      window.open(data.signedUrl, '_blank');
+    } catch (e) {
+      toast.error('Unable to open PDF');
     }
   };
 
