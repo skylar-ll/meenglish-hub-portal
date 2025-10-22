@@ -101,7 +101,7 @@ const TeacherSelection = () => {
     registration.teacherSelections = selectedTeachers;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
-    navigate("/student/duration-selection", { state: { password } });
+    navigate("/student/timing-selection", { state: { password } });
   };
 
   useEffect(() => {
@@ -110,7 +110,7 @@ const TeacherSelection = () => {
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
       registration.teacherSelections = selectedTeachers;
       sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
-      navigate("/student/duration-selection", { state: { password } });
+      navigate("/student/timing-selection", { state: { password } });
     }
   }, [loading, courseTeachers.length, navigate, password, selectedTeachers]);
 
