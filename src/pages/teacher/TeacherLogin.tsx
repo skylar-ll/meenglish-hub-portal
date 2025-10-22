@@ -55,8 +55,8 @@ const TeacherLogin = () => {
 
       if (error) throw error;
 
-      // Verify teacher role (auto-assign if missing)
-      let { data: roleData } = await supabase
+      // Verify teacher role (must be assigned by admin)
+      const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id)
@@ -64,18 +64,8 @@ const TeacherLogin = () => {
         .maybeSingle();
 
       if (!roleData) {
-        await supabase.from("user_roles").insert({ user_id: data.user.id, role: "teacher" });
-        ({ data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .eq("role", "teacher")
-          .maybeSingle());
-      }
-
-      if (!roleData) {
         await supabase.auth.signOut();
-        toast.error("Invalid teacher account");
+        toast.error("Invalid teacher account - role must be assigned by admin");
         return;
       }
 

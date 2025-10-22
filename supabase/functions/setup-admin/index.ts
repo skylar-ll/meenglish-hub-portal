@@ -20,14 +20,28 @@ Deno.serve(async (req) => {
       }
     )
 
-    // Requested credentials
-    const adminEmail = 'admin@gmail.com'
-    const adminPassword = '123456789'
+    // Get admin credentials from request body
+    const { email, password } = await req.json()
+    
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'Email and password are required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // Validate password strength (minimum 12 characters)
+    if (password.length < 12) {
+      return new Response(
+        JSON.stringify({ error: 'Password must be at least 12 characters long' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
 
     // Check if admin already exists by email
     const { data: usersList, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
     if (listErr) console.log('listUsers error:', listErr.message)
-    const adminUser = usersList?.users?.find((u) => u.email === adminEmail)
+    const adminUser = usersList?.users?.find((u) => u.email === email)
 
     const userId = adminUser?.id
 
@@ -49,15 +63,15 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ message: 'Admin user already exists and role verified', email: adminEmail }),
+        JSON.stringify({ message: 'Admin user already exists and role verified', email }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     // Create admin user (auto-confirm)
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email: adminEmail,
-      password: adminPassword,
+      email,
+      password,
       email_confirm: true,
       user_metadata: {
         full_name_en: 'Admin',
@@ -73,7 +87,7 @@ Deno.serve(async (req) => {
     if (roleErr) throw roleErr
 
     return new Response(
-      JSON.stringify({ message: 'Admin user created successfully', email: adminEmail }),
+      JSON.stringify({ message: 'Admin user created successfully', email }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {

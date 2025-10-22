@@ -34,8 +34,8 @@ const TeacherDashboard = () => {
         return;
       }
 
-      // 2. Verify teacher role, try to self-assign if missing
-      let { data: roleData, error: roleErr } = await supabase
+      // 2. Verify teacher role (must be assigned by admin)
+      const { data: roleData, error: roleErr } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
@@ -43,17 +43,8 @@ const TeacherDashboard = () => {
         .maybeSingle();
 
       if (!roleData) {
-        await supabase.from('user_roles').insert({ user_id: session.user.id, role: 'teacher' });
-        ({ data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'teacher')
-          .maybeSingle());
-      }
-
-      if (!roleData) {
-        toast.error('Unauthorized access - teacher role required');
+        toast.error('Unauthorized access - teacher role must be assigned by admin');
+        await supabase.auth.signOut();
         navigate('/teacher/login');
         return;
       }

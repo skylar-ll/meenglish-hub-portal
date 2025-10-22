@@ -74,7 +74,8 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
         .maybeSingle();
 
       if (!roleData) {
-        await supabase.from('user_roles').insert({ user_id: session.user.id, role: 'teacher' });
+        toast({ title: "Unauthorized", description: "Teacher role must be assigned by admin.", variant: "destructive" });
+        return;
       }
 
       const { data: studentsData, error: studentsError } = await supabase
