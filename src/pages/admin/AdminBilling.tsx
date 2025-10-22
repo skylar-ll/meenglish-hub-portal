@@ -308,19 +308,18 @@ const AdminBilling = () => {
                   </div>
                 </div>
 
-                {/* Student Signature */}
+                {/* Parent Signature */}
                 {billing.signature_url && (
                   <div className="mb-6">
-                    <p className="text-lg font-bold mb-4">Parent Signature</p>
-                    <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                      <span>✍️</span>
-                      Please sign below to agree to the terms and conditions
+                    <h3 className="text-xl font-bold mb-2">Parent Signature</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      ✍️ Please sign below to agree to the terms and conditions
                     </p>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20 min-h-[300px] flex items-center justify-center">
+                    <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 bg-background">
                       <img 
                         src={signatureUrls[billing.id] || billing.signature_url || ''} 
                         alt="Parent Signature" 
-                        className="max-w-full max-h-[280px] object-contain"
+                        className="w-full h-auto max-h-[400px] object-contain"
                       />
                     </div>
                   </div>
