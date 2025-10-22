@@ -104,10 +104,15 @@ const TeacherSelection = () => {
     navigate("/student/timing-selection", { state: { password } });
   };
 
-  const handleSkip = () => {
-    // If no courses need teacher selection, skip this step
-    navigate("/student/duration-selection", { state: { password } });
-  };
+  useEffect(() => {
+    // If no courses need teacher selection, auto-skip to timing
+    if (!loading && courseTeachers.length === 0) {
+      const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+      registration.teacherSelections = selectedTeachers;
+      sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
+      navigate("/student/timing-selection", { state: { password } });
+    }
+  }, [loading, courseTeachers.length, navigate, password, selectedTeachers]);
 
   if (loading) {
     return (
@@ -117,10 +122,13 @@ const TeacherSelection = () => {
     );
   }
 
-  // If no courses need teacher selection, auto-skip
+  // If no courses need teacher selection, the useEffect will handle navigation
   if (courseTeachers.length === 0) {
-    handleSkip();
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4 flex items-center justify-center">
+        <p className="text-lg">Redirecting to timing selection...</p>
+      </div>
+    );
   }
 
   return (
