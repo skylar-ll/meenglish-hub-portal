@@ -27,6 +27,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const [step, setStep] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -37,6 +39,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     id: "",
     password: "",
     courses: [] as string[],
+    teacherSelections: {} as Record<string, string>,
     timing: "",
     branch: "",
     paymentMethod: "",
@@ -70,7 +73,46 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
     }));
   };
 
-  const handleNext = () => {
+  const fetchTeachersForCourses = async () => {
+    if (formData.courses.length === 0) return;
+
+    try {
+      const { data: teachersData, error } = await supabase
+        .from('teachers')
+        .select('id, full_name, courses_assigned')
+        .not('courses_assigned', 'is', null);
+
+      if (error) throw error;
+
+      const coursesNeedingSelection: any[] = [];
+      const autoSelected: Record<string, string> = {};
+
+      formData.courses.forEach((course: string) => {
+        const teachersForCourse = (teachersData || []).filter((teacher: any) => {
+          const teacherCourses = teacher.courses_assigned?.toLowerCase().split(',').map((c: string) => c.trim()) || [];
+          const courseLower = course.toLowerCase();
+          return teacherCourses.some((tc: string) => tc.includes(courseLower) || courseLower.includes(tc));
+        });
+
+        if (teachersForCourse.length > 1) {
+          coursesNeedingSelection.push({
+            course,
+            teachers: teachersForCourse
+          });
+        } else if (teachersForCourse.length === 1) {
+          autoSelected[course] = teachersForCourse[0].id;
+        }
+      });
+
+      setTeachers(teachersData || []);
+      setCourseTeachers(coursesNeedingSelection);
+      setFormData(prev => ({ ...prev, teacherSelections: { ...prev.teacherSelections, ...autoSelected } }));
+    } catch (error) {
+      toast.error("Failed to load teachers");
+    }
+  };
+
+  const handleNext = async () => {
     if (step === 1) {
       if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
         toast.error(t('addPrevStudent.fillAllFields'));
@@ -86,25 +128,34 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         toast.error(t('addPrevStudent.selectAtLeastOneCourse'));
         return;
       }
+      await fetchTeachersForCourses();
       setStep(3);
     } else if (step === 3) {
-      if (!formData.timing) {
-        toast.error("Please select a timing");
+      // Teacher selection step
+      const missingSelections = courseTeachers.filter(ct => !formData.teacherSelections[ct.course]);
+      if (missingSelections.length > 0) {
+        toast.error("Please select a teacher for all courses");
         return;
       }
       setStep(4);
     } else if (step === 4) {
-      if (!formData.branch) {
-        toast.error(t('addPrevStudent.selectBranchError'));
+      if (!formData.timing) {
+        toast.error("Please select a timing");
         return;
       }
       setStep(5);
     } else if (step === 5) {
+      if (!formData.branch) {
+        toast.error(t('addPrevStudent.selectBranchError'));
+        return;
+      }
+      setStep(6);
+    } else if (step === 6) {
       if (!formData.courseDuration && !formData.customDuration) {
         toast.error("Please select or enter a course duration");
         return;
       }
-      setStep(6);
+      setStep(7);
     }
   };
 
@@ -235,6 +286,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         id: "",
         password: "",
         courses: [],
+        teacherSelections: {},
         timing: "",
         branch: "",
         paymentMethod: "",
@@ -271,7 +323,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 5</DialogTitle>
+              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 7</DialogTitle>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
@@ -486,8 +538,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                     <h3 className="font-semibold text-primary">{category}</h3>
                     <div className="space-y-2">
                       {categoryCourses.map((course) => (
-                        <div key={course.value} className="flex items-center p-2 rounded hover:bg-muted/50">
-                          <div className="flex items-center space-x-2 flex-1">
+                        <div key={course.value} className="flex items-center justify-between p-3 rounded hover:bg-muted/50">
+                          <div className="flex items-center space-x-3 flex-1">
                             <Checkbox
                               id={`course-${course.value}`}
                               checked={formData.courses.includes(course.value)}
@@ -504,6 +556,9 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                                 onDelete={refetch}
                               />
                             </div>
+                          </div>
+                          <div className="text-sm font-semibold text-primary">
+                            ${course.price.toFixed(2)}
                           </div>
                         </div>
                       ))}
@@ -538,8 +593,66 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
               </div>
             )}
 
-            {/* Step 3: Timing Selection */}
+            {/* Step 3: Teacher Selection */}
             {step === 3 && (
+              <div className="space-y-4">
+                {courseTeachers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">Teachers have been auto-assigned based on your courses.</p>
+                    <Button onClick={handleNext} className="w-full">
+                      {t('student.next')}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Label className="text-lg font-semibold">Select Your Teachers</Label>
+                    <p className="text-sm text-muted-foreground">Multiple teachers are available for some courses. Please choose your preferred teacher.</p>
+                    
+                    {courseTeachers.map((courseTeacher) => (
+                      <div key={courseTeacher.course} className="space-y-3">
+                        <Label className="font-semibold">{courseTeacher.course}</Label>
+                        <div className="grid gap-3">
+                          {courseTeacher.teachers.map((teacher: any) => (
+                            <Card
+                              key={teacher.id}
+                              className={`p-4 cursor-pointer transition-all ${
+                                formData.teacherSelections[courseTeacher.course] === teacher.id
+                                  ? "border-primary border-2 bg-primary/5"
+                                  : "hover:bg-muted/50"
+                              }`}
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                teacherSelections: { ...prev.teacherSelections, [courseTeacher.course]: teacher.id }
+                              }))}
+                            >
+                              <p className="font-medium">{teacher.full_name}</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Teaches: {teacher.courses_assigned}
+                              </p>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        {t('student.back')}
+                      </Button>
+                      <Button onClick={handleNext} className="flex-1">
+                        {t('student.next')}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Timing Selection */}
+            {step === 4 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Timing</Label>
                 <div className="grid gap-3">
@@ -576,7 +689,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {t('student.back')}
                     </Button>
@@ -588,8 +701,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
               </div>
             )}
 
-            {/* Step 4: Branch Selection */}
-            {step === 4 && (
+            {/* Step 5: Branch Selection */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">{t('addPrevStudent.selectBranch')}</Label>
                 <div className="grid gap-3">
@@ -626,7 +739,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {t('student.back')}
                     </Button>
@@ -638,8 +751,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
               </div>
             )}
 
-            {/* Step 5: Course Duration */}
-            {step === 5 && (
+            {/* Step 6: Course Duration */}
+            {step === 6 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Course Duration</Label>
                 <div className="grid gap-3">
@@ -710,7 +823,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
 
 
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     {t('student.back')}
                   </Button>
@@ -722,8 +835,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
               </div>
             )}
 
-            {/* Step 6: Payment Method */}
-            {step === 6 && (
+            {/* Step 7: Payment Method */}
+            {step === 7 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">{t('addPrevStudent.selectPaymentMethod')}</Label>
                 <div className="grid gap-3">
@@ -760,7 +873,7 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
+                    <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {t('student.back')}
                     </Button>
