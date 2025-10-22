@@ -56,6 +56,7 @@ const AdminBilling = () => {
     discount_percentage: 0,
     amount_paid: 0,
   });
+  const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     checkAdminAndFetch();
@@ -88,6 +89,33 @@ const AdminBilling = () => {
     }
   };
 
+  const prepareSignatureUrls = async (records: BillingRecord[]) => {
+    try {
+      const entries = await Promise.all(
+        records
+          .filter((r) => !!r.signature_url)
+          .map(async (r) => {
+            const raw = r.signature_url as string;
+            const marker = '/signatures/';
+            let path = raw;
+            const idx = raw.indexOf(marker);
+            if (raw.startsWith('http') && idx !== -1) {
+              path = raw.substring(idx + marker.length);
+            }
+            path = path.replace(/^\/+/, '');
+            const { data, error } = await supabase.storage
+              .from('signatures')
+              .createSignedUrl(path, 60 * 60);
+            const url = !error && data?.signedUrl ? data.signedUrl : raw;
+            return [r.id, url] as const;
+          })
+      );
+      setSignatureUrls(Object.fromEntries(entries));
+    } catch (e) {
+      // ignore errors and fall back to raw URLs
+    }
+  };
+
   const fetchBillings = async () => {
     try {
       const { data, error } = await supabase
@@ -96,7 +124,9 @@ const AdminBilling = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBillings(data || []);
+      const rows = data || [];
+      setBillings(rows);
+      await prepareSignatureUrls(rows);
     } catch (error: any) {
       toast.error('Failed to load billing records');
     } finally {
@@ -281,15 +311,15 @@ const AdminBilling = () => {
                 {/* Student Signature */}
                 {billing.signature_url && (
                   <div className="mb-6">
-                    <p className="text-lg font-bold mb-4">Student Signature</p>
+                    <p className="text-lg font-bold mb-4">Parent Signature</p>
                     <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
                       <span>✍️</span>
                       Please sign below to agree to the terms and conditions
                     </p>
                     <div className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20 min-h-[300px] flex items-center justify-center">
                       <img 
-                        src={billing.signature_url} 
-                        alt="Student Signature" 
+                        src={signatureUrls[billing.id] || billing.signature_url || ''} 
+                        alt="Parent Signature" 
                         className="max-w-full max-h-[280px] object-contain"
                       />
                     </div>
