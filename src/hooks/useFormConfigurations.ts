@@ -85,6 +85,12 @@ export const useFormConfigurations = () => {
         .filter((c) => c.config_type === "timing")
         .map((c) => ({ id: c.id, value: c.config_key, label: c.config_value }));
 
+      const defaultTimings = [
+        { id: "timing-1030-1200", value: "10:30am-12:00pm", label: "10:30 am to 12:00 pm" },
+        { id: "timing-300-430", value: "3:00pm-4:30pm", label: "3:00-4:30pm" },
+        { id: "timing-430-600", value: "4:30pm-6:00pm", label: "4:30-6:00pm" },
+      ];
+
       setCourses(coursesData);
       setBranches(branchesData);
       setPaymentMethods(paymentMethodsData);
@@ -92,7 +98,7 @@ export const useFormConfigurations = () => {
       setClassTypes(classTypesData);
       setFieldLabels(fieldLabelsData);
       setCourseDurations(courseDurationsData);
-      setTimings(timingsData);
+      setTimings(timingsData.length ? timingsData : defaultTimings);
     } catch (error) {
       console.error("Error fetching form configurations:", error);
     } finally {
