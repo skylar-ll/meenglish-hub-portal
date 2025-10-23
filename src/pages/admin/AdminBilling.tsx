@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { ArrowLeft, FileText, Download, Edit, Trash2, DollarSign } from 'lucide-react';
+import { ArrowLeft, FileText, Download, Edit, Trash2, DollarSign, Printer } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -95,24 +95,40 @@ const AdminBilling = () => {
         records
           .filter((r) => !!r.signature_url)
           .map(async (r) => {
-            const raw = r.signature_url as string;
-            const marker = '/signatures/';
-            let path = raw;
-            const idx = raw.indexOf(marker);
-            if (raw.startsWith('http') && idx !== -1) {
-              path = raw.substring(idx + marker.length);
+            try {
+              const raw = r.signature_url as string;
+              // If it's already a full URL, use it directly
+              if (raw.startsWith('http') || raw.startsWith('blob:')) {
+                return [r.id, raw] as const;
+              }
+              // Otherwise treat as storage path
+              const marker = '/signatures/';
+              let path = raw;
+              const idx = raw.indexOf(marker);
+              if (idx !== -1) {
+                path = raw.substring(idx + marker.length);
+              }
+              path = path.replace(/^\/+/, '');
+              
+              const { data, error } = await supabase.storage
+                .from('signatures')
+                .createSignedUrl(path, 60 * 60);
+              
+              if (error) {
+                console.error('Error creating signed URL:', error);
+                return [r.id, raw] as const;
+              }
+              
+              return [r.id, data?.signedUrl || raw] as const;
+            } catch (err) {
+              console.error('Error processing signature URL:', err);
+              return [r.id, r.signature_url as string] as const;
             }
-            path = path.replace(/^\/+/, '');
-            const { data, error } = await supabase.storage
-              .from('signatures')
-              .createSignedUrl(path, 60 * 60);
-            const url = !error && data?.signedUrl ? data.signedUrl : raw;
-            return [r.id, url] as const;
           })
       );
       setSignatureUrls(Object.fromEntries(entries));
     } catch (e) {
-      // ignore errors and fall back to raw URLs
+      console.error('Error preparing signature URLs:', e);
     }
   };
 
@@ -191,10 +207,44 @@ const AdminBilling = () => {
         .from('billing-pdfs')
         .createSignedUrl(billing.signed_pdf_url, 60 * 60); // 1 hour
       if (error || !data?.signedUrl) throw error || new Error('No signed URL');
-      window.open(data.signedUrl, '_blank');
+      
+      // Download the file
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.download = `billing_${billing.student_name_en}_${billing.student_id}.pdf`;
+      link.click();
     } catch (e) {
-      toast.error('Unable to open PDF');
+      toast.error('Unable to download PDF');
     }
+  };
+
+  const handlePrint = (billingId: string) => {
+    const element = document.getElementById(`billing-${billingId}`);
+    if (!element) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Billing Form</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .signature-box { border: 2px dashed #ccc; padding: 20px; margin: 20px 0; }
+            .signature-box img { max-width: 100%; height: auto; }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          ${element.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   if (loading) {
@@ -231,7 +281,7 @@ const AdminBilling = () => {
         <div className="grid gap-6">
           {billings.map((billing) => (
             <Card key={billing.id} className="overflow-hidden">
-              <div className="p-8">
+              <div id={`billing-${billing.id}`} className="p-8">
                 {/* Form Header */}
                 <div className="text-center border-b pb-4 mb-6">
                   <h2 className="text-2xl font-bold mb-2">Modern Education Institute of Language</h2>
@@ -308,31 +358,45 @@ const AdminBilling = () => {
                   </div>
                 </div>
 
-                {/* Parent Signature */}
-                {billing.signature_url && (
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold mb-2">Student Signature</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      ✍️ Please sign below to agree to the terms and conditions
-                    </p>
-                    <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 bg-background">
+                {/* Student Signature */}
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-2">Student Signature</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    ✍️ Please sign below to agree to the terms and conditions
+                  </p>
+                  <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 bg-background min-h-[200px] flex items-center justify-center">
+                    {billing.signature_url ? (
                       <img 
-                        src={signatureUrls[billing.id] || billing.signature_url || ''} 
+                        src={signatureUrls[billing.id] || billing.signature_url} 
                         alt="Student Signature" 
                         className="w-full h-auto max-h-[400px] object-contain"
+                        onError={(e) => {
+                          console.error('Failed to load signature image');
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
-                    </div>
+                    ) : (
+                      <p className="text-muted-foreground">No signature available</p>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-4 border-t">
+                <div className="flex flex-wrap gap-3 pt-4 border-t">
                   <Button
                     variant="default"
                     onClick={() => handleDownloadPDF(billing)}
+                    disabled={!billing.signed_pdf_url}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePrint(billing.id)}
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Print Bill
                   </Button>
                   <Button
                     variant="outline"
