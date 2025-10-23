@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import jsPDF from 'jspdf';
 
 interface BillingRecord {
   id: string;
@@ -95,40 +96,27 @@ const AdminBilling = () => {
         records
           .filter((r) => !!r.signature_url)
           .map(async (r) => {
-            try {
-              const raw = r.signature_url as string;
-              // If it's already a full URL, use it directly
-              if (raw.startsWith('http') || raw.startsWith('blob:')) {
-                return [r.id, raw] as const;
-              }
-              // Otherwise treat as storage path
-              const marker = '/signatures/';
-              let path = raw;
-              const idx = raw.indexOf(marker);
-              if (idx !== -1) {
-                path = raw.substring(idx + marker.length);
-              }
-              path = path.replace(/^\/+/, '');
-              
-              const { data, error } = await supabase.storage
-                .from('signatures')
-                .createSignedUrl(path, 60 * 60);
-              
-              if (error) {
-                console.error('Error creating signed URL:', error);
-                return [r.id, raw] as const;
-              }
-              
-              return [r.id, data?.signedUrl || raw] as const;
-            } catch (err) {
-              console.error('Error processing signature URL:', err);
-              return [r.id, r.signature_url as string] as const;
+            const raw = r.signature_url as string;
+            const marker = '/signatures/';
+            let path = raw;
+            const idx = raw.indexOf(marker);
+            // If it's a full HTTP URL to the private bucket, extract the path after /signatures/
+            if (raw.startsWith('http') && idx !== -1) {
+              path = raw.substring(idx + marker.length);
             }
+            // Remove any leading slashes
+            path = path.replace(/^\/+/, '');
+
+            const { data, error } = await supabase.storage
+              .from('signatures')
+              .createSignedUrl(path, 60 * 60);
+            const url = !error && data?.signedUrl ? data.signedUrl : raw;
+            return [r.id, url] as const;
           })
       );
       setSignatureUrls(Object.fromEntries(entries));
     } catch (e) {
-      console.error('Error preparing signature URLs:', e);
+      // ignore errors and fall back to raw URLs
     }
   };
 
@@ -245,6 +233,83 @@ const AdminBilling = () => {
     `);
     printWindow.document.close();
     printWindow.print();
+  };
+
+  const imageToDataURL = async (url: string): Promise<string> => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleGeneratePDF = async (billing: BillingRecord) => {
+    try {
+      if (!billing.signature_url) {
+        toast.error('No signature to embed');
+        return;
+      }
+
+      // Create a signed URL for the signature image
+      let sigPath = billing.signature_url as string;
+      const marker = '/signatures/';
+      const idx = sigPath.indexOf(marker);
+      if (sigPath.startsWith('http') && idx !== -1) {
+        sigPath = sigPath.substring(idx + marker.length);
+      }
+      sigPath = sigPath.replace(/^\/+/, '');
+
+      const { data: sig, error: sigErr } = await supabase.storage
+        .from('signatures')
+        .createSignedUrl(sigPath, 60 * 10);
+      if (sigErr) console.warn('Signature sign error', sigErr);
+      const signedSigUrl = sig?.signedUrl || billing.signature_url;
+
+      // Build the PDF
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      doc.setFontSize(16);
+      doc.text('Modern Education Institute of Language', 40, 40);
+      doc.setFontSize(12);
+      doc.text(`Student Name (English): ${billing.student_name_en}`, 40, 70);
+      doc.text(`Student Name (Arabic): ${billing.student_name_ar}`, 40, 90);
+      doc.text(`Contact Number: ${billing.phone}`, 40, 110);
+      doc.text(`Course Package: ${billing.course_package}`, 40, 130);
+      doc.text(`Time Slot: ${billing.time_slot || 'TBD'}`, 40, 150);
+      doc.text(`Level Count: ${billing.level_count}`, 40, 170);
+      doc.text(`Registration Date: ${new Date(billing.registration_date).toLocaleDateString()}`, 40, 190);
+      doc.text(`Course Start Date: ${new Date(billing.course_start_date).toLocaleDateString()}`, 40, 210);
+      doc.text(`Total Fee: ${billing.total_fee} SR  |  Discount: ${billing.discount_percentage}%`, 40, 230);
+      doc.text(`Fee After Discount: ${billing.fee_after_discount} SR`, 40, 250);
+      doc.text(`Amount Paid: ${billing.amount_paid} SR  |  Amount Remaining: ${billing.amount_remaining} SR`, 40, 270);
+
+      try {
+        const sigDataUrl = await imageToDataURL(signedSigUrl);
+        doc.text('Student Signature:', 40, 310);
+        doc.addImage(sigDataUrl, 'PNG', 40, 320, 300, 100);
+      } catch (e) {
+        console.warn('Failed to embed signature image into PDF', e);
+      }
+
+      const pdfBlob = doc.output('blob');
+      const pdfPath = `${billing.student_id}/billing_${billing.id}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from('billing-pdfs')
+        .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      if (upErr) throw upErr;
+
+      await supabase
+        .from('billing')
+        .update({ signed_pdf_url: pdfPath })
+        .eq('id', billing.id);
+
+      toast.success('PDF generated successfully');
+      await fetchBillings();
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to generate PDF');
+    }
   };
 
   if (loading) {
@@ -390,6 +455,13 @@ const AdminBilling = () => {
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGeneratePDF(billing)}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    {billing.signed_pdf_url ? 'Re-generate PDF' : 'Generate PDF'}
                   </Button>
                   <Button
                     variant="outline"

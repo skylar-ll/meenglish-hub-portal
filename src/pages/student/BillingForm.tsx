@@ -185,9 +185,8 @@ const BillingForm = () => {
 
       if (signatureError) throw signatureError;
 
-      const { data: { publicUrl: signatureUrl } } = supabase.storage
-        .from('signatures')
-        .getPublicUrl(signatureFileName);
+      // Use storage path (bucket is private); we'll sign when needed
+      const signatureStoragePath = signatureFileName;
 
       // Create billing record
       const billingRecord = {
@@ -202,8 +201,10 @@ const BillingForm = () => {
         level_count: billData.levelCount,
         total_fee: billData.totalFee,
         discount_percentage: billData.discountPercent,
+        fee_after_discount: billData.feeAfterDiscount,
         amount_paid: 0,
-        signature_url: signatureUrl,
+        amount_remaining: billData.feeAfterDiscount,
+        signature_url: signatureStoragePath,
         language: 'en',
         first_payment: billData.firstPayment,
         second_payment: billData.secondPayment,
