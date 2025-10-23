@@ -26,12 +26,22 @@ const StudentPayments = () => {
   const [paymentData, setPaymentData] = useState({
     studentId: "",
     studentName: "",
+    studentNameAr: "",
     totalCourseFee: 0,
     amountPaid: 0,
     amountRemaining: 0,
     courseDuration: 0,
     discountPercentage: 0,
     billingFormPath: "",
+    signatureUrl: "",
+    phone: "",
+    coursePackage: "",
+    timeSlot: "",
+    registrationDate: "",
+    courseStartDate: "",
+    firstPayment: 0,
+    secondPayment: 0,
+    nextPaymentDate: "",
   });
 
   useEffect(() => {
@@ -48,7 +58,7 @@ const StudentPayments = () => {
 
       const { data: student, error } = await supabase
         .from("students")
-        .select("id, student_id, full_name_en, total_course_fee, amount_paid, amount_remaining, course_duration_months, discount_percentage")
+        .select("*")
         .eq("email", user.email)
         .single();
 
@@ -57,19 +67,57 @@ const StudentPayments = () => {
       // Fetch billing form if exists
       const { data: billing } = await supabase
         .from("billing")
-        .select("signed_pdf_url")
+        .select("*")
         .eq("student_id", student.id)
         .maybeSingle();
+
+      // Create signed URL for signature if available
+      let signedSignatureUrl = "";
+      if (billing?.signature_url) {
+        try {
+          const raw = billing.signature_url as string;
+          const marker = '/signatures/';
+          let path = raw;
+          const idx = raw.indexOf(marker);
+          if (raw.startsWith('http') && idx !== -1) {
+            path = raw.substring(idx + marker.length);
+          }
+          path = path.replace(/^\/+/, '');
+          const { data: sigData, error: sigError } = await supabase.storage
+            .from('signatures')
+            .createSignedUrl(path, 60 * 60);
+          if (!sigError && sigData?.signedUrl) {
+            signedSignatureUrl = sigData.signedUrl;
+          }
+        } catch (e) {
+          console.error('Failed to get signature URL:', e);
+        }
+      }
+
+      // Calculate next payment date (halfway through course)
+      const nextPaymentDays = student.course_duration_months ? Math.floor((student.course_duration_months * 30) / 2) : 30;
+      const nextPayment = new Date(student.registration_date || new Date());
+      nextPayment.setDate(nextPayment.getDate() + nextPaymentDays);
 
       setPaymentData({
         studentId: student.student_id || "N/A",
         studentName: student.full_name_en || "",
-        totalCourseFee: student.total_course_fee || 0,
+        studentNameAr: student.full_name_ar || "",
+        totalCourseFee: billing?.total_fee || student.total_course_fee || 0,
         amountPaid: student.amount_paid || 0,
         amountRemaining: student.amount_remaining || 0,
         courseDuration: student.course_duration_months || 0,
-        discountPercentage: student.discount_percentage || 0,
+        discountPercentage: billing?.discount_percentage || student.discount_percentage || 0,
         billingFormPath: billing?.signed_pdf_url || "",
+        signatureUrl: signedSignatureUrl || billing?.signature_url || "",
+        phone: student.phone1 || "",
+        coursePackage: billing?.course_package || student.program || "",
+        timeSlot: billing?.time_slot || student.timing || "",
+        registrationDate: billing?.registration_date ? new Date(billing.registration_date).toLocaleDateString() : "",
+        courseStartDate: billing?.course_start_date ? new Date(billing.course_start_date).toLocaleDateString() : "",
+        firstPayment: billing?.first_payment || 0,
+        secondPayment: billing?.second_payment || 0,
+        nextPaymentDate: nextPayment.toLocaleDateString(),
       });
     } catch (error: any) {
       toast.error("Failed to load payment data");
@@ -128,103 +176,130 @@ const StudentPayments = () => {
           <div className="text-center py-12">{t('common.loading')}</div>
         ) : (
           <div className="space-y-6">
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <CreditCard className="w-8 h-8 text-primary" />
+            {/* Full Billing Form Preview */}
+            <Card className="p-8">
+              {/* Header */}
+              <div className="text-center border-b pb-4 mb-6">
+                <h2 className="text-2xl font-bold mb-2">Modern Education Institute of Language</h2>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Training License No.: 5300751</p>
+                  <p>Commercial Registration No.: 2050122590</p>
+                </div>
+              </div>
+
+              {/* Student Info Grid */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold">{paymentData.studentName}</h2>
-                  <p className="text-sm text-muted-foreground">Student ID: {paymentData.studentId}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Student Name (English)</p>
+                  <p className="font-semibold text-lg">{paymentData.studentName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Student Name (Arabic)</p>
+                  <p className="font-semibold text-lg">{paymentData.studentNameAr || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Student ID</p>
+                  <p className="font-mono font-semibold">{paymentData.studentId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Contact Number</p>
+                  <p className="font-semibold">{paymentData.phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Course Package</p>
+                  <p className="font-semibold">{paymentData.coursePackage}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Time Slot</p>
+                  <p className="font-semibold">{paymentData.timeSlot || 'TBD'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Registration Date</p>
+                  <p className="font-semibold">{paymentData.registrationDate}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Course Start Date</p>
+                  <p className="font-semibold">{paymentData.courseStartDate}</p>
                 </div>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
-                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="w-5 h-5 text-primary" />
-                      <h3 className="font-semibold">Total Course Fee</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-primary">
-                      ${paymentData.totalCourseFee.toFixed(2)}
-                    </p>
+              {/* Financial Details */}
+              <div className="bg-muted/30 rounded-lg p-6 mb-6">
+                <h3 className="font-bold text-lg mb-4">Financial Details</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Level Count</span>
+                    <span className="font-bold">{paymentData.courseDuration}</span>
                   </div>
-
-                  <div className="p-4 bg-success/5 rounded-lg border border-success/20">
-                    <h3 className="font-semibold mb-2">Amount Paid</h3>
-                    <p className="text-3xl font-bold text-success">
-                      ${paymentData.amountPaid.toFixed(2)}
-                    </p>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Total Fee</span>
+                    <span className="font-bold">{paymentData.totalCourseFee.toLocaleString()} SR</span>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 bg-destructive/5 rounded-lg border border-destructive/20">
-                    <h3 className="font-semibold mb-2">Amount Remaining</h3>
-                    <p className="text-3xl font-bold text-destructive">
-                      ${paymentData.amountRemaining.toFixed(2)}
-                    </p>
-                    {paymentData.discountPercentage > 0 && (
-                      <p className="text-sm text-success mt-2">
-                        {paymentData.discountPercentage}% discount applied
-                      </p>
-                    )}
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-bold text-green-600">{paymentData.discountPercentage}%</span>
                   </div>
-
-                  <div className="p-4 bg-muted rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="w-5 h-5" />
-                      <h3 className="font-semibold">Course Duration</h3>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {paymentData.courseDuration} {paymentData.courseDuration === 1 ? 'Month' : 'Months'}
-                    </p>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Fee After Discount</span>
+                    <span className="font-bold">{(paymentData.totalCourseFee * (1 - paymentData.discountPercentage / 100)).toLocaleString()} SR</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Amount Paid</span>
+                    <span className="font-bold text-green-600">{paymentData.amountPaid.toLocaleString()} SR</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Amount Remaining</span>
+                    <span className="font-bold text-destructive">{paymentData.amountRemaining.toLocaleString()} SR</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-info/5 rounded-lg border border-info/20">
-                <h3 className="font-semibold mb-2">Payment Terms</h3>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• First payment: 50% due at enrollment (${(paymentData.totalCourseFee / 2).toFixed(2)})</li>
-                  <li>• Second payment: 50% due after course completion (${(paymentData.totalCourseFee / 2).toFixed(2)})</li>
-                  <li>• Contact admin for payment arrangements</li>
-                </ul>
-              </div>
-
-              {paymentData.amountRemaining > 0 && (
-                <div className="mt-6">
-                  <Button
-                    onClick={() => setShowPaymentDialog(true)}
-                    className="w-full bg-gradient-to-r from-success to-success/80 hover:opacity-90 transition-opacity"
-                    size="lg"
-                  >
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    Pay Remaining Balance (${paymentData.amountRemaining.toFixed(2)})
-                  </Button>
-                </div>
-              )}
-
-              {paymentData.amountRemaining === 0 && (
-                <div className="mt-6 p-4 bg-success/10 rounded-lg border border-success/20 flex items-center gap-3">
-                  <CheckCircle className="w-6 h-6 text-success" />
-                  <div>
-                    <h3 className="font-semibold text-success">Fully Paid</h3>
-                    <p className="text-sm text-muted-foreground">Your course fee has been paid in full.</p>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {paymentData.billingFormPath && (
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-primary" />
+              {/* Payment Schedule */}
+              <div className="bg-primary/5 rounded-lg p-6 mb-6 border border-primary/20">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Payment Schedule
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-background rounded-lg">
                     <div>
-                      <h3 className="text-lg font-semibold">Billing Form</h3>
-                      <p className="text-sm text-muted-foreground">Your signed registration form</p>
+                      <p className="font-semibold">First Payment (50%)</p>
+                      <p className="text-sm text-muted-foreground">Due at enrollment</p>
                     </div>
+                    <p className="text-xl font-bold text-primary">{paymentData.firstPayment.toLocaleString()} SR</p>
                   </div>
+                  {paymentData.amountRemaining > 0 && (
+                    <div className="flex justify-between items-center p-3 bg-background rounded-lg">
+                      <div>
+                        <p className="font-semibold">Second Payment (50%)</p>
+                        <p className="text-sm text-muted-foreground">Due: {paymentData.nextPaymentDate}</p>
+                      </div>
+                      <p className="text-xl font-bold text-destructive">{paymentData.secondPayment.toLocaleString()} SR</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Student Signature */}
+              {paymentData.signatureUrl && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-2">Student Signature</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    ✍️ Please sign below to agree to the terms and conditions
+                  </p>
+                  <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 bg-background">
+                    <img 
+                      src={paymentData.signatureUrl} 
+                      alt="Student Signature" 
+                      className="w-full h-auto max-h-[400px] object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                {paymentData.billingFormPath && (
                   <Button
                     onClick={async () => {
                       try {
@@ -237,14 +312,35 @@ const StudentPayments = () => {
                         toast.error('Unable to open billing form');
                       }
                     }}
-                    className="bg-gradient-to-r from-primary to-secondary"
+                    variant="outline"
+                    className="flex-1"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    View Form
+                    Download Bill (PDF)
                   </Button>
-                </div>
-              </Card>
-            )}
+                )}
+                
+                {paymentData.amountRemaining > 0 && (
+                  <Button
+                    onClick={() => setShowPaymentDialog(true)}
+                    className="flex-1 bg-gradient-to-r from-success to-success/80 hover:opacity-90 transition-opacity"
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Pay Remaining ({paymentData.amountRemaining.toLocaleString()} SR)
+                  </Button>
+                )}
+
+                {paymentData.amountRemaining === 0 && (
+                  <div className="flex-1 p-4 bg-success/10 rounded-lg border border-success/20 flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-success" />
+                    <div>
+                      <h3 className="font-semibold text-success">Fully Paid</h3>
+                      <p className="text-sm text-muted-foreground">Your course fee has been paid in full.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         )}
       </div>
@@ -254,7 +350,7 @@ const StudentPayments = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to pay the remaining balance of ${paymentData.amountRemaining.toFixed(2)}.
+              You are about to pay the remaining balance of {paymentData.amountRemaining.toLocaleString()} SR.
               This will complete your course fee payment.
             </AlertDialogDescription>
           </AlertDialogHeader>

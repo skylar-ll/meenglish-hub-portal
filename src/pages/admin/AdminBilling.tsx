@@ -287,7 +287,7 @@ const AdminBilling = () => {
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-muted-foreground">Total Fee</span>
-                      <span className="font-bold">${billing.total_fee.toFixed(2)}</span>
+                      <span className="font-bold">{billing.total_fee.toLocaleString()} SR</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-muted-foreground">Discount</span>
@@ -295,15 +295,15 @@ const AdminBilling = () => {
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-muted-foreground">Fee After Discount</span>
-                      <span className="font-bold">${billing.fee_after_discount.toFixed(2)}</span>
+                      <span className="font-bold">{billing.fee_after_discount.toLocaleString()} SR</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-muted-foreground">Amount Paid</span>
-                      <span className="font-bold text-green-600">${billing.amount_paid.toFixed(2)}</span>
+                      <span className="font-bold text-green-600">{billing.amount_paid.toLocaleString()} SR</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-muted-foreground">Amount Remaining</span>
-                      <span className="font-bold text-destructive">${billing.amount_remaining.toFixed(2)}</span>
+                      <span className="font-bold text-destructive">{billing.amount_remaining.toLocaleString()} SR</span>
                     </div>
                   </div>
                 </div>
@@ -311,14 +311,14 @@ const AdminBilling = () => {
                 {/* Parent Signature */}
                 {billing.signature_url && (
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold mb-2">Parent Signature</h3>
+                    <h3 className="text-xl font-bold mb-2">Student Signature</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       ✍️ Please sign below to agree to the terms and conditions
                     </p>
                     <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 bg-background">
                       <img 
                         src={signatureUrls[billing.id] || billing.signature_url || ''} 
-                        alt="Parent Signature" 
+                        alt="Student Signature" 
                         className="w-full h-auto max-h-[400px] object-contain"
                       />
                     </div>
@@ -396,11 +396,11 @@ const AdminBilling = () => {
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Fee After Discount:</p>
                 <p className="text-2xl font-bold text-primary">
-                  ${(editForm.total_fee * (1 - editForm.discount_percentage / 100)).toFixed(2)}
+                  {(editForm.total_fee * (1 - editForm.discount_percentage / 100)).toLocaleString()} SR
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 mb-1">Amount Remaining:</p>
                 <p className="text-xl font-bold text-destructive">
-                  ${((editForm.total_fee * (1 - editForm.discount_percentage / 100)) - editForm.amount_paid).toFixed(2)}
+                  {((editForm.total_fee * (1 - editForm.discount_percentage / 100)) - editForm.amount_paid).toLocaleString()} SR
                 </p>
               </div>
             </div>

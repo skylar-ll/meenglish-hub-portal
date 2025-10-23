@@ -231,9 +231,9 @@ const BillingForm = () => {
         doc.text(`Level Count: ${billData.levelCount}`, 40, 170);
         doc.text(`Registration Date: ${billingRecord.registration_date}`, 40, 190);
         doc.text(`Course Start Date: ${billingRecord.course_start_date}`, 40, 210);
-        doc.text(`Total Fee: ${billData.totalFee}  |  Discount: ${billData.discountPercent}%`, 40, 230);
-        doc.text(`Fee After Discount: ${billData.feeAfterDiscount}`, 40, 250);
-        doc.text(`First Payment: ${billData.firstPayment}  |  Second Payment: ${billData.secondPayment}`, 40, 270);
+        doc.text(`Total Fee: ${billData.totalFee} SR  |  Discount: ${billData.discountPercent}%`, 40, 230);
+        doc.text(`Fee After Discount: ${billData.feeAfterDiscount} SR`, 40, 250);
+        doc.text(`First Payment: ${billData.firstPayment} SR  |  Second Payment: ${billData.secondPayment} SR`, 40, 270);
 
         // Add signature image if present
         if (signature) {
