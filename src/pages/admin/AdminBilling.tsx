@@ -58,7 +58,8 @@ const AdminBilling = () => {
     amount_paid: 0,
   });
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
-
+  const [payingBilling, setPayingBilling] = useState<BillingRecord | null>(null);
+  const [payPercent, setPayPercent] = useState<number>(50);
   useEffect(() => {
     checkAdminAndFetch();
   }, []);
@@ -183,7 +184,35 @@ const AdminBilling = () => {
       toast.error('Failed to delete billing');
     }
   };
+  
+  const handleOpenPay = (billing: BillingRecord) => {
+    setPayingBilling(billing);
+    setPayPercent(50);
+  };
 
+  const handleConfirmPay = async () => {
+    if (!payingBilling) return;
+    try {
+      const pct = Math.max(0, Math.min(100, Number(payPercent) || 0));
+      const intended = Math.round(payingBilling.fee_after_discount * (pct / 100));
+      const amountToPay = Math.min(intended, payingBilling.amount_remaining);
+
+      const newPaid = payingBilling.amount_paid + amountToPay;
+      const newRemaining = Math.max(0, payingBilling.fee_after_discount - newPaid);
+
+      const { error } = await supabase
+        .from('billing')
+        .update({ amount_paid: newPaid, amount_remaining: newRemaining })
+        .eq('id', payingBilling.id);
+
+      if (error) throw error;
+      toast.success(`Recorded payment of ${amountToPay.toLocaleString()} SR`);
+      setPayingBilling(null);
+      await fetchBillings();
+    } catch (e) {
+      toast.error('Failed to record payment');
+    }
+  };
   const handleDownloadPDF = async (billing: BillingRecord) => {
     try {
       if (!billing.signed_pdf_url) {
@@ -236,7 +265,11 @@ const AdminBilling = () => {
   };
 
   const imageToDataURL = async (url: string): Promise<string> => {
+    // If it's already a data URL, return as-is
+    if (url.startsWith('data:')) return url;
+
     const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch image');
     const blob = await res.blob();
     return await new Promise((resolve) => {
       const reader = new FileReader();
@@ -244,7 +277,6 @@ const AdminBilling = () => {
       reader.readAsDataURL(blob);
     });
   };
-
   const handleGeneratePDF = async (billing: BillingRecord) => {
     try {
       if (!billing.signature_url) {
@@ -252,20 +284,24 @@ const AdminBilling = () => {
         return;
       }
 
-      // Create a signed URL for the signature image
-      let sigPath = billing.signature_url as string;
-      const marker = '/signatures/';
-      const idx = sigPath.indexOf(marker);
-      if (sigPath.startsWith('http') && idx !== -1) {
-        sigPath = sigPath.substring(idx + marker.length);
-      }
-      sigPath = sigPath.replace(/^\/+/, '');
+      // Resolve a usable URL for the signature image
+      const resolveSignatureUrl = async (): Promise<string> => {
+        const raw = billing.signature_url as string;
+        if (raw.startsWith('data:')) return raw; // direct data URL
+        if (raw.startsWith('http')) return raw;  // already a full URL
+        // Otherwise, it's a storage path in the private "signatures" bucket
+        const cleaned = raw.replace(/^\/+/, '');
+        const { data, error } = await supabase.storage
+          .from('signatures')
+          .createSignedUrl(cleaned, 60 * 10);
+        if (error || !data?.signedUrl) {
+          console.warn('Signature sign error', error);
+          throw new Error('Signature image not found');
+        }
+        return data.signedUrl;
+      };
 
-      const { data: sig, error: sigErr } = await supabase.storage
-        .from('signatures')
-        .createSignedUrl(sigPath, 60 * 10);
-      if (sigErr) console.warn('Signature sign error', sigErr);
-      const signedSigUrl = sig?.signedUrl || billing.signature_url;
+      const signedSigUrl = await resolveSignatureUrl();
 
       // Build the PDF
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -471,6 +507,13 @@ const AdminBilling = () => {
                     Print Bill
                   </Button>
                   <Button
+                    variant="default"
+                    onClick={() => handleOpenPay(billing)}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Pay
+                  </Button>
+                  <Button
                     variant="outline"
                     onClick={() => handleEditClick(billing)}
                   >
@@ -547,6 +590,55 @@ const AdminBilling = () => {
               <Button onClick={handleEditSave} className="bg-gradient-to-r from-primary to-secondary">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Pay Dialog */}
+        <Dialog open={!!payingBilling} onOpenChange={() => setPayingBilling(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record a Payment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Choose the percentage of the total fee to pay now.</p>
+              <div className="flex flex-wrap gap-2">
+                {[25,50,75,100].map((pct) => (
+                  <Button
+                    key={pct}
+                    variant={payPercent === pct ? 'default' : 'outline'}
+                    onClick={() => setPayPercent(pct)}
+                  >
+                    {pct}%
+                  </Button>
+                ))}
+              </div>
+              <div>
+                <Label>Custom Percentage (%)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={payPercent}
+                  onChange={(e) => setPayPercent(parseFloat(e.target.value || '0'))}
+                />
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Amount to record:</p>
+                <p className="text-2xl font-bold text-primary">
+                  {payingBilling ? Math.min(Math.round(payingBilling.fee_after_discount * (payPercent/100)), payingBilling.amount_remaining).toLocaleString() : 0} SR
+                </p>
+                {payingBilling && (
+                  <p className="text-sm text-muted-foreground mt-2">Remaining after payment: {Math.max(0, (payingBilling.fee_after_discount - (payingBilling.amount_paid + Math.min(Math.round(payingBilling.fee_after_discount * (payPercent/100)), payingBilling.amount_remaining)))).toLocaleString()} SR</p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPayingBilling(null)}>Cancel</Button>
+              <Button onClick={handleConfirmPay} className="bg-gradient-to-r from-primary to-secondary">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Confirm Payment
               </Button>
             </DialogFooter>
           </DialogContent>
