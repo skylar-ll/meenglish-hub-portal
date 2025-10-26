@@ -227,7 +227,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('📅 Payment Schedule', leftCol, yPos + 10);
+  doc.text('Payment Schedule', leftCol, yPos + 10);
   yPos += 35;
 
   // First Payment
@@ -275,7 +275,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('✍️ Please sign below to agree to the terms and conditions', leftCol, yPos);
+  doc.text('Please sign below to agree to the terms and conditions', leftCol, yPos);
   yPos += 20;
 
   // Signature box with dashed border
