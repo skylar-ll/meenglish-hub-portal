@@ -20,11 +20,16 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSave, langua
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    // Set canvas size with high resolution for crisp signature
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
+    // Scale context to match device pixel ratio
+    ctx.scale(dpr, dpr);
 
-    // Set drawing style
+    // Set drawing style for smooth lines
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
@@ -42,8 +47,10 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSave, langua
     setHasDrawn(true);
 
     const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = ('touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left);
+    const y = ('touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -59,8 +66,8 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSave, langua
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const x = ('touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left);
+    const y = ('touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top);
 
     ctx.lineTo(x, y);
     ctx.stroke();

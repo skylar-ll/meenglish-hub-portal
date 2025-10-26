@@ -221,29 +221,126 @@ const BillingForm = () => {
       // Generate and upload signed PDF of the billing form
       try {
         const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-        doc.setFontSize(16);
-        doc.text('Modern Education Institute of Language', 40, 40);
-        doc.setFontSize(12);
-        doc.text(`Student: ${billData.clientName} (${billData.clientNameAr})`, 40, 70);
-        doc.text(`Email: ${billData.email}`, 40, 90);
-        doc.text(`Phone: ${billData.contactNumber}`, 40, 110);
-        doc.text(`Course/Package: ${billData.courseName}`, 40, 130);
-        doc.text(`Time Slot: ${billData.timeSlot}`, 40, 150);
-        doc.text(`Level Count: ${billData.levelCount}`, 40, 170);
-        doc.text(`Registration Date: ${billingRecord.registration_date}`, 40, 190);
-        doc.text(`Course Start Date: ${billingRecord.course_start_date}`, 40, 210);
-        doc.text(`Total Fee: ${billData.totalFee} SR  |  Discount: ${billData.discountPercent}%`, 40, 230);
-        doc.text(`Fee After Discount: ${billData.feeAfterDiscount} SR`, 40, 250);
-        doc.text(`First Payment: ${billData.firstPayment} SR  |  Second Payment: ${billData.secondPayment} SR`, 40, 270);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = 40;
 
-        // Add signature image if present
+        // Header
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Modern Education Institute of Language', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 20;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Training License No.: 5300751', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 12;
+        doc.text('Commercial Registration No.: 2050122590', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 30;
+
+        // Student Information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Student Information', margin, yPos);
+        yPos += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Name: ${billData.clientName} (${billData.clientNameAr})`, margin, yPos);
+        yPos += 15;
+        doc.text(`Email: ${billData.email}`, margin, yPos);
+        yPos += 15;
+        doc.text(`Phone: ${billData.contactNumber}`, margin, yPos);
+        yPos += 15;
+        doc.text(`National ID: ${billData.nationalId}`, margin, yPos);
+        yPos += 25;
+
+        // Course Details
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Course Details', margin, yPos);
+        yPos += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Course/Package: ${billData.courseName}`, margin, yPos);
+        yPos += 15;
+        doc.text(`Time Slot: ${billData.timeSlot}`, margin, yPos);
+        yPos += 15;
+        doc.text(`Level Count: ${billData.levelCount}`, margin, yPos);
+        yPos += 15;
+        doc.text(`Registration Date: ${billingRecord.registration_date}`, margin, yPos);
+        yPos += 15;
+        doc.text(`Course Start Date: ${billingRecord.course_start_date}`, margin, yPos);
+        yPos += 25;
+
+        // Financial Information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Financial Summary', margin, yPos);
+        yPos += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Total Fee: ${billData.totalFee.toLocaleString()} SAR`, margin, yPos);
+        yPos += 15;
+        doc.text(`Discount: ${billData.discountPercent}%`, margin, yPos);
+        yPos += 15;
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Fee After Discount: ${billData.feeAfterDiscount.toLocaleString()} SAR`, margin, yPos);
+        yPos += 15;
+        doc.setFont('helvetica', 'normal');
+        doc.text(`First Payment: ${billData.firstPayment.toLocaleString()} SAR`, margin, yPos);
+        yPos += 15;
+        doc.text(`Second Payment: ${billData.secondPayment.toLocaleString()} SAR`, margin, yPos);
+        yPos += 30;
+
+        // Terms and Conditions (brief)
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Terms and Conditions', margin, yPos);
+        yPos += 15;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const terms = [
+          'Student must attend on time as per schedule',
+          'Fees include registration, placement test, textbooks, and VAT',
+          'No refund of paid fees under any circumstance',
+          'Postponement allowed up to 3 months with prior notice',
+          'Perfect attendance certificate granted for 100% attendance'
+        ];
+        terms.forEach(term => {
+          doc.text(`• ${term}`, margin, yPos);
+          yPos += 12;
+        });
+        yPos += 20;
+
+        // Signature Section
         if (signature) {
+          // Add some space if needed
+          if (yPos > pageHeight - 180) {
+            doc.addPage();
+            yPos = 40;
+          }
+          
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Student Signature', margin, yPos);
+          yPos += 15;
+          
           try {
-            doc.text('Student Signature:', 40, 310);
-            // Draw signature image 300x100 px
-            doc.addImage(signature, 'PNG', 40, 320, 300, 100);
+            // Embed the exact signature image at high quality
+            // Calculate aspect ratio to maintain proportions
+            const signatureImg = new Image();
+            signatureImg.src = signature;
+            const imgWidth = 350;
+            const imgHeight = 120;
+            
+            doc.addImage(signature, 'PNG', margin, yPos, imgWidth, imgHeight, '', 'FAST');
+            yPos += imgHeight + 15;
           } catch (e) {
             console.warn('Failed to add signature image to PDF', e);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'italic');
+            doc.text('[Signature Image]', margin, yPos);
+            yPos += 20;
           }
         }
 
@@ -634,7 +731,26 @@ const BillingForm = () => {
           <div className="space-y-6">
             <div>
               <h3 className="font-semibold mb-4">Student Signature</h3>
-              <SignatureCanvas onSave={handleSignatureSave} language="en" />
+              {signature ? (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white p-4 flex items-center justify-center min-h-[200px]">
+                    <img 
+                      src={signature} 
+                      alt="Student Signature" 
+                      className="max-w-full max-h-[180px] object-contain"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSignature(null)}
+                    className="w-full"
+                  >
+                    Clear and Re-sign
+                  </Button>
+                </div>
+              ) : (
+                <SignatureCanvas onSave={handleSignatureSave} language="en" />
+              )}
             </div>
             
             <div className="pt-6 border-t">
