@@ -228,7 +228,8 @@ const AdminBilling = () => {
       // Download the file
       const link = document.createElement('a');
       link.href = data.signedUrl;
-      link.download = `billing_${billing.student_name_en}_${billing.student_id}.pdf`;
+      const today = new Date().toISOString().slice(0,10);
+      link.download = `BillingForm_${billing.student_name_en}_${today}.pdf`;
       link.click();
     } catch (e) {
       toast.error('Unable to download PDF');
