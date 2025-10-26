@@ -27,6 +27,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [studentType, setStudentType] = useState<"new" | "previous">("new");
+  const [searchingStudent, setSearchingStudent] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
   const [priceValues, setPriceValues] = useState<Record<string, string>>({});
@@ -95,6 +98,55 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSearchPreviousStudent = async () => {
+    if (!searchQuery.trim()) {
+      toast.error("Please enter a phone number or name to search");
+      return;
+    }
+
+    setSearchingStudent(true);
+    try {
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .or(`phone1.ilike.%${searchQuery}%,full_name_en.ilike.%${searchQuery}%,full_name_ar.ilike.%${searchQuery}%`)
+        .limit(1)
+        .single();
+
+      if (error || !data) {
+        toast.error("Student not found");
+        return;
+      }
+
+      // Autofill form with previous student data
+      setFormData({
+        fullNameAr: data.full_name_ar || "",
+        fullNameEn: data.full_name_en || "",
+        phone1: data.phone1?.replace(/^\+966/, "") || "",
+        phone2: data.phone2?.replace(/^\+966/, "") || "",
+        email: data.email || "",
+        id: data.national_id || "",
+        password: "", // Don't autofill password
+        courses: data.program ? data.program.split(', ') : [],
+        timing: data.timing || "",
+        branch: data.branch || "",
+        paymentMethod: data.payment_method || "",
+        courseDuration: data.course_duration_months?.toString() || "",
+        customDuration: "",
+        customDurationUnit: "months",
+        countryCode1: "+966",
+        countryCode2: "+966",
+      });
+
+      toast.success("Student information loaded successfully");
+      setStep(1); // Go to first step with populated data
+    } catch (error: any) {
+      toast.error("Failed to search for student");
+    } finally {
+      setSearchingStudent(false);
+    }
   };
 
   const toggleCourse = (courseValue: string) => {
@@ -340,6 +392,56 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           <div className="text-center py-8">Loading...</div>
         ) : (
           <div className="space-y-4 py-4">
+            {/* Student Type Selector */}
+            {step === 1 && (
+              <>
+                <Card className="p-4 mb-4 bg-muted/50">
+                  <Label className="text-sm font-medium mb-3 block">Student Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant={studentType === "new" ? "default" : "outline"}
+                      onClick={() => setStudentType("new")}
+                      className="w-full"
+                    >
+                      New Student
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={studentType === "previous" ? "default" : "outline"}
+                      onClick={() => setStudentType("previous")}
+                      className="w-full"
+                    >
+                      Previous Student
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Previous Student Search */}
+                {studentType === "previous" && (
+                  <Card className="p-4 mb-4">
+                    <Label className="text-sm font-medium mb-2 block">Search Student</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter phone number or name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") handleSearchPreviousStudent();
+                        }}
+                      />
+                      <Button
+                        onClick={handleSearchPreviousStudent}
+                        disabled={searchingStudent}
+                      >
+                        {searchingStudent ? "Searching..." : "Search"}
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+
             {/* Step 1: Basic Information */}
             {step === 1 && (
               <div className="space-y-4">

@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SignatureCanvas } from "@/components/billing/SignatureCanvas";
+import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { ArrowLeft, FileText, Calendar } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, Download } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
-import jsPDF from "jspdf";
 
 const BillingForm = () => {
   const navigate = useNavigate();
@@ -220,131 +220,26 @@ const BillingForm = () => {
 
       // Generate and upload signed PDF of the billing form
       try {
-        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let yPos = 40;
-
-        // Header
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Modern Education Institute of Language', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 20;
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Training License No.: 5300751', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 12;
-        doc.text('Commercial Registration No.: 2050122590', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 30;
-
-        // Student Information
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Student Information', margin, yPos);
-        yPos += 20;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`Name: ${billData.clientName} (${billData.clientNameAr})`, margin, yPos);
-        yPos += 15;
-        doc.text(`Email: ${billData.email}`, margin, yPos);
-        yPos += 15;
-        doc.text(`Phone: ${billData.contactNumber}`, margin, yPos);
-        yPos += 15;
-        doc.text(`National ID: ${billData.nationalId}`, margin, yPos);
-        yPos += 25;
-
-        // Course Details
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Course Details', margin, yPos);
-        yPos += 20;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`Course/Package: ${billData.courseName}`, margin, yPos);
-        yPos += 15;
-        doc.text(`Time Slot: ${billData.timeSlot}`, margin, yPos);
-        yPos += 15;
-        doc.text(`Level Count: ${billData.levelCount}`, margin, yPos);
-        yPos += 15;
-        doc.text(`Registration Date: ${billingRecord.registration_date}`, margin, yPos);
-        yPos += 15;
-        doc.text(`Course Start Date: ${billingRecord.course_start_date}`, margin, yPos);
-        yPos += 25;
-
-        // Financial Information
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Financial Summary', margin, yPos);
-        yPos += 20;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`Total Fee: ${billData.totalFee.toLocaleString()} SAR`, margin, yPos);
-        yPos += 15;
-        doc.text(`Discount: ${billData.discountPercent}%`, margin, yPos);
-        yPos += 15;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Fee After Discount: ${billData.feeAfterDiscount.toLocaleString()} SAR`, margin, yPos);
-        yPos += 15;
-        doc.setFont('helvetica', 'normal');
-        doc.text(`First Payment: ${billData.firstPayment.toLocaleString()} SAR`, margin, yPos);
-        yPos += 15;
-        doc.text(`Second Payment: ${billData.secondPayment.toLocaleString()} SAR`, margin, yPos);
-        yPos += 30;
-
-        // Terms and Conditions (brief)
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Terms and Conditions', margin, yPos);
-        yPos += 15;
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        const terms = [
-          'Student must attend on time as per schedule',
-          'Fees include registration, placement test, textbooks, and VAT',
-          'No refund of paid fees under any circumstance',
-          'Postponement allowed up to 3 months with prior notice',
-          'Perfect attendance certificate granted for 100% attendance'
-        ];
-        terms.forEach(term => {
-          doc.text(`• ${term}`, margin, yPos);
-          yPos += 12;
+        const pdfBlob = await generateBillingPDF({
+          student_id: user.id,
+          student_name_en: billData.clientName,
+          student_name_ar: billData.clientNameAr,
+          phone: billData.contactNumber,
+          course_package: billData.courseName,
+          time_slot: billData.timeSlot,
+          registration_date: billingRecord.registration_date,
+          course_start_date: billingRecord.course_start_date,
+          level_count: billData.levelCount,
+          total_fee: billData.totalFee,
+          discount_percentage: billData.discountPercent,
+          fee_after_discount: billData.feeAfterDiscount,
+          amount_paid: 0,
+          amount_remaining: billData.feeAfterDiscount,
+          first_payment: billData.firstPayment,
+          second_payment: billData.secondPayment,
+          signature_url: signatureStoragePath,
         });
-        yPos += 20;
 
-        // Signature Section
-        if (signature) {
-          // Add some space if needed
-          if (yPos > pageHeight - 180) {
-            doc.addPage();
-            yPos = 40;
-          }
-          
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Student Signature', margin, yPos);
-          yPos += 15;
-          
-          try {
-            // Embed the exact signature image at high quality
-            // Calculate aspect ratio to maintain proportions
-            const signatureImg = new Image();
-            signatureImg.src = signature;
-            const imgWidth = 350;
-            const imgHeight = 120;
-            
-            doc.addImage(signature, 'PNG', margin, yPos, imgWidth, imgHeight, '', 'FAST');
-            yPos += imgHeight + 15;
-          } catch (e) {
-            console.warn('Failed to add signature image to PDF', e);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'italic');
-            doc.text('[Signature Image]', margin, yPos);
-            yPos += 20;
-          }
-        }
-
-        const pdfBlob = doc.output('blob');
         const pdfPath = `${user.id}/billing_${billing.id}.pdf`;
         const { error: pdfUploadError } = await supabase.storage
           .from('billing-pdfs')

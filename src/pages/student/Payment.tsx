@@ -180,62 +180,52 @@ const Payment = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <div className="container max-w-2xl mx-auto py-8">
         {/* Header */}
-        <div className="mb-8 text-center animate-fade-in">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/student/branch-selection")}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {t('student.back')}
-          </Button>
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            {t('student.paymentMethod')}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-6">
+            Select Payment Method
           </h1>
-        </div>
 
-        {/* Payment Selection Form */}
-        <Card className="p-8 animate-slide-up">
+          {/* Payment Selection Form */}
           {loading ? (
-            <div className="text-center py-8">{t('common.loading')}</div>
+            <div className="text-center py-8">Loading...</div>
           ) : (
-            <div className="space-y-6">
-              <Label>{t('student.selectPayment')}</Label>
-              <div className="grid gap-4">
-                {paymentMethods.map((method) => (
-                  <Card
-                    key={method.value}
-                    className={`p-6 cursor-pointer transition-all ${
-                      selectedMethod === method.value
-                        ? "border-primary border-2 bg-primary/5 shadow-lg"
-                        : "hover:bg-muted/50 hover:shadow-md"
-                    }`}
-                    onClick={() => setSelectedMethod(method.value)}
-                  >
-                    <p className="font-medium text-lg">{method.label}</p>
-                  </Card>
-                ))}
-              </div>
+            <div className="space-y-3">
+              {paymentMethods.map((method) => (
+                <button
+                  key={method.value}
+                  className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
+                    selectedMethod === method.value 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border bg-background hover:border-primary/50'
+                  }`}
+                  onClick={() => setSelectedMethod(method.value)}
+                >
+                  <span className="text-lg">{method.label}</span>
+                </button>
+              ))}
 
-              <div className="pt-4 space-y-4">
-                <div className="p-4 bg-success/10 rounded-lg border border-success/20">
-                  <h3 className="font-semibold mb-2 text-success">{t('student.paymentTerms')}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t('student.paymentTermsDesc')}
-                  </p>
-                </div>
-
+              <div className="flex gap-3 pt-6">
                 <Button
-                  onClick={handleConfirm}
-                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  variant="outline"
+                  onClick={() => navigate("/student/branch-selection")}
+                  className="flex-1"
                   size="lg"
                 >
-                  {t('student.confirmSubscribe')}
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!selectedMethod || loading}
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-red-500 hover:opacity-90"
+                  size="lg"
+                >
+                  Create Student
                 </Button>
               </div>
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

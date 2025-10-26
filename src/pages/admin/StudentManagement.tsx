@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ interface Student {
   student_id: string;
   full_name_en: string;
   email: string;
+  phone1: string;
   course_duration_months: number;
   total_course_fee: number;
   amount_paid: number;
@@ -32,6 +34,7 @@ const StudentManagement = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [courses, setCourses] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     checkAdminAccess();
@@ -197,6 +200,18 @@ const StudentManagement = () => {
     }
   };
 
+  // Filter students based on search query
+  const filteredStudents = students.filter(student => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      student.full_name_en.toLowerCase().includes(query) ||
+      student.email.toLowerCase().includes(query) ||
+      student.phone1.toLowerCase().includes(query) ||
+      (student.student_id && student.student_id.toLowerCase().includes(query))
+    );
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <div className="container mx-auto py-8">
@@ -212,6 +227,27 @@ const StudentManagement = () => {
         <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
           Student Management
         </h1>
+
+        {/* Search Bar */}
+        <Card className="p-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="Search by student name, phone number, or student ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </Card>
 
         {loading ? (
           <div className="text-center py-12">Loading...</div>
@@ -235,7 +271,7 @@ const StudentManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <tr key={student.id} className="border-b hover:bg-muted/50">
                       <td className="p-3">
                         <span className="font-medium text-primary">{student.student_id || 'N/A'}</span>
