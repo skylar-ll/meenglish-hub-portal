@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ExportDataModal } from "@/components/admin/ExportDataModal";
@@ -32,6 +33,8 @@ const AdminDashboard = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
 
   const fetchData = async () => {
     try {
@@ -273,7 +276,17 @@ const AdminDashboard = () => {
 
             {/* Students Tab */}
             <TabsContent value="students" className="space-y-4">
-              <h2 className="text-2xl font-bold mb-4">{t('admin.studentsInfo')}</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
+                <div className="w-full max-w-sm">
+                  <Input
+                    placeholder="Search students by name, phone, or ID..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
               {loading ? (
                 <div className="text-center py-8">{t('common.loading')}</div>
               ) : students.length === 0 ? (
@@ -294,7 +307,20 @@ const AdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student) => {
+                      {students
+                        .filter(student => {
+                          if (!studentSearchQuery) return true;
+                          const query = studentSearchQuery.toLowerCase();
+                          return (
+                            student.full_name_en?.toLowerCase().includes(query) ||
+                            student.full_name_ar?.toLowerCase().includes(query) ||
+                            student.phone1?.includes(query) ||
+                            student.phone2?.includes(query) ||
+                            student.student_id?.toLowerCase().includes(query) ||
+                            student.email?.toLowerCase().includes(query)
+                          );
+                        })
+                        .map((student) => {
                         const completedCourses = student.total_grade ? 1 : 0;
                         const totalCourses = 12;
                         return (
@@ -337,14 +363,34 @@ const AdminDashboard = () => {
 
             {/* Teachers Tab */}
             <TabsContent value="teachers" className="space-y-4">
-              <h2 className="text-2xl font-bold mb-4">{t('admin.teachersInfo')}</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">{t('admin.teachersInfo')}</h2>
+                <div className="w-full max-w-sm">
+                  <Input
+                    placeholder="Search teachers by name, email, or courses..."
+                    value={teacherSearchQuery}
+                    onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
               {loading ? (
                 <div className="text-center py-8">{t('common.loading')}</div>
               ) : teachers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">{t('common.noTeachersYet')}</div>
               ) : (
                 <div className="grid gap-4">
-                  {teachers.map((teacher) => {
+                  {teachers
+                    .filter(teacher => {
+                      if (!teacherSearchQuery) return true;
+                      const query = teacherSearchQuery.toLowerCase();
+                      return (
+                        teacher.full_name?.toLowerCase().includes(query) ||
+                        teacher.email?.toLowerCase().includes(query) ||
+                        teacher.courses_assigned?.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((teacher) => {
                     // Get students assigned to this teacher using junction table
                     const teacherStudents = students.filter(s => 
                       s.teacherIds?.includes(teacher.id)
