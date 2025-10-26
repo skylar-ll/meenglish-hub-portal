@@ -329,20 +329,26 @@ const AdminBilling = () => {
         console.warn('Failed to embed signature image into PDF', e);
       }
 
+      // Generate PDF blob and download directly (avoids Microsoft blocking)
       const pdfBlob = doc.output('blob');
-      const pdfPath = `${billing.student_id}/billing_${billing.id}.pdf`;
-      const { error: upErr } = await supabase.storage
-        .from('billing-pdfs')
-        .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-      if (upErr) throw upErr;
-
-      await supabase
-        .from('billing')
-        .update({ signed_pdf_url: pdfPath })
-        .eq('id', billing.id);
-
-      toast.success('PDF generated successfully');
-      await fetchBillings();
+      const today = new Date().toISOString().slice(0, 10);
+      
+      // Create object URL for direct download
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      
+      // Download the file
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `BillingForm_${billing.student_name_en}_${today}.pdf`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      
+      toast.success('PDF downloaded successfully');
     } catch (e) {
       console.error(e);
       toast.error('Failed to generate PDF');
