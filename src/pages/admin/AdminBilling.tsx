@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { ArrowLeft, FileText, Download, Edit, Trash2, DollarSign, Printer } from 'lucide-react';
+import { ArrowLeft, FileText, Download, Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,7 +23,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import jsPDF from 'jspdf';
+
 
 interface BillingRecord {
   id: string;
@@ -58,8 +58,6 @@ const AdminBilling = () => {
     amount_paid: 0,
   });
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
-  const [payingBilling, setPayingBilling] = useState<BillingRecord | null>(null);
-  const [payPercent, setPayPercent] = useState<number>(50);
   useEffect(() => {
     checkAdminAndFetch();
   }, []);
@@ -167,184 +165,48 @@ const AdminBilling = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this billing record?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('billing')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success('Billing deleted successfully');
-      fetchBillings();
-    } catch (error: any) {
-      toast.error('Failed to delete billing');
-    }
-  };
-  
-  const handleOpenPay = (billing: BillingRecord) => {
-    setPayingBilling(billing);
-    setPayPercent(50);
-  };
-
-  const handleConfirmPay = async () => {
-    if (!payingBilling) return;
-    try {
-      const pct = Math.max(0, Math.min(100, Number(payPercent) || 0));
-      const intended = Math.round(payingBilling.fee_after_discount * (pct / 100));
-      const amountToPay = Math.min(intended, payingBilling.amount_remaining);
-
-      const newPaid = payingBilling.amount_paid + amountToPay;
-      const newRemaining = Math.max(0, payingBilling.fee_after_discount - newPaid);
-
-      const { error } = await supabase
-        .from('billing')
-        .update({ amount_paid: newPaid, amount_remaining: newRemaining })
-        .eq('id', payingBilling.id);
-
-      if (error) throw error;
-      toast.success(`Recorded payment of ${amountToPay.toLocaleString()} SR`);
-      setPayingBilling(null);
-      await fetchBillings();
-    } catch (e) {
-      toast.error('Failed to record payment');
-    }
-  };
-  const handleDownloadPDF = async (billing: BillingRecord) => {
-    try {
-      if (!billing.signed_pdf_url) {
-        toast.info('PDF not available yet');
-        return;
-      }
-      // Treat signed_pdf_url as storage path and create a signed URL (bucket is private)
-      const { data, error } = await supabase.storage
-        .from('billing-pdfs')
-        .createSignedUrl(billing.signed_pdf_url, 60 * 60); // 1 hour
-      if (error || !data?.signedUrl) throw error || new Error('No signed URL');
-      
-      // Download the file
-      const link = document.createElement('a');
-      link.href = data.signedUrl;
-      const today = new Date().toISOString().slice(0,10);
-      link.download = `BillingForm_${billing.student_name_en}_${today}.pdf`;
-      link.click();
-    } catch (e) {
-      toast.error('Unable to download PDF');
-    }
-  };
-
-  const handlePrint = (billingId: string) => {
-    const element = document.getElementById(`billing-${billingId}`);
-    if (!element) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Billing Form</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .signature-box { border: 2px dashed #ccc; padding: 20px; margin: 20px 0; }
-            .signature-box img { max-width: 100%; height: auto; }
-            @media print {
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          ${element.innerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const imageToDataURL = async (url: string): Promise<string> => {
-    // If it's already a data URL, return as-is
-    if (url.startsWith('data:')) return url;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch image');
-    const blob = await res.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
-  };
   const handleGeneratePDF = async (billing: BillingRecord) => {
     try {
       if (!billing.signature_url) {
-        toast.error('No signature to embed');
+        toast.error('No signature available');
         return;
       }
 
-      // Resolve a usable URL for the signature image
-      const resolveSignatureUrl = async (): Promise<string> => {
-        const raw = billing.signature_url as string;
-        if (raw.startsWith('data:')) return raw; // direct data URL
-        if (raw.startsWith('http')) return raw;  // already a full URL
-        // Otherwise, it's a storage path in the private "signatures" bucket
-        const cleaned = raw.replace(/^\/+/, '');
-        const { data, error } = await supabase.storage
-          .from('signatures')
-          .createSignedUrl(cleaned, 60 * 10);
-        if (error || !data?.signedUrl) {
-          console.warn('Signature sign error', error);
-          throw new Error('Signature image not found');
-        }
-        return data.signedUrl;
+      // Import and use the centralized PDF generator
+      const { generateBillingPDF } = await import('@/components/billing/BillingPDFGenerator');
+      
+      const billingData = {
+        student_id: billing.student_id,
+        student_name_en: billing.student_name_en,
+        student_name_ar: billing.student_name_ar,
+        phone: billing.phone,
+        course_package: billing.course_package,
+        time_slot: billing.time_slot,
+        registration_date: billing.registration_date,
+        course_start_date: billing.course_start_date,
+        level_count: billing.level_count,
+        total_fee: billing.total_fee,
+        discount_percentage: billing.discount_percentage,
+        fee_after_discount: billing.fee_after_discount,
+        amount_paid: billing.amount_paid,
+        amount_remaining: billing.amount_remaining,
+        first_payment: billing.fee_after_discount / 2,
+        second_payment: billing.fee_after_discount / 2,
+        signature_url: billing.signature_url,
+        student_id_code: billing.student_id,
       };
 
-      const signedSigUrl = await resolveSignatureUrl();
-
-      // Build the PDF
-      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-      doc.setFontSize(16);
-      doc.text('Modern Education Institute of Language', 40, 40);
-      doc.setFontSize(12);
-      doc.text(`Student Name (English): ${billing.student_name_en}`, 40, 70);
-      doc.text(`Student Name (Arabic): ${billing.student_name_ar}`, 40, 90);
-      doc.text(`Contact Number: ${billing.phone}`, 40, 110);
-      doc.text(`Course Package: ${billing.course_package}`, 40, 130);
-      doc.text(`Time Slot: ${billing.time_slot || 'TBD'}`, 40, 150);
-      doc.text(`Level Count: ${billing.level_count}`, 40, 170);
-      doc.text(`Registration Date: ${new Date(billing.registration_date).toLocaleDateString()}`, 40, 190);
-      doc.text(`Course Start Date: ${new Date(billing.course_start_date).toLocaleDateString()}`, 40, 210);
-      doc.text(`Total Fee: ${billing.total_fee} SR  |  Discount: ${billing.discount_percentage}%`, 40, 230);
-      doc.text(`Fee After Discount: ${billing.fee_after_discount} SR`, 40, 250);
-      doc.text(`Amount Paid: ${billing.amount_paid} SR  |  Amount Remaining: ${billing.amount_remaining} SR`, 40, 270);
-
-      try {
-        const sigDataUrl = await imageToDataURL(signedSigUrl);
-        doc.text('Student Signature:', 40, 310);
-        doc.addImage(sigDataUrl, 'PNG', 40, 320, 300, 100);
-      } catch (e) {
-        console.warn('Failed to embed signature image into PDF', e);
-      }
-
-      // Generate PDF blob and download directly (avoids Microsoft blocking)
-      const pdfBlob = doc.output('blob');
+      const pdfBlob = await generateBillingPDF(billingData);
       const today = new Date().toISOString().slice(0, 10);
       
-      // Create object URL for direct download
+      // Create direct download
       const blobUrl = URL.createObjectURL(pdfBlob);
-      
-      // Download the file
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = `BillingForm_${billing.student_name_en}_${today}.pdf`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
       
@@ -492,47 +354,19 @@ const AdminBilling = () => {
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 pt-4 border-t">
                   <Button
-                    variant="default"
-                    onClick={() => handleDownloadPDF(billing)}
-                    disabled={!billing.signed_pdf_url}
+                    onClick={() => handleGeneratePDF(billing)}
+                    className="gap-2"
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4" />
                     Download PDF
                   </Button>
                   <Button
-                    variant="outline"
-                    onClick={() => handleGeneratePDF(billing)}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    {billing.signed_pdf_url ? 'Re-generate PDF' : 'Generate PDF'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePrint(billing.id)}
-                  >
-                    <Printer className="w-4 h-4 mr-2" />
-                    Print Bill
-                  </Button>
-                  <Button
-                    variant="default"
-                    onClick={() => handleOpenPay(billing)}
-                  >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Pay
-                  </Button>
-                  <Button
-                    variant="outline"
                     onClick={() => handleEditClick(billing)}
+                    variant="outline"
+                    className="gap-2"
                   >
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className="w-4 h-4" />
                     Edit Billing
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDelete(billing.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
                   </Button>
                 </div>
               </div>
@@ -595,57 +429,7 @@ const AdminBilling = () => {
                 Cancel
               </Button>
               <Button onClick={handleEditSave} className="bg-gradient-to-r from-primary to-secondary">
-                <DollarSign className="w-4 h-4 mr-2" />
                 Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Pay Dialog */}
-        <Dialog open={!!payingBilling} onOpenChange={() => setPayingBilling(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Record a Payment</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Choose the percentage of the total fee to pay now.</p>
-              <div className="flex flex-wrap gap-2">
-                {[25,50,75,100].map((pct) => (
-                  <Button
-                    key={pct}
-                    variant={payPercent === pct ? 'default' : 'outline'}
-                    onClick={() => setPayPercent(pct)}
-                  >
-                    {pct}%
-                  </Button>
-                ))}
-              </div>
-              <div>
-                <Label>Custom Percentage (%)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={payPercent}
-                  onChange={(e) => setPayPercent(parseFloat(e.target.value || '0'))}
-                />
-              </div>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Amount to record:</p>
-                <p className="text-2xl font-bold text-primary">
-                  {payingBilling ? Math.min(Math.round(payingBilling.fee_after_discount * (payPercent/100)), payingBilling.amount_remaining).toLocaleString() : 0} SR
-                </p>
-                {payingBilling && (
-                  <p className="text-sm text-muted-foreground mt-2">Remaining after payment: {Math.max(0, (payingBilling.fee_after_discount - (payingBilling.amount_paid + Math.min(Math.round(payingBilling.fee_after_discount * (payPercent/100)), payingBilling.amount_remaining)))).toLocaleString()} SR</p>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPayingBilling(null)}>Cancel</Button>
-              <Button onClick={handleConfirmPay} className="bg-gradient-to-r from-primary to-secondary">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Confirm Payment
               </Button>
             </DialogFooter>
           </DialogContent>
