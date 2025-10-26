@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,15 +8,15 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
-const BranchSelection = () => {
+const PaymentMethodSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [selectedBranch, setSelectedBranch] = useState("");
-  const { branches, loading } = useFormConfigurations();
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const { paymentMethods, loading } = useFormConfigurations();
 
   const handleNext = () => {
-    if (!selectedBranch) {
-      toast.error(t('student.selectBranchError'));
+    if (!selectedMethod) {
+      toast.error("Please select a payment method");
       return;
     }
 
@@ -28,10 +28,10 @@ const BranchSelection = () => {
     }
 
     const registrationData = JSON.parse(storedData);
-    registrationData.branch = selectedBranch;
+    registrationData.paymentMethod = selectedMethod;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/payment-selection");
+    navigate("/student/billing-form");
   };
 
   return (
@@ -40,17 +40,17 @@ const BranchSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/duration-selection")}
+            onClick={() => navigate("/student/branch-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Branch
+            Payment Method
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Select your preferred branch location
+            Select your preferred payment method
           </p>
         </div>
 
@@ -60,28 +60,28 @@ const BranchSelection = () => {
           ) : (
             <div className="space-y-6">
               <Label className="text-lg font-semibold">
-                {t('student.selectBranch')}
+                Select Payment Method
               </Label>
 
               <div className="grid gap-4">
-                {branches.map((branch) => (
+                {paymentMethods.map((method) => (
                   <Card
-                    key={branch.value}
+                    key={method.value}
                     className={`p-6 cursor-pointer transition-all ${
-                      selectedBranch === branch.value
+                      selectedMethod === method.value
                         ? "border-primary border-2 bg-primary/5 shadow-lg"
                         : "hover:bg-muted/50 hover:shadow-md"
                     }`}
-                    onClick={() => setSelectedBranch(branch.value)}
+                    onClick={() => setSelectedMethod(method.value)}
                   >
-                    <p className="font-medium text-lg">{branch.label}</p>
+                    <p className="font-medium text-lg">{method.label}</p>
                   </Card>
                 ))}
               </div>
 
               <Button
                 onClick={handleNext}
-                disabled={!selectedBranch}
+                disabled={!selectedMethod}
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                 size="lg"
               >
@@ -96,4 +96,4 @@ const BranchSelection = () => {
   );
 };
 
-export default BranchSelection;
+export default PaymentMethodSelection;

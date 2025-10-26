@@ -15,6 +15,7 @@ import TeacherSelection from "./pages/student/TeacherSelection";
 import TimingSelection from "./pages/student/TimingSelection";
 import CourseDurationSelection from "./pages/student/CourseDurationSelection";
 import BranchSelection from "./pages/student/BranchSelection";
+import PaymentMethodSelection from "./pages/student/PaymentMethodSelection";
 import BillingForm from "./pages/student/BillingForm";
 import Payment from "./pages/student/Payment";
 import CoursePage from "./pages/student/CoursePage";
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="/student/timing-selection" element={<TimingSelection />} />
           <Route path="/student/duration-selection" element={<CourseDurationSelection />} />
           <Route path="/student/branch-selection" element={<BranchSelection />} />
+          <Route path="/student/payment-selection" element={<PaymentMethodSelection />} />
           <Route path="/student/billing-form" element={<BillingForm />} />
           <Route path="/student/payment" element={<Payment />} />
           <Route path="/student/course" element={<CoursePage />} />
