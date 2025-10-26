@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CreditCard, Calendar, DollarSign, CheckCircle, FileText, Download } from "lucide-react";
+import { ArrowLeft, CreditCard, Calendar, CheckCircle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -299,26 +300,55 @@ const StudentPayments = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-                {paymentData.billingFormPath && (
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const { data, error } = await supabase.storage
-                          .from('billing-pdfs')
-                          .createSignedUrl(paymentData.billingFormPath, 60 * 60);
-                        if (error || !data?.signedUrl) throw error || new Error('No signed URL');
-                        window.open(data.signedUrl, '_blank');
-                      } catch (e) {
-                        toast.error('Unable to open billing form');
-                      }
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Bill (PDF)
-                  </Button>
-                )}
+                <Button
+                  onClick={async () => {
+                    try {
+                      toast.loading('Generating PDF...');
+                      
+                      const pdfBlob = await generateBillingPDF({
+                        student_id: paymentData.studentId,
+                        student_name_en: paymentData.studentName,
+                        student_name_ar: paymentData.studentNameAr,
+                        phone: paymentData.phone,
+                        course_package: paymentData.coursePackage,
+                        time_slot: paymentData.timeSlot,
+                        registration_date: paymentData.registrationDate,
+                        course_start_date: paymentData.courseStartDate,
+                        level_count: paymentData.courseDuration,
+                        total_fee: paymentData.totalCourseFee,
+                        discount_percentage: paymentData.discountPercentage,
+                        fee_after_discount: paymentData.totalCourseFee * (1 - paymentData.discountPercentage / 100),
+                        amount_paid: paymentData.amountPaid,
+                        amount_remaining: paymentData.amountRemaining,
+                        first_payment: paymentData.firstPayment,
+                        second_payment: paymentData.secondPayment,
+                        signature_url: paymentData.signatureUrl,
+                        student_id_code: paymentData.studentId,
+                      });
+
+                      const url = URL.createObjectURL(pdfBlob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `billing_${paymentData.studentId}_${Date.now()}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+
+                      toast.dismiss();
+                      toast.success('PDF downloaded successfully!');
+                    } catch (e) {
+                      toast.dismiss();
+                      toast.error('Unable to generate billing form');
+                      console.error(e);
+                    }
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Bill (PDF)
+                </Button>
                 
                 {paymentData.amountRemaining > 0 && (
                   <Button
