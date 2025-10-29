@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2, Plus, Save } from "lucide-react";
@@ -27,6 +28,7 @@ interface ConfigItem {
 export const EditFormConfigModal = ({ open, onOpenChange }: EditFormConfigModalProps) => {
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
 
   const fetchConfigs = async () => {
     const { data, error } = await supabase
@@ -37,6 +39,12 @@ export const EditFormConfigModal = ({ open, onOpenChange }: EditFormConfigModalP
 
     if (!error && data) {
       setConfigs(data);
+      
+      // Fetch auto-translation setting
+      const autoTranslateSetting = data.find(
+        c => c.config_key === 'auto_translation_enabled'
+      );
+      setAutoTranslationEnabled(autoTranslateSetting?.config_value === 'true');
     }
   };
 
@@ -128,6 +136,25 @@ export const EditFormConfigModal = ({ open, onOpenChange }: EditFormConfigModalP
     setConfigs(configs.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
+  const handleAutoTranslationToggle = async (enabled: boolean) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('form_configurations')
+        .update({ config_value: enabled ? 'true' : 'false' })
+        .eq('config_key', 'auto_translation_enabled');
+      
+      if (error) throw error;
+      
+      setAutoTranslationEnabled(enabled);
+      toast.success(`Auto-translation ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error: any) {
+      toast.error(`Failed to update: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderConfigItems = (configType: string, title: string) => {
     const items = configs.filter(c => c.config_type === configType);
     
@@ -196,6 +223,26 @@ export const EditFormConfigModal = ({ open, onOpenChange }: EditFormConfigModalP
         <DialogHeader>
           <DialogTitle>Edit Form Configurations</DialogTitle>
         </DialogHeader>
+
+        {/* Auto-Translation Toggle */}
+        <Card className="p-4 mt-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="auto-translate-toggle" className="text-base font-semibold">
+                Auto-Translation
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically translate Arabic names to English in Add New Student and Add Previous Student forms
+              </p>
+            </div>
+            <Switch
+              id="auto-translate-toggle"
+              checked={autoTranslationEnabled}
+              onCheckedChange={handleAutoTranslationToggle}
+              disabled={loading}
+            />
+          </div>
+        </Card>
 
         <Tabs defaultValue="courses" className="mt-4">
           <TabsList className="grid w-full grid-cols-5">
