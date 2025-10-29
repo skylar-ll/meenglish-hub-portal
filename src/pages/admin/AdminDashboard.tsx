@@ -582,6 +582,7 @@ const AdminDashboard = () => {
         open={showAddNewStudentModal}
         onOpenChange={setShowAddNewStudentModal}
         onStudentAdded={fetchData}
+        isEditMode={false}
       />
 
       {/* Add Previous Student Modal */}
@@ -589,6 +590,7 @@ const AdminDashboard = () => {
         open={showAddStudentModal}
         onOpenChange={setShowAddStudentModal}
         onStudentAdded={fetchData}
+        isEditMode={false}
       />
 
       {/* Attendance Records Modal */}

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
@@ -20,15 +21,33 @@ interface AddPreviousStudentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStudentAdded: () => void;
+  isEditMode?: boolean;
 }
 
-const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPreviousStudentModalProps) => {
+const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded, isEditMode = false }: AddPreviousStudentModalProps) => {
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
+  
+  // Fetch auto-translation setting
+  useEffect(() => {
+    const fetchAutoTranslationSetting = async () => {
+      const { data } = await supabase
+        .from('form_configurations')
+        .select('config_value')
+        .eq('config_key', 'auto_translation_enabled')
+        .single();
+      
+      setAutoTranslationEnabled(data?.config_value === 'true');
+    };
+    
+    if (open) {
+      fetchAutoTranslationSetting();
+    }
+  }, [open]);
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -372,22 +391,48 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 7</DialogTitle>
-              <Button
-                variant={isEditMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? "Done Editing" : "Edit Form"}
-              </Button>
-            </div>
+            <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 7</DialogTitle>
           </DialogHeader>
         
         {configLoading ? (
           <div className="text-center py-8">Loading...</div>
         ) : (
           <>
+            {/* Auto-Translation Toggle - Only shown in edit mode */}
+            {isEditMode && (
+              <Card className="p-4 bg-muted/50 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="auto-translate-toggle-prev" className="text-base font-semibold">
+                      Auto-Translation
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically translate Arabic names to English in Add New Student and Add Previous Student forms
+                    </p>
+                  </div>
+                  <Switch
+                    id="auto-translate-toggle-prev"
+                    checked={autoTranslationEnabled}
+                    onCheckedChange={async (enabled) => {
+                      try {
+                        const { error } = await supabase
+                          .from('form_configurations')
+                          .update({ config_value: enabled ? 'true' : 'false' })
+                          .eq('config_key', 'auto_translation_enabled');
+                        
+                        if (error) throw error;
+                        
+                        setAutoTranslationEnabled(enabled);
+                        toast.success(`Auto-translation ${enabled ? 'enabled' : 'disabled'}`);
+                      } catch (error: any) {
+                        toast.error(`Failed to update: ${error.message}`);
+                      }
+                    }}
+                  />
+                </div>
+              </Card>
+            )}
+
             {/* Step 1: Basic Information */}
             {step === 1 && (
               <div className="space-y-4">
