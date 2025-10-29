@@ -167,53 +167,55 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   };
 
   const handleNext = async () => {
-    if (step === 1) {
-      if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
-        toast.error(t('addPrevStudent.fillAllFields'));
-        return;
-      }
-      if (formData.password.length < 8) {
-        toast.error(t('addPrevStudent.passwordMinLength'));
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      if (formData.courses.length === 0) {
-        toast.error(t('addPrevStudent.selectAtLeastOneCourse'));
-        return;
-      }
+    // Fetch teachers when moving from course selection to teacher assignment
+    if (step === 2) {
       await fetchTeachersForCourses();
-      setStep(3);
-    } else if (step === 3) {
-      // Teacher selection step
-      const missingSelections = courseTeachers.filter(ct => !formData.teacherSelections[ct.course]);
-      if (missingSelections.length > 0) {
-        toast.error("Please select a teacher for all courses");
-        return;
-      }
-      setStep(4);
-    } else if (step === 4) {
-      if (!formData.timing) {
-        toast.error("Please select a timing");
-        return;
-      }
-      setStep(5);
-    } else if (step === 5) {
-      if (!formData.branch) {
-        toast.error(t('addPrevStudent.selectBranchError'));
-        return;
-      }
-      setStep(6);
-    } else if (step === 6) {
-      if (!formData.courseDuration && !formData.customDuration) {
-        toast.error("Please select or enter a course duration");
-        return;
-      }
-      setStep(7);
+    }
+    
+    // Allow free navigation between steps without validation
+    if (step < 7) {
+      setStep(step + 1);
     }
   };
 
   const handleSubmit = async () => {
+    // Validate all required fields before submission
+    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
+      toast.error(t('addPrevStudent.fillAllFields'));
+      return;
+    }
+    
+    if (formData.password.length < 8) {
+      toast.error(t('addPrevStudent.passwordMinLength'));
+      return;
+    }
+    
+    if (formData.courses.length === 0) {
+      toast.error(t('addPrevStudent.selectAtLeastOneCourse'));
+      return;
+    }
+    
+    const missingSelections = courseTeachers.filter(ct => !formData.teacherSelections[ct.course]);
+    if (missingSelections.length > 0) {
+      toast.error("Please select a teacher for all courses");
+      return;
+    }
+    
+    if (!formData.timing) {
+      toast.error("Please select a timing");
+      return;
+    }
+    
+    if (!formData.branch) {
+      toast.error(t('addPrevStudent.selectBranchError'));
+      return;
+    }
+    
+    if (!formData.courseDuration && !formData.customDuration) {
+      toast.error("Please select or enter a course duration");
+      return;
+    }
+    
     if (!formData.paymentMethod) {
       toast.error(t('addPrevStudent.selectPaymentError'));
       return;
@@ -235,12 +237,6 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       if (error.errors) {
         toast.error(error.errors[0].message);
       }
-      return;
-    }
-
-    // Validate course selection
-    if (formData.courses.length === 0) {
-      toast.error("At least one course is required");
       return;
     }
 

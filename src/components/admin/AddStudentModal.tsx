@@ -161,40 +161,39 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   };
 
   const handleNext = () => {
-    if (step === 1) {
-      if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      if (formData.courses.length === 0) {
-        toast.error("Please select at least one course");
-        return;
-      }
-      setStep(3);
-    } else if (step === 3) {
-      if (!formData.timing) {
-        toast.error("Please select a timing");
-        return;
-      }
-      setStep(4);
-    } else if (step === 4) {
-      if (!formData.branch) {
-        toast.error("Please select a branch");
-        return;
-      }
-      setStep(5);
-    } else if (step === 5) {
-      if (!formData.courseDuration && !formData.customDuration) {
-        toast.error("Please select or enter a course duration");
-        return;
-      }
-      setStep(6);
+    // Allow free navigation between steps without validation
+    if (step < 6) {
+      setStep(step + 1);
     }
   };
 
   const handleSubmit = async () => {
+    // Validate all required fields before submission
+    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
+      toast.error("Please fill in all required fields in Personal Information");
+      return;
+    }
+    
+    if (formData.courses.length === 0) {
+      toast.error("Please select at least one course");
+      return;
+    }
+    
+    if (!formData.timing) {
+      toast.error("Please select a timing");
+      return;
+    }
+    
+    if (!formData.branch) {
+      toast.error("Please select a branch");
+      return;
+    }
+    
+    if (!formData.courseDuration && !formData.customDuration) {
+      toast.error("Please select or enter a course duration");
+      return;
+    }
+    
     if (!formData.paymentMethod) {
       toast.error("Please select a payment method");
       return;

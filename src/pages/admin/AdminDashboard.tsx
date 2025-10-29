@@ -263,21 +263,6 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
-        {/* Search Bar */}
-        <Card className="p-6 mb-6">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold">Search Student</h3>
-            <Input
-              placeholder="Enter phone number or name..."
-              value={studentSearchQuery}
-              onChange={(e) => setStudentSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button className="gap-2">
-              Search
-            </Button>
-          </div>
-        </Card>
 
         {/* Main Content Tabs */}
         <Card className="p-6">
