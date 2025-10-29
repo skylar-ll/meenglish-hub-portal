@@ -4,6 +4,7 @@ import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCh
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ExportDataModal } from "@/components/admin/ExportDataModal";
@@ -259,6 +260,54 @@ const AdminDashboard = () => {
               <Users className="w-5 h-5" />
               Student Management
             </Button>
+          </div>
+        </Card>
+
+        {/* Search Bar and Settings */}
+        <Card className="p-6 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Search Student</h3>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="auto-translate" className="text-sm">Auto-Translation</Label>
+                <Button
+                  id="auto-translate"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const { supabase } = await import("@/integrations/supabase/client");
+                    const { data: setting } = await supabase
+                      .from('form_configurations')
+                      .select('config_value')
+                      .eq('config_key', 'auto_translation_enabled')
+                      .single();
+                    
+                    const newValue = setting?.config_value === 'true' ? 'false' : 'true';
+                    await supabase
+                      .from('form_configurations')
+                      .update({ config_value: newValue })
+                      .eq('config_key', 'auto_translation_enabled');
+                    
+                    const { toast } = await import("sonner");
+                    toast.success(`Auto-translation ${newValue === 'true' ? 'enabled' : 'disabled'}`);
+                    fetchData();
+                  }}
+                >
+                  Toggle
+                </Button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter phone number or name..."
+                value={studentSearchQuery}
+                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+              <Button className="gap-2">
+                Search
+              </Button>
+            </div>
           </div>
         </Card>
 

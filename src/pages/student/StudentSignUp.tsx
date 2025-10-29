@@ -58,32 +58,47 @@ const StudentSignUp = () => {
       clearTimeout(translationTimeoutRef.current);
     }
 
-    // Check if there's Arabic text (contains Arabic characters)
-    const hasArabic = /[\u0600-\u06FF]/.test(arabicName);
-    
-    if (arabicName && hasArabic) {
-      setIsTranslating(true);
+    const checkAndTranslate = async () => {
+      const { data: setting } = await supabase
+        .from('form_configurations')
+        .select('config_value')
+        .eq('config_key', 'auto_translation_enabled')
+        .single();
+
+      if (setting?.config_value !== 'true') {
+        setIsTranslating(false);
+        return;
+      }
+
+      // Check if there's Arabic text (contains Arabic characters)
+      const hasArabic = /[\u0600-\u06FF]/.test(arabicName);
       
-      // Debounce translation by 800ms
-      translationTimeoutRef.current = setTimeout(async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('translate-name', {
-            body: { arabicName }
-          });
+      if (arabicName && hasArabic) {
+        setIsTranslating(true);
+        
+        // Debounce translation by 800ms
+        translationTimeoutRef.current = setTimeout(async () => {
+          try {
+            const { data, error } = await supabase.functions.invoke('translate-name', {
+              body: { arabicName }
+            });
 
-          if (error) throw error;
+            if (error) throw error;
 
-          if (data?.translatedName) {
-            setFormData((prev) => ({ ...prev, fullNameEn: data.translatedName }));
+            if (data?.translatedName) {
+              setFormData((prev) => ({ ...prev, fullNameEn: data.translatedName }));
+            }
+          } catch (error: any) {
+            console.error("Translation error:", error);
+            // Silently fail - user can still type manually
+          } finally {
+            setIsTranslating(false);
           }
-        } catch (error: any) {
-          console.error("Translation error:", error);
-          // Silently fail - user can still type manually
-        } finally {
-          setIsTranslating(false);
-        }
-      }, 800);
-    }
+        }, 800);
+      }
+    };
+
+    checkAndTranslate();
 
     return () => {
       if (translationTimeoutRef.current) {

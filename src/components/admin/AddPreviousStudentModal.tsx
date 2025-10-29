@@ -81,29 +81,44 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
       clearTimeout(translationTimeoutRef.current);
     }
 
-    if (formData.fullNameAr.trim() && !formData.fullNameEn) {
-      setIsTranslating(true);
-      
-      translationTimeoutRef.current = setTimeout(async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('translate-name', {
-            body: { arabicName: formData.fullNameAr }
-          });
+    const checkAndTranslate = async () => {
+      const { data: setting } = await supabase
+        .from('form_configurations')
+        .select('config_value')
+        .eq('config_key', 'auto_translation_enabled')
+        .single();
 
-          if (error) throw error;
+      if (setting?.config_value !== 'true') {
+        setIsTranslating(false);
+        return;
+      }
 
-          if (data?.translatedName) {
-            setFormData(prev => ({ ...prev, fullNameEn: data.translatedName }));
+      if (formData.fullNameAr.trim() && !formData.fullNameEn) {
+        setIsTranslating(true);
+        
+        translationTimeoutRef.current = setTimeout(async () => {
+          try {
+            const { data, error } = await supabase.functions.invoke('translate-name', {
+              body: { arabicName: formData.fullNameAr }
+            });
+
+            if (error) throw error;
+
+            if (data?.translatedName) {
+              setFormData(prev => ({ ...prev, fullNameEn: data.translatedName }));
+            }
+          } catch (error) {
+            console.error('Translation error:', error);
+          } finally {
+            setIsTranslating(false);
           }
-        } catch (error) {
-          console.error('Translation error:', error);
-        } finally {
-          setIsTranslating(false);
-        }
-      }, 800);
-    } else if (!formData.fullNameAr.trim()) {
-      setIsTranslating(false);
-    }
+        }, 800);
+      } else if (!formData.fullNameAr.trim()) {
+        setIsTranslating(false);
+      }
+    };
+
+    checkAndTranslate();
 
     return () => {
       if (translationTimeoutRef.current) {
