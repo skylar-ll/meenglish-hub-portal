@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,9 +42,55 @@ const StudentSignUp = () => {
     { value: "+44", label: "+44 (UK)" },
   ];
 
+  const [isTranslating, setIsTranslating] = useState(false);
+  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Auto-translate Arabic name to English
+  useEffect(() => {
+    const arabicName = formData.fullNameAr.trim();
+    
+    // Clear any pending translation
+    if (translationTimeoutRef.current) {
+      clearTimeout(translationTimeoutRef.current);
+    }
+
+    // Check if there's Arabic text (contains Arabic characters)
+    const hasArabic = /[\u0600-\u06FF]/.test(arabicName);
+    
+    if (arabicName && hasArabic) {
+      setIsTranslating(true);
+      
+      // Debounce translation by 800ms
+      translationTimeoutRef.current = setTimeout(async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('translate-name', {
+            body: { arabicName }
+          });
+
+          if (error) throw error;
+
+          if (data?.translatedName) {
+            setFormData((prev) => ({ ...prev, fullNameEn: data.translatedName }));
+          }
+        } catch (error: any) {
+          console.error("Translation error:", error);
+          // Silently fail - user can still type manually
+        } finally {
+          setIsTranslating(false);
+        }
+      }, 800);
+    }
+
+    return () => {
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
+      }
+    };
+  }, [formData.fullNameAr]);
 
   // Helper to get field label
   const getFieldLabel = (key: string) => {
@@ -158,12 +204,22 @@ const StudentSignUp = () => {
 
             <div className="space-y-2">
               <Label htmlFor="fullNameEn">{getFieldLabel('full_name_en')} *</Label>
-              <Input
-                id="fullNameEn"
-                placeholder={t('placeholder.fullNameEnglish')}
-                value={formData.fullNameEn}
-                onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="fullNameEn"
+                  placeholder={t('placeholder.fullNameEnglish')}
+                  value={formData.fullNameEn}
+                  onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
+                />
+                {isTranslating && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                  </div>
+                )}
+              </div>
+              {isTranslating && (
+                <p className="text-xs text-muted-foreground">{t('translation.translating')}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

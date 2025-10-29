@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,14 @@ const TeacherLogin = () => {
   const [activeTab, setActiveTab] = useState(searchParams.get("signup") === "true" ? "signup" : "login");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [signupName, setSignupName] = useState("");
+  const [signupNameAr, setSignupNameAr] = useState("");
+  const [signupNameEn, setSignupNameEn] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableCourses = [
     "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6",
@@ -37,6 +40,49 @@ const TeacherLogin = () => {
         : [...prev, course]
     );
   };
+
+  // Auto-translate Arabic name to English
+  useEffect(() => {
+    const arabicName = signupNameAr.trim();
+    
+    // Clear any pending translation
+    if (translationTimeoutRef.current) {
+      clearTimeout(translationTimeoutRef.current);
+    }
+
+    // Check if there's Arabic text (contains Arabic characters)
+    const hasArabic = /[\u0600-\u06FF]/.test(arabicName);
+    
+    if (arabicName && hasArabic) {
+      setIsTranslating(true);
+      
+      // Debounce translation by 800ms
+      translationTimeoutRef.current = setTimeout(async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('translate-name', {
+            body: { arabicName }
+          });
+
+          if (error) throw error;
+
+          if (data?.translatedName) {
+            setSignupNameEn(data.translatedName);
+          }
+        } catch (error: any) {
+          console.error("Translation error:", error);
+          // Silently fail - user can still type manually
+        } finally {
+          setIsTranslating(false);
+        }
+      }, 800);
+    }
+
+    return () => {
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
+      }
+    };
+  }, [signupNameAr]);
 
   const handleLogin = async () => {
     try {
@@ -83,7 +129,7 @@ const TeacherLogin = () => {
     // Validate BEFORE any async operations
     try {
       teacherSignupSchema.parse({
-        fullName: signupName,
+        fullName: signupNameEn,
         email: signupEmail,
         password: signupPassword,
       });
@@ -107,7 +153,7 @@ const TeacherLogin = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            full_name_en: signupName,
+            full_name_en: signupNameEn,
           }
         }
       });
@@ -134,7 +180,7 @@ const TeacherLogin = () => {
         .from("teachers")
         .insert({
           id: authData.user.id,
-          full_name: signupName,
+          full_name: signupNameEn,
           email: signupEmail,
           student_count: 0,
           courses_assigned: coursesString,
@@ -236,13 +282,34 @@ const TeacherLogin = () => {
             <TabsContent value="signup">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">{t('student.fullNameEn')}</Label>
+                  <Label htmlFor="signup-name-ar">{t('student.fullNameAr')}</Label>
                   <Input
-                    id="signup-name"
-                    placeholder={t('placeholder.teacherName')}
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
+                    id="signup-name-ar"
+                    dir="rtl"
+                    placeholder={t('placeholder.fullNameArabic')}
+                    value={signupNameAr}
+                    onChange={(e) => setSignupNameAr(e.target.value)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name-en">{t('student.fullNameEn')}</Label>
+                  <div className="relative">
+                    <Input
+                      id="signup-name-en"
+                      placeholder={t('placeholder.teacherName')}
+                      value={signupNameEn}
+                      onChange={(e) => setSignupNameEn(e.target.value)}
+                    />
+                    {isTranslating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                  {isTranslating && (
+                    <p className="text-xs text-muted-foreground">{t('translation.translating')}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

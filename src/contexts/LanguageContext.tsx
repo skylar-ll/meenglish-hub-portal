@@ -411,6 +411,9 @@ const translations = {
     'placeholder.teacherName': 'John Doe',
     'placeholder.grade': 'A+, B, 95%, etc.',
     'placeholder.courseDuration': 'Enter number of months',
+    
+    // Translation
+    'translation.translating': 'Translating from Arabic...',
   },
   ar: {
     // Homepage
@@ -812,6 +815,9 @@ const translations = {
     'placeholder.teacherName': 'John Doe',
     'placeholder.grade': 'A+، B، 95%، إلخ.',
     'placeholder.courseDuration': 'أدخل عدد الأشهر',
+    
+    // Translation
+    'translation.translating': 'جاري الترجمة من العربية...',
   },
 };
 
