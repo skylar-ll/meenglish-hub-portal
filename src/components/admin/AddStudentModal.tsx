@@ -21,13 +21,13 @@ interface AddStudentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStudentAdded: () => void;
-  isEditMode?: boolean;
 }
 
-export const AddStudentModal = ({ open, onOpenChange, onStudentAdded, isEditMode = false }: AddStudentModalProps) => {
+export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStudentModalProps) => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   
@@ -396,7 +396,16 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded, isEditMode
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Student - Step {step} of 6</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Add New Student - Step {step} of 6</DialogTitle>
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? "Done Editing" : "Edit Form"}
+              </Button>
+            </div>
           </DialogHeader>
 
         {configLoading ? (

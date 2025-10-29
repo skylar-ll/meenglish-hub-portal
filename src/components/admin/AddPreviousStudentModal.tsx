@@ -21,12 +21,12 @@ interface AddPreviousStudentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStudentAdded: () => void;
-  isEditMode?: boolean;
 }
 
-const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded, isEditMode = false }: AddPreviousStudentModalProps) => {
+const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPreviousStudentModalProps) => {
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -391,7 +391,16 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded, isEditMod
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 7</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{t('addPrevStudent.title')} - {t('addPrevStudent.step')} {step} {t('addPrevStudent.of')} 7</DialogTitle>
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? "Done Editing" : "Edit Form"}
+              </Button>
+            </div>
           </DialogHeader>
         
         {configLoading ? (

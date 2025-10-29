@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, Settings } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { ExportDataModal } from "@/components/admin/ExportDataModal";
 import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal";
 import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
 import { AddStudentModal } from "@/components/admin/AddStudentModal";
-import { EditFormConfigModal } from "@/components/admin/EditFormConfigModal";
 import { CoursesManagement } from "@/components/admin/CoursesManagement";
 import {
   Table,
@@ -32,7 +31,6 @@ const AdminDashboard = () => {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showAddNewStudentModal, setShowAddNewStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showEditFormModal, setShowEditFormModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,15 +259,6 @@ const AdminDashboard = () => {
             >
               <Users className="w-5 h-5" />
               Student Management
-            </Button>
-            <Button 
-              onClick={() => setShowEditFormModal(true)}
-              variant="outline"
-              className="gap-2"
-              size="lg"
-            >
-              <Settings className="w-5 h-5" />
-              Edit Form
             </Button>
           </div>
         </Card>
@@ -582,7 +571,6 @@ const AdminDashboard = () => {
         open={showAddNewStudentModal}
         onOpenChange={setShowAddNewStudentModal}
         onStudentAdded={fetchData}
-        isEditMode={false}
       />
 
       {/* Add Previous Student Modal */}
@@ -590,19 +578,12 @@ const AdminDashboard = () => {
         open={showAddStudentModal}
         onOpenChange={setShowAddStudentModal}
         onStudentAdded={fetchData}
-        isEditMode={false}
       />
 
       {/* Attendance Records Modal */}
       <AttendanceRecordsModal
         isOpen={showAttendanceModal}
         onClose={() => setShowAttendanceModal(false)}
-      />
-
-      {/* Edit Form Configuration Modal */}
-      <EditFormConfigModal
-        open={showEditFormModal}
-        onOpenChange={setShowEditFormModal}
       />
     </div>
   );
