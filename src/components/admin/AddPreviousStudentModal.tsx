@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { studentSignupSchema } from "@/lib/validations";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
@@ -29,6 +29,8 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -72,6 +74,43 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
         : [...prev.courses, courseValue]
     }));
   };
+
+  // Auto-translate Arabic name to English with debouncing
+  useEffect(() => {
+    if (translationTimeoutRef.current) {
+      clearTimeout(translationTimeoutRef.current);
+    }
+
+    if (formData.fullNameAr.trim() && !formData.fullNameEn) {
+      setIsTranslating(true);
+      
+      translationTimeoutRef.current = setTimeout(async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('translate-name', {
+            body: { arabicName: formData.fullNameAr }
+          });
+
+          if (error) throw error;
+
+          if (data?.translatedName) {
+            setFormData(prev => ({ ...prev, fullNameEn: data.translatedName }));
+          }
+        } catch (error) {
+          console.error('Translation error:', error);
+        } finally {
+          setIsTranslating(false);
+        }
+      }, 800);
+    } else if (!formData.fullNameAr.trim()) {
+      setIsTranslating(false);
+    }
+
+    return () => {
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
+      }
+    };
+  }, [formData.fullNameAr]);
 
   const fetchTeachersForCourses = async () => {
     if (formData.courses.length === 0) return;
@@ -377,13 +416,21 @@ const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: AddPrev
                     />
                     {" *"}
                   </Label>
-                  <Input
-                    id="fullNameEn"
-                    placeholder="Full Name"
-                    value={formData.fullNameEn}
-                    onChange={(e) => setFormData({...formData, fullNameEn: e.target.value})}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="fullNameEn"
+                      placeholder="Full Name"
+                      value={formData.fullNameEn}
+                      onChange={(e) => setFormData({...formData, fullNameEn: e.target.value})}
+                      required
+                    />
+                    {isTranslating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Translating from Arabic...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

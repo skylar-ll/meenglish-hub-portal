@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft, Pencil, Check, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2 } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { EditFormConfigModal } from "./EditFormConfigModal";
 import { InlineEditableField } from "./InlineEditableField";
@@ -33,6 +33,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
   const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
+  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const startEditPrice = (id: string, current: number | null | undefined) => {
     setPriceValues((prev) => ({ ...prev, [id]: String(current ?? 0) }));
@@ -99,6 +101,43 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Auto-translate Arabic name to English with debouncing
+  useEffect(() => {
+    if (translationTimeoutRef.current) {
+      clearTimeout(translationTimeoutRef.current);
+    }
+
+    if (formData.fullNameAr.trim() && !formData.fullNameEn) {
+      setIsTranslating(true);
+      
+      translationTimeoutRef.current = setTimeout(async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('translate-name', {
+            body: { arabicName: formData.fullNameAr }
+          });
+
+          if (error) throw error;
+
+          if (data?.translatedName) {
+            setFormData(prev => ({ ...prev, fullNameEn: data.translatedName }));
+          }
+        } catch (error) {
+          console.error('Translation error:', error);
+        } finally {
+          setIsTranslating(false);
+        }
+      }, 800);
+    } else if (!formData.fullNameAr.trim()) {
+      setIsTranslating(false);
+    }
+
+    return () => {
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
+      }
+    };
+  }, [formData.fullNameAr]);
 
   const handleSearchPreviousStudent = async () => {
     if (!searchQuery.trim()) {
@@ -480,12 +519,20 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     />
                     {" *"}
                   </Label>
-                  <Input
-                    id="fullNameEn"
-                    placeholder="Full Name"
-                    value={formData.fullNameEn}
-                    onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="fullNameEn"
+                      placeholder="Full Name"
+                      value={formData.fullNameEn}
+                      onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
+                    />
+                    {isTranslating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Translating from Arabic...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
