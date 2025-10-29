@@ -21,7 +21,18 @@ Deno.serve(async (req) => {
     )
 
     // Get admin credentials from request body
-    const { email, password } = await req.json()
+    let email, password;
+    try {
+      const body = await req.json();
+      email = body.email;
+      password = body.password;
+    } catch (jsonError) {
+      console.error('Failed to parse request body:', jsonError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body. Expected JSON with email and password.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
     
     if (!email || !password) {
       return new Response(
