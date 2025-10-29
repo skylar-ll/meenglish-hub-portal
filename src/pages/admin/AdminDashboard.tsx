@@ -280,7 +280,7 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-bold">{t('admin.studentsInfo')}</h2>
                 <div className="w-full max-w-sm">
                   <Input
-                    placeholder="Search students by name, phone, or ID..."
+                    placeholder={t('search.studentsPlaceholder')}
                     value={studentSearchQuery}
                     onChange={(e) => setStudentSearchQuery(e.target.value)}
                     className="w-full"
@@ -367,7 +367,7 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-bold">{t('admin.teachersInfo')}</h2>
                 <div className="w-full max-w-sm">
                   <Input
-                    placeholder="Search teachers by name, email, or courses..."
+                    placeholder={t('search.teachersPlaceholder')}
                     value={teacherSearchQuery}
                     onChange={(e) => setTeacherSearchQuery(e.target.value)}
                     className="w-full"

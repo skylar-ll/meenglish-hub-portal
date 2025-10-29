@@ -96,7 +96,7 @@ const AdminLogin = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@me-english.com"
+                placeholder={t('placeholder.adminEmail')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -107,7 +107,7 @@ const AdminLogin = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('placeholder.password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

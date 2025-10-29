@@ -215,7 +215,7 @@ const TeacherLogin = () => {
                   <Input
                     id="login-password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t('placeholder.password')}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -239,7 +239,7 @@ const TeacherLogin = () => {
                   <Label htmlFor="signup-name">{t('student.fullNameEn')}</Label>
                   <Input
                     id="signup-name"
-                    placeholder="John Doe"
+                    placeholder={t('placeholder.teacherName')}
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
                   />
@@ -261,7 +261,7 @@ const TeacherLogin = () => {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t('placeholder.password')}
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                   />

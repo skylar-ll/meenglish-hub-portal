@@ -150,7 +150,7 @@ const StudentSignUp = () => {
               <Input
                 id="fullNameAr"
                 dir="rtl"
-                placeholder="الاسم الكامل"
+                placeholder={t('placeholder.fullNameArabic')}
                 value={formData.fullNameAr}
                 onChange={(e) => handleInputChange("fullNameAr", e.target.value)}
               />
@@ -160,7 +160,7 @@ const StudentSignUp = () => {
               <Label htmlFor="fullNameEn">{getFieldLabel('full_name_en')} *</Label>
               <Input
                 id="fullNameEn"
-                placeholder="Full Name"
+                placeholder={t('placeholder.fullNameEnglish')}
                 value={formData.fullNameEn}
                 onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
               />
@@ -185,7 +185,7 @@ const StudentSignUp = () => {
                   <Input
                     id="phone1"
                     type="tel"
-                    placeholder="XXX XXX XXX"
+                    placeholder={t('placeholder.phoneNumber')}
                     value={formData.phone1}
                     onChange={(e) => handleInputChange("phone1", e.target.value)}
                     className="flex-1"
@@ -211,7 +211,7 @@ const StudentSignUp = () => {
                   <Input
                     id="phone2"
                     type="tel"
-                    placeholder="XXX XXX XXX"
+                    placeholder={t('placeholder.phoneNumber')}
                     value={formData.phone2}
                     onChange={(e) => handleInputChange("phone2", e.target.value)}
                     className="flex-1"
@@ -225,7 +225,7 @@ const StudentSignUp = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="email@example.com"
+                placeholder={t('placeholder.email')}
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
               />
@@ -235,7 +235,7 @@ const StudentSignUp = () => {
               <Label htmlFor="id">{getFieldLabel('national_id')} *</Label>
               <Input
                 id="id"
-                placeholder="ID Number"
+                placeholder={t('placeholder.idNumber')}
                 value={formData.id}
                 onChange={(e) => handleInputChange("id", e.target.value)}
               />
@@ -246,7 +246,7 @@ const StudentSignUp = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password (min 8 characters)"
+                placeholder={t('placeholder.enterPassword')}
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
               />

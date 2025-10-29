@@ -392,6 +392,25 @@ const translations = {
     'common.back': 'Back',
     'common.error': 'Error',
     'common.success': 'Success',
+    
+    // Search and filters
+    'search.studentsPlaceholder': 'Search students by name, phone, or ID...',
+    'search.teachersPlaceholder': 'Search teachers by name, email, or courses...',
+    'search.studentManagementPlaceholder': 'Search by student name, phone number, or student ID...',
+    
+    // Login placeholders
+    'placeholder.adminEmail': 'admin@me-english.com',
+    'placeholder.studentEmail': 'student@example.com',
+    'placeholder.password': '••••••••',
+    'placeholder.fullNameArabic': 'الاسم الكامل',
+    'placeholder.fullNameEnglish': 'Full Name',
+    'placeholder.phoneNumber': 'XXX XXX XXX',
+    'placeholder.email': 'email@example.com',
+    'placeholder.idNumber': 'ID Number',
+    'placeholder.enterPassword': 'Enter password (min 8 characters)',
+    'placeholder.teacherName': 'John Doe',
+    'placeholder.grade': 'A+, B, 95%, etc.',
+    'placeholder.courseDuration': 'Enter number of months',
   },
   ar: {
     // Homepage
@@ -774,6 +793,25 @@ const translations = {
     'common.back': 'رجوع',
     'common.error': 'خطأ',
     'common.success': 'نجاح',
+    
+    // Search and filters
+    'search.studentsPlaceholder': 'البحث عن الطلاب بالاسم أو الهاتف أو الرقم التعريفي...',
+    'search.teachersPlaceholder': 'البحث عن المعلمين بالاسم أو البريد الإلكتروني أو الدورات...',
+    'search.studentManagementPlaceholder': 'البحث باسم الطالب أو رقم الهاتف أو الرقم التعريفي...',
+    
+    // Login placeholders
+    'placeholder.adminEmail': 'admin@me-english.com',
+    'placeholder.studentEmail': 'student@example.com',
+    'placeholder.password': '••••••••',
+    'placeholder.fullNameArabic': 'الاسم الكامل',
+    'placeholder.fullNameEnglish': 'Full Name',
+    'placeholder.phoneNumber': 'XXX XXX XXX',
+    'placeholder.email': 'email@example.com',
+    'placeholder.idNumber': 'ID Number',
+    'placeholder.enterPassword': 'أدخل كلمة المرور (8 أحرف على الأقل)',
+    'placeholder.teacherName': 'John Doe',
+    'placeholder.grade': 'A+، B، 95%، إلخ.',
+    'placeholder.courseDuration': 'أدخل عدد الأشهر',
   },
 };
 

@@ -340,7 +340,7 @@ const QuizAttemptDetail = () => {
                 id="grade"
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                placeholder="A+, B, 95%, etc."
+                placeholder={t('placeholder.grade')}
                 className="mt-1"
               />
             </div>

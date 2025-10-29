@@ -111,7 +111,7 @@ const StudentLogin = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="student@example.com"
+                placeholder={t('placeholder.studentEmail')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -123,7 +123,7 @@ const StudentLogin = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('placeholder.password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}

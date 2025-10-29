@@ -90,7 +90,7 @@ const CourseDurationSelection = () => {
                     id="customDuration"
                     type="number"
                     min="1"
-                    placeholder="Enter number of months"
+                    placeholder={t('placeholder.courseDuration')}
                     value={customDuration}
                     onChange={(e) => {
                       setCustomDuration(e.target.value);

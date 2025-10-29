@@ -7,6 +7,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InlineStudentField } from "@/components/admin/InlineStudentField";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Teacher {
   id: string;
@@ -30,6 +31,7 @@ interface Student {
 
 const StudentManagement = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [courses, setCourses] = useState<{ value: string; label: string }[]>([]);
@@ -232,7 +234,7 @@ const StudentManagement = () => {
         <Card className="p-4 mb-6">
           <div className="flex items-center gap-4">
             <Input
-              placeholder="Search by student name, phone number, or student ID..."
+              placeholder={t('search.studentManagementPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
