@@ -16,6 +16,10 @@ import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { EditFormConfigModal } from "./EditFormConfigModal";
 import { InlineEditableField } from "./InlineEditableField";
 import { AddNewFieldButton } from "./AddNewFieldButton";
+import { BillingFormStep } from "./shared/BillingFormStep";
+import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
+import { format, addDays } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -29,6 +33,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   
   // Fetch auto-translation setting
@@ -181,9 +186,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
   const handleNext = () => {
     // Allow free navigation between steps without validation
-    if (step < 6) {
+    if (step < 7) {
       setStep(step + 1);
     }
+  };
+
+  const handleSignatureSave = (dataUrl: string) => {
+    setSignature(dataUrl);
   };
 
   const handleSubmit = async () => {
@@ -215,6 +224,11 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     
     if (!formData.paymentMethod) {
       toast.error("Please select a payment method");
+      return;
+    }
+
+    if (!signature) {
+      toast.error("Please sign the billing form");
       return;
     }
 
@@ -263,10 +277,30 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         return;
       }
 
+      const ksaTimezone = "Asia/Riyadh";
+      const now = new Date();
+      const ksaDate = toZonedTime(now, ksaTimezone);
+
+      // Upload signature to storage
+      const signatureBlob = await fetch(signature).then(r => r.blob());
+      const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
+      
+      const { data: signatureUpload, error: signatureError } = await supabase.storage
+        .from('signatures')
+        .upload(signatureFileName, signatureBlob);
+
+      if (signatureError) throw signatureError;
+
       // Create student record
       const durationMonths = formData.customDuration 
         ? parseInt(formData.customDuration) 
         : parseInt(formData.courseDuration);
+
+      // Calculate billing details
+      const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+      const totalFee = pricing?.price || (durationMonths * 500);
+      const discountPercent = 10;
+      const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
 
       // Determine which teachers to assign based on courses
       const assignedTeacherIds = new Set<string>();
@@ -323,6 +357,74 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
+      // Create billing record
+      const billingRecord = {
+        student_id: authData.user.id,
+        student_name_en: validatedData.fullNameEn,
+        student_name_ar: validatedData.fullNameAr,
+        phone: validatedData.phone1,
+        course_package: formData.courses.join(', '),
+        registration_date: format(ksaDate, "yyyy-MM-dd"),
+        course_start_date: format(addDays(ksaDate, 1), "yyyy-MM-dd"),
+        time_slot: formData.timing,
+        level_count: durationMonths,
+        total_fee: totalFee,
+        discount_percentage: discountPercent,
+        fee_after_discount: feeAfterDiscount,
+        amount_paid: 0,
+        amount_remaining: feeAfterDiscount,
+        signature_url: signatureFileName,
+        language: 'en',
+        first_payment: feeAfterDiscount * 0.5,
+        second_payment: feeAfterDiscount * 0.5,
+      };
+
+      const { data: billing, error: billingError } = await supabase
+        .from('billing')
+        .insert(billingRecord)
+        .select()
+        .single();
+
+      if (billingError) throw billingError;
+
+      // Generate and upload signed PDF
+      try {
+        const pdfBlob = await generateBillingPDF({
+          student_id: authData.user.id,
+          student_name_en: validatedData.fullNameEn,
+          student_name_ar: validatedData.fullNameAr,
+          phone: validatedData.phone1,
+          course_package: formData.courses.join(', '),
+          time_slot: formData.timing,
+          registration_date: billingRecord.registration_date,
+          course_start_date: billingRecord.course_start_date,
+          level_count: durationMonths,
+          total_fee: totalFee,
+          discount_percentage: discountPercent,
+          fee_after_discount: feeAfterDiscount,
+          amount_paid: 0,
+          amount_remaining: feeAfterDiscount,
+          first_payment: feeAfterDiscount * 0.5,
+          second_payment: feeAfterDiscount * 0.5,
+          signature_url: signatureFileName,
+        });
+
+        const pdfPath = `${authData.user.id}/billing_${billing.id}.pdf`;
+        const { error: pdfUploadError } = await supabase.storage
+          .from('billing-pdfs')
+          .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+        
+        if (pdfUploadError) throw pdfUploadError;
+
+        // Save PDF path to billing record
+        await supabase
+          .from('billing')
+          .update({ signed_pdf_url: pdfPath })
+          .eq('id', billing.id);
+      } catch (pdfErr) {
+        console.error('PDF generation/upload failed:', pdfErr);
+      }
+
       // Update profile
       await supabase
         .from("profiles")
@@ -361,6 +463,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         countryCode2: "+966",
       });
       setStep(1);
+      setSignature(null);
       
       onStudentAdded();
       onOpenChange(false);
@@ -397,7 +500,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Add New Student - Step {step} of 6</DialogTitle>
+              <DialogTitle>Add New Student - Step {step} of 7</DialogTitle>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
@@ -968,10 +1071,33 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>
-                    <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
-                      {loading ? "Creating..." : "Create Student"}
+                    <Button onClick={handleNext} className="flex-1">
+                      Next
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
+              </div>
+            )}
+
+            {/* Step 7: Billing Form with Signature */}
+            {step === 7 && (
+              <div className="space-y-4">
+                <BillingFormStep
+                  formData={formData}
+                  onSignatureSave={handleSignatureSave}
+                  signature={signature}
+                  courseDurations={courseDurations}
+                />
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
+                    {loading ? "Creating..." : "Create Student"}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
