@@ -78,6 +78,11 @@ const BillingForm = () => {
       const totalFee = pricing?.price || (durationMonths * 500); // Default 500 per month
       const discountPercent = 10; // Default 10% discount
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
+      
+      // Get partial payment amount from registration data
+      const partialPaymentAmount = registrationData.partialPaymentAmount || 0;
+      const amountPaid = partialPaymentAmount;
+      const amountRemaining = feeAfterDiscount - amountPaid;
 
       const billingData = {
         clientName: registrationData.fullNameEn,
@@ -93,10 +98,10 @@ const BillingForm = () => {
         totalFee: totalFee,
         discountPercent: discountPercent,
         feeAfterDiscount: feeAfterDiscount,
-        amountPaid: 0,
-        amountRemaining: feeAfterDiscount,
-        firstPayment: feeAfterDiscount * 0.5,
-        secondPayment: feeAfterDiscount * 0.5,
+        amountPaid: amountPaid,
+        amountRemaining: amountRemaining,
+        firstPayment: amountPaid,
+        secondPayment: amountRemaining,
         branch: registrationData.branch,
         email: registrationData.email,
         nationalId: registrationData.id,
@@ -203,8 +208,8 @@ const BillingForm = () => {
         total_fee: billData.totalFee,
         discount_percentage: billData.discountPercent,
         fee_after_discount: billData.feeAfterDiscount,
-        amount_paid: 0,
-        amount_remaining: billData.feeAfterDiscount,
+        amount_paid: billData.amountPaid,
+        amount_remaining: billData.amountRemaining,
         signature_url: signatureStoragePath,
         language: 'en',
         first_payment: billData.firstPayment,
@@ -234,8 +239,8 @@ const BillingForm = () => {
           total_fee: billData.totalFee,
           discount_percentage: billData.discountPercent,
           fee_after_discount: billData.feeAfterDiscount,
-          amount_paid: 0,
-          amount_remaining: billData.feeAfterDiscount,
+          amount_paid: billData.amountPaid,
+          amount_remaining: billData.amountRemaining,
           first_payment: billData.firstPayment,
           second_payment: billData.secondPayment,
           signature_url: signatureStoragePath,
@@ -378,7 +383,7 @@ const BillingForm = () => {
         <div className="mb-8 text-center">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/branch-selection")}
+            onClick={() => navigate("/student/partial-payment-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -659,7 +664,7 @@ const BillingForm = () => {
         <div className="mt-6 flex gap-4 md:hidden">
           <Button
             variant="outline"
-            onClick={() => navigate("/student/branch-selection")}
+            onClick={() => navigate("/student/partial-payment-selection")}
             className="flex-1"
             disabled={submitting}
           >
@@ -678,7 +683,7 @@ const BillingForm = () => {
         {/* Floating Navigation Button */}
         <FloatingNavigationButton
           onNext={handleSubmit}
-          onBack={() => navigate("/student/branch-selection")}
+          onBack={() => navigate("/student/partial-payment-selection")}
           nextLabel="Sign & Complete Registration"
           backLabel="Back"
           loading={submitting}
