@@ -294,10 +294,11 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     setTiming(cls.timing);
     setSelectedTeacher(cls.teacher_id);
     setSelectedStudents(cls.student_ids);
-    
-    // Switch to the create tab when editing
-    const createTab = document.querySelector('[value="create"]') as HTMLButtonElement;
-    if (createTab) createTab.click();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingClass(null);
+    resetForm();
   };
 
   const handleUpdateClass = async () => {
@@ -401,19 +402,6 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
             </TabsList>
 
             <TabsContent value="create" className="space-y-6 mt-4">
-              {editingClass && (
-                <div className="bg-primary/10 p-3 rounded-md">
-                  <p className="text-sm font-medium">Editing class</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetForm}
-                    className="mt-1"
-                  >
-                    Cancel editing
-                  </Button>
-                </div>
-              )}
             {/* Class Details */}
             <div className="space-y-4">
               <div>
@@ -515,9 +503,9 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
               >
                 Cancel
               </Button>
-              <Button onClick={editingClass ? handleUpdateClass : handleCreateClass} disabled={loading}>
+              <Button onClick={handleCreateClass} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingClass ? "Update Class" : "Create Class"}
+                Create Class
               </Button>
             </div>
             </TabsContent>
@@ -532,33 +520,140 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                   {existingClasses.map((cls) => (
                     <Card key={cls.id}>
                       <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{cls.class_name}</h3>
-                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                              <p><span className="font-medium">Course:</span> {cls.course_name} {cls.level && `- ${cls.level}`}</p>
-                              <p><span className="font-medium">Timing:</span> {cls.timing}</p>
-                              <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>
-                              <p><span className="font-medium">Students:</span> {cls.student_ids.length}</p>
+                        {editingClass === cls.id ? (
+                          // Edit Mode
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor={`edit-class-name-${cls.id}`}>Class Name</Label>
+                              <Input
+                                id={`edit-class-name-${cls.id}`}
+                                value={className}
+                                onChange={(e) => setClassName(e.target.value)}
+                                placeholder="e.g., English Level 1 - Morning Group"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor={`edit-course-name-${cls.id}`}>Course Name</Label>
+                              <Input
+                                id={`edit-course-name-${cls.id}`}
+                                value={courseName}
+                                onChange={(e) => setCourseName(e.target.value)}
+                                placeholder="e.g., English, Spanish"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor={`edit-level-${cls.id}`}>Level (Optional)</Label>
+                              <Input
+                                id={`edit-level-${cls.id}`}
+                                value={level}
+                                onChange={(e) => setLevel(e.target.value)}
+                                placeholder="e.g., Level 1, Beginner"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor={`edit-timing-${cls.id}`}>Timing</Label>
+                              <Input
+                                id={`edit-timing-${cls.id}`}
+                                value={timing}
+                                onChange={(e) => setTiming(e.target.value)}
+                                placeholder="e.g., 4:30 PM - 5:30 PM"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor={`edit-teacher-${cls.id}`}>Select Teacher</Label>
+                              <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Choose a teacher" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teachers.map((teacher) => (
+                                    <SelectItem key={teacher.id} value={teacher.id}>
+                                      {teacher.full_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <Label>Select Students</Label>
+                              <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto space-y-2">
+                                {students.map((student) => (
+                                  <div
+                                    key={student.id}
+                                    className="flex items-start space-x-3 p-2 hover:bg-accent rounded-md"
+                                  >
+                                    <Checkbox
+                                      id={`edit-student-${cls.id}-${student.id}`}
+                                      checked={selectedStudents.includes(student.id)}
+                                      onCheckedChange={() => toggleStudent(student.id)}
+                                    />
+                                    <label
+                                      htmlFor={`edit-student-${cls.id}-${student.id}`}
+                                      className="flex-1 cursor-pointer text-sm"
+                                    >
+                                      <div className="font-medium">{student.full_name_en}</div>
+                                      <div className="text-muted-foreground">
+                                        {student.program && `Course: ${student.program}`}
+                                        {student.course_level && ` • Level: ${student.course_level}`}
+                                      </div>
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-2">
+                                Selected: {selectedStudents.length} student(s)
+                              </p>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={handleCancelEdit}
+                                disabled={loading}
+                              >
+                                Cancel
+                              </Button>
+                              <Button onClick={handleUpdateClass} disabled={loading}>
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Changes
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditClass(cls)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteClass(cls.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                        ) : (
+                          // View Mode
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">{cls.class_name}</h3>
+                              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                                <p><span className="font-medium">Course:</span> {cls.course_name} {cls.level && `- ${cls.level}`}</p>
+                                <p><span className="font-medium">Timing:</span> {cls.timing}</p>
+                                <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>
+                                <p><span className="font-medium">Students:</span> {cls.student_ids.length}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClass(cls)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClass(cls.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
