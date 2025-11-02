@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
@@ -113,9 +114,10 @@ const CourseSelection = () => {
                   </p>
                 </div>
 
+                {/* Hide inline button on mobile when floating button shows */}
                 <Button
                   onClick={handleNext}
-                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
                   size="lg"
                 >
                   {t('student.next')}
@@ -125,6 +127,16 @@ const CourseSelection = () => {
             </div>
           )}
         </Card>
+        
+        {/* Floating Navigation Button */}
+        <FloatingNavigationButton
+          onNext={handleNext}
+          onBack={() => navigate("/student/signup")}
+          nextLabel={t('student.next')}
+          backLabel={t('student.back')}
+          showBack={true}
+          showNext={true}
+        />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
@@ -79,10 +80,11 @@ const BranchSelection = () => {
                 ))}
               </div>
 
+              {/* Hide inline button on mobile when floating button shows */}
               <Button
                 onClick={handleNext}
                 disabled={!selectedBranch}
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
                 size="lg"
               >
                 {t('student.next')}
@@ -91,6 +93,17 @@ const BranchSelection = () => {
             </div>
           )}
         </Card>
+        
+        {/* Floating Navigation Button */}
+        <FloatingNavigationButton
+          onNext={handleNext}
+          onBack={() => navigate("/student/duration-selection")}
+          nextLabel={t('student.next')}
+          backLabel={t('student.back')}
+          disabled={!selectedBranch}
+          showBack={true}
+          showNext={true}
+        />
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import { BillingFormStep } from "./shared/BillingFormStep";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -615,6 +616,19 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           </div>
         )}
       </DialogContent>
+      
+      {/* Floating Navigation Button */}
+      {open && !configLoading && (
+        <FloatingNavigationButton
+          onNext={step === 7 ? handleSubmit : handleNext}
+          onBack={step > 1 ? () => setStep(step - 1) : undefined}
+          nextLabel={step === 7 ? "Create Student" : "Next"}
+          backLabel="Back"
+          loading={loading}
+          showBack={step > 1}
+          showNext={true}
+        />
+      )}
     </Dialog>
   );
 };

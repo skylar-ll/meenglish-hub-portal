@@ -10,6 +10,7 @@ import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { ArrowLeft, FileText, Calendar, Download } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
+import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const BillingForm = () => {
   const navigate = useNavigate();
@@ -655,7 +656,7 @@ const BillingForm = () => {
           </div>
         </Card>
 
-        <div className="mt-6 flex gap-4">
+        <div className="mt-6 flex gap-4 md:hidden">
           <Button
             variant="outline"
             onClick={() => navigate("/student/branch-selection")}
@@ -670,9 +671,21 @@ const BillingForm = () => {
             className="flex-1 bg-gradient-to-r from-primary to-secondary"
           >
             <FileText className="w-4 h-4 mr-2" />
-            {submitting ? "Completing Registration..." : "Sign & Complete Registration"}
+            {submitting ? "Completing..." : "Sign & Complete"}
           </Button>
         </div>
+        
+        {/* Floating Navigation Button */}
+        <FloatingNavigationButton
+          onNext={handleSubmit}
+          onBack={() => navigate("/student/branch-selection")}
+          nextLabel="Sign & Complete Registration"
+          backLabel="Back"
+          loading={submitting}
+          disabled={!signature}
+          showBack={true}
+          showNext={true}
+        />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const StudentSignUp = () => {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ const StudentSignUp = () => {
     countryCode2: "+966",
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const countryCodes = [
     { value: "+966", label: "+966 (Saudi Arabia)" },
     { value: "+971", label: "+971 (UAE)" },
@@ -114,6 +117,7 @@ const StudentSignUp = () => {
   };
 
   const handleNext = async () => {
+    setIsSubmitting(true);
     try {
       // Combine country code with phone numbers
       const dataToValidate = {
@@ -176,6 +180,8 @@ const StudentSignUp = () => {
       } else {
         toast.error("Invalid form data");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -323,17 +329,28 @@ const StudentSignUp = () => {
               />
             </div>
 
+            {/* Keep inline button for visual consistency, but hide on mobile when floating button shows */}
             <Button
               onClick={handleNext}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
               size="lg"
+              disabled={isSubmitting}
             >
-              {t('student.next')}
+              {isSubmitting ? "Creating Account..." : t('student.next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         )}
         </Card>
+        
+        {/* Floating Navigation Button */}
+        <FloatingNavigationButton
+          onNext={handleNext}
+          nextLabel={t('student.next')}
+          loading={isSubmitting}
+          showBack={false}
+          onBack={() => navigate("/")}
+        />
       </div>
     </div>
   );

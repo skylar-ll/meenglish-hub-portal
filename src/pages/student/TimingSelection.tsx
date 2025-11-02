@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 interface TimingOption {
   id: string;
@@ -111,9 +112,10 @@ const TimingSelection = () => {
               ))}
             </div>
 
+            {/* Hide inline button on mobile when floating button shows */}
             <Button
               onClick={handleNext}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
               size="lg"
             >
               {t('student.next')}
@@ -121,6 +123,16 @@ const TimingSelection = () => {
             </Button>
           </div>
         </Card>
+        
+        {/* Floating Navigation Button */}
+        <FloatingNavigationButton
+          onNext={handleNext}
+          onBack={() => navigate("/student/teacher-selection")}
+          nextLabel={t('student.next')}
+          backLabel={t('student.back')}
+          showBack={true}
+          showNext={true}
+        />
       </div>
     </div>
   );
