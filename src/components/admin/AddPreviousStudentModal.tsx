@@ -208,6 +208,17 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         password: formData.password,
       });
 
+      // Check if email already exists
+      const { data: existingUsers } = await supabase
+        .from('students')
+        .select('email')
+        .eq('email', validatedData.email);
+
+      if (existingUsers && existingUsers.length > 0) {
+        toast.error(`A student with email "${validatedData.email}" already exists. Please use a different email.`);
+        return;
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
