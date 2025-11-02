@@ -335,6 +335,47 @@ const BillingForm = () => {
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
+      // Automatically enroll student in matching classes
+      try {
+        const studentCourses = billData.courseName.split(', ');
+        const studentTiming = billData.timeSlot;
+        
+        for (const course of studentCourses) {
+          // Find classes that match this course and timing
+          const { data: matchingClasses } = await supabase
+            .from('classes')
+            .select('id')
+            .eq('course_name', course.trim())
+            .eq('timing', studentTiming);
+
+          if (matchingClasses && matchingClasses.length > 0) {
+            // Check which classes the student is not already enrolled in
+            const { data: existingEnrollments } = await supabase
+              .from('class_students')
+              .select('class_id')
+              .eq('student_id', studentData.id)
+              .in('class_id', matchingClasses.map(c => c.id));
+
+            const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
+            
+            // Enroll in classes not yet enrolled
+            const newEnrollments = matchingClasses
+              .filter(c => !enrolledClassIds.has(c.id))
+              .map(c => ({
+                class_id: c.id,
+                student_id: studentData.id
+              }));
+
+            if (newEnrollments.length > 0) {
+              await supabase.from('class_students').insert(newEnrollments);
+            }
+          }
+        }
+      } catch (classEnrollError) {
+        console.error('Error auto-enrolling in classes:', classEnrollError);
+        // Don't fail the whole registration if class enrollment fails
+      }
+
       // Update profile
       await supabase
         .from("profiles")
