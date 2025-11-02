@@ -67,7 +67,10 @@ export type Database = {
           first_payment: number | null
           id: string
           language: string
+          last_payment_date: string | null
           level_count: number
+          payment_deadline: string | null
+          payment_status: string | null
           phone: string
           registration_date: string
           second_payment: number | null
@@ -94,7 +97,10 @@ export type Database = {
           first_payment?: number | null
           id?: string
           language?: string
+          last_payment_date?: string | null
           level_count?: number
+          payment_deadline?: string | null
+          payment_status?: string | null
           phone: string
           registration_date?: string
           second_payment?: number | null
@@ -121,7 +127,10 @@ export type Database = {
           first_payment?: number | null
           id?: string
           language?: string
+          last_payment_date?: string | null
           level_count?: number
+          payment_deadline?: string | null
+          payment_status?: string | null
           phone?: string
           registration_date?: string
           second_payment?: number | null
@@ -273,6 +282,54 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      payment_history: {
+        Row: {
+          amount_paid: number
+          billing_id: string
+          created_at: string
+          id: string
+          payment_date: string
+          payment_method: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid: number
+          billing_id: string
+          created_at?: string
+          id?: string
+          payment_date?: string
+          payment_method: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          billing_id?: string
+          created_at?: string
+          id?: string
+          payment_date?: string
+          payment_method?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_billing_id_fkey"
+            columns: ["billing_id"]
+            isOneToOne: false
+            referencedRelation: "billing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_history_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
