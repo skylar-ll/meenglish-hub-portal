@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import logo from "@/assets/logo-new.png";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { MyClasses } from "@/components/student/MyClasses";
 
 // Course curriculum data
 const courseLessons = [
@@ -323,6 +324,11 @@ const CoursePage = () => {
               </div>
             </div>
           </div>
+        </Card>
+
+        {/* My Classes Card */}
+        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "50ms" }}>
+          <MyClasses />
         </Card>
 
         {/* Progress Card */}

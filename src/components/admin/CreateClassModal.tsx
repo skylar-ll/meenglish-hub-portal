@@ -294,6 +294,10 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     setTiming(cls.timing);
     setSelectedTeacher(cls.teacher_id);
     setSelectedStudents(cls.student_ids);
+    
+    // Switch to the create tab when editing
+    const createTab = document.querySelector('[value="create"]') as HTMLButtonElement;
+    if (createTab) createTab.click();
   };
 
   const handleUpdateClass = async () => {
