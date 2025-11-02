@@ -137,6 +137,75 @@ export type Database = {
         }
         Relationships: []
       }
+      class_students: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_students_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      classes: {
+        Row: {
+          class_name: string
+          course_name: string
+          created_at: string
+          id: string
+          level: string | null
+          teacher_id: string
+          timing: string
+          updated_at: string
+        }
+        Insert: {
+          class_name: string
+          course_name: string
+          created_at?: string
+          id?: string
+          level?: string | null
+          teacher_id: string
+          timing: string
+          updated_at?: string
+        }
+        Update: {
+          class_name?: string
+          course_name?: string
+          created_at?: string
+          id?: string
+          level?: string | null
+          teacher_id?: string
+          timing?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_pricing: {
         Row: {
           created_at: string | null

@@ -10,6 +10,7 @@ import { CreateQuizModal } from "@/components/teacher/CreateQuizModal";
 import { UploadLessonModal } from "@/components/teacher/UploadLessonModal";
 import { MarkAttendanceModal } from "@/components/teacher/MarkAttendanceModal";
 import { StudentWeeklyReportModal } from "@/components/teacher/StudentWeeklyReportModal";
+import { ClassCard } from "@/components/teacher/ClassCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ const TeacherDashboard = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [teacherName, setTeacherName] = useState<string>("");
 
@@ -104,6 +106,34 @@ const TeacherDashboard = () => {
         // If no teacher record, use email as name
         setTeacherName(session.user.email?.split('@')[0] || "Teacher");
       }
+
+      // Fetch classes assigned to this teacher
+      const { data: classesData } = await supabase
+        .from("classes")
+        .select(`
+          id,
+          class_name,
+          timing,
+          course_name,
+          level,
+          class_students (
+            student_id,
+            students (
+              id,
+              full_name_en
+            )
+          )
+        `)
+        .eq("teacher_id", session.user.id);
+
+      if (classesData) {
+        // Transform the data to include student information
+        const formattedClasses = classesData.map((classItem: any) => ({
+          ...classItem,
+          students: classItem.class_students?.map((cs: any) => cs.students) || []
+        }));
+        setClasses(formattedClasses);
+      }
       
       setLoading(false);
     };
@@ -131,7 +161,7 @@ const TeacherDashboard = () => {
 
   const stats = [
     { label: t('teacher.totalStudents'), value: students.length, icon: Users, color: "from-primary to-secondary" },
-    { label: t('teacher.activeClasses'), value: "3", icon: BookOpen, color: "from-secondary to-accent" },
+    { label: t('teacher.activeClasses'), value: classes.length.toString(), icon: BookOpen, color: "from-secondary to-accent" },
     { label: t('teacher.pendingAttendance'), value: "12", icon: Calendar, color: "from-accent to-primary" },
   ];
 
@@ -216,6 +246,25 @@ const TeacherDashboard = () => {
             <span>View All Students</span>
           </Button>
         </div>
+
+        {/* Classes Section */}
+        {classes.length > 0 && (
+          <Card className="p-6 mb-8">
+            <h2 className="text-2xl font-bold mb-6">My Classes</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {classes.map((classItem) => (
+                <ClassCard
+                  key={classItem.id}
+                  className={classItem.class_name}
+                  timing={classItem.timing}
+                  courseName={classItem.course_name}
+                  level={classItem.level}
+                  students={classItem.students}
+                />
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Students List */}
         <Card className="p-6">
