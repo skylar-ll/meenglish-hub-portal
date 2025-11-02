@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 
 interface Student {
   id: string;
@@ -28,6 +30,17 @@ interface CreateClassModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface ExistingClass {
+  id: string;
+  class_name: string;
+  course_name: string;
+  level: string;
+  timing: string;
+  teacher_id: string;
+  teacher_name: string;
+  student_ids: string[];
+}
+
 export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -39,10 +52,13 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const [level, setLevel] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
+  const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
+  const [editingClass, setEditingClass] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       fetchData();
+      fetchExistingClasses();
     }
   }, [open]);
 
@@ -72,6 +88,49 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       toast.error("Failed to load students and teachers");
     } finally {
       setFetchingData(false);
+    }
+  };
+
+  const fetchExistingClasses = async () => {
+    try {
+      const { data: classesData, error: classesError } = await supabase
+        .from("classes")
+        .select(`
+          id,
+          class_name,
+          course_name,
+          level,
+          timing,
+          teacher_id,
+          teachers (full_name)
+        `);
+
+      if (classesError) throw classesError;
+
+      const classesWithStudents = await Promise.all(
+        (classesData || []).map(async (cls) => {
+          const { data: studentsData } = await supabase
+            .from("class_students")
+            .select("student_id")
+            .eq("class_id", cls.id);
+
+          return {
+            id: cls.id,
+            class_name: cls.class_name,
+            course_name: cls.course_name,
+            level: cls.level || "",
+            timing: cls.timing,
+            teacher_id: cls.teacher_id,
+            teacher_name: (cls.teachers as any)?.full_name || "",
+            student_ids: studentsData?.map((s) => s.student_id) || [],
+          };
+        })
+      );
+
+      setExistingClasses(classesWithStudents);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      toast.error("Failed to load classes");
     }
   };
 
@@ -207,13 +266,8 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       toast.success("Class created successfully!");
       
       // Reset form
-      setSelectedStudents([]);
-      setSelectedTeacher("");
-      setClassName("");
-      setTiming("");
-      setCourseName("");
-      setLevel("");
-      onOpenChange(false);
+      resetForm();
+      fetchExistingClasses();
     } catch (error) {
       console.error("Error creating class:", error);
       toast.error("Failed to create class");
@@ -222,11 +276,113 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     }
   };
 
+  const resetForm = () => {
+    setSelectedStudents([]);
+    setSelectedTeacher("");
+    setClassName("");
+    setTiming("");
+    setCourseName("");
+    setLevel("");
+    setEditingClass(null);
+  };
+
+  const handleEditClass = (cls: ExistingClass) => {
+    setEditingClass(cls.id);
+    setClassName(cls.class_name);
+    setCourseName(cls.course_name);
+    setLevel(cls.level);
+    setTiming(cls.timing);
+    setSelectedTeacher(cls.teacher_id);
+    setSelectedStudents(cls.student_ids);
+  };
+
+  const handleUpdateClass = async () => {
+    if (!editingClass) return;
+
+    if (!className.trim() || !courseName.trim() || !timing.trim() || !selectedTeacher || selectedStudents.length === 0) {
+      toast.error("Please fill in all fields and select at least one student");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Update class
+      const { error: classError } = await supabase
+        .from("classes")
+        .update({
+          class_name: className,
+          course_name: courseName,
+          level: level || null,
+          timing: timing,
+          teacher_id: selectedTeacher,
+        })
+        .eq("id", editingClass);
+
+      if (classError) throw classError;
+
+      // Delete old class_students
+      await supabase.from("class_students").delete().eq("class_id", editingClass);
+
+      // Insert new class_students
+      const classStudentsData = selectedStudents.map((studentId) => ({
+        class_id: editingClass,
+        student_id: studentId,
+      }));
+
+      const { error: classStudentsError } = await supabase
+        .from("class_students")
+        .insert(classStudentsData);
+
+      if (classStudentsError) throw classStudentsError;
+
+      // Update student_teachers
+      for (const studentId of selectedStudents) {
+        await supabase
+          .from("student_teachers")
+          .upsert(
+            {
+              student_id: studentId,
+              teacher_id: selectedTeacher,
+            },
+            { onConflict: "student_id,teacher_id" }
+          );
+      }
+
+      toast.success("Class updated successfully!");
+      resetForm();
+      fetchExistingClasses();
+    } catch (error) {
+      console.error("Error updating class:", error);
+      toast.error("Failed to update class");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteClass = async (classId: string) => {
+    if (!confirm("Are you sure you want to delete this class?")) return;
+
+    try {
+      const { error } = await supabase.from("classes").delete().eq("id", classId);
+
+      if (error) throw error;
+
+      toast.success("Class deleted successfully!");
+      fetchExistingClasses();
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      toast.error("Failed to delete class");
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => {
+      if (!open) resetForm();
+      onOpenChange(open);
+    }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Class</DialogTitle>
+          <DialogTitle>Manage Classes</DialogTitle>
         </DialogHeader>
 
         {fetchingData ? (
@@ -234,7 +390,26 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-6">
+          <Tabs defaultValue="create" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Create New Class</TabsTrigger>
+              <TabsTrigger value="manage">Existing Classes</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="create" className="space-y-6 mt-4">
+              {editingClass && (
+                <div className="bg-primary/10 p-3 rounded-md">
+                  <p className="text-sm font-medium">Editing class</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetForm}
+                    className="mt-1"
+                  >
+                    Cancel editing
+                  </Button>
+                </div>
+              )}
             {/* Class Details */}
             <div className="space-y-4">
               <div>
@@ -336,12 +511,57 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateClass} disabled={loading}>
+              <Button onClick={editingClass ? handleUpdateClass : handleCreateClass} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Class
+                {editingClass ? "Update Class" : "Create Class"}
               </Button>
             </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="manage" className="space-y-4 mt-4">
+              {existingClasses.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No classes created yet
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {existingClasses.map((cls) => (
+                    <Card key={cls.id}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{cls.class_name}</h3>
+                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                              <p><span className="font-medium">Course:</span> {cls.course_name} {cls.level && `- ${cls.level}`}</p>
+                              <p><span className="font-medium">Timing:</span> {cls.timing}</p>
+                              <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>
+                              <p><span className="font-medium">Students:</span> {cls.student_ids.length}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditClass(cls)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClass(cls.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </DialogContent>
     </Dialog>
