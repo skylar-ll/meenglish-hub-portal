@@ -12,9 +12,10 @@ interface BillingFormStepProps {
   onSignatureSave: (dataUrl: string) => void;
   signature: string | null;
   courseDurations: any[];
+  partialPaymentAmount?: number;
 }
 
-export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDurations }: BillingFormStepProps) => {
+export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDurations, partialPaymentAmount = 0 }: BillingFormStepProps) => {
   const [downloading, setDownloading] = useState(false);
   const ksaTimezone = "Asia/Riyadh";
 
@@ -27,8 +28,8 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
   const totalFee = pricing?.price || (durationMonths * 500);
   const discountPercent = 10;
   const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
-  const firstPayment = feeAfterDiscount * 0.5;
-  const secondPayment = feeAfterDiscount * 0.5;
+  const amountPaid = partialPaymentAmount;
+  const remainingBalance = feeAfterDiscount - amountPaid;
 
   const now = new Date();
   const ksaDate = toZonedTime(now, ksaTimezone);
@@ -56,10 +57,10 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
         total_fee: totalFee,
         discount_percentage: discountPercent,
         fee_after_discount: feeAfterDiscount,
-        amount_paid: 0,
-        amount_remaining: feeAfterDiscount,
-        first_payment: firstPayment,
-        second_payment: secondPayment,
+        amount_paid: amountPaid,
+        amount_remaining: remainingBalance,
+        first_payment: amountPaid,
+        second_payment: remainingBalance,
         signature_url: signature,
       });
 
@@ -174,29 +175,42 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
               <span>{feeAfterDiscount.toFixed(2)} SAR</span>
             </div>
             <div className="flex justify-between text-sm mt-4">
-              <span>Amount Paid:</span>
-              <span>0.00 SAR</span>
+              <span>Amount Paid Now:</span>
+              <span className="font-semibold text-green-600">{amountPaid.toFixed(2)} SAR</span>
             </div>
-            <div className="flex justify-between text-sm font-semibold text-primary">
+            <div className="flex justify-between text-sm font-semibold text-orange-600">
               <span>Amount Remaining:</span>
-              <span>{feeAfterDiscount.toFixed(2)} SAR</span>
+              <span>{remainingBalance.toFixed(2)} SAR</span>
             </div>
           </div>
 
           {/* Payment Schedule */}
-          <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Payment Schedule</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>First Payment:</span>
-                <span className="font-semibold">{firstPayment.toFixed(2)} SAR</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Second Payment:</span>
-                <span className="font-semibold">{secondPayment.toFixed(2)} SAR</span>
+          {remainingBalance > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-2">Payment Schedule</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>Initial Payment:</span>
+                  <span className="font-semibold text-green-600">{amountPaid.toFixed(2)} SAR</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Remaining Balance:</span>
+                  <span className="font-semibold text-orange-600">{remainingBalance.toFixed(2)} SAR</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  * Remaining balance must be paid by the end of the first month
+                </p>
               </div>
             </div>
-          </div>
+          )}
+          
+          {remainingBalance === 0 && (
+            <div className="border-t pt-4 bg-green-50 dark:bg-green-950 p-4 rounded-lg">
+              <p className="text-sm font-semibold text-green-600 text-center">
+                ✓ Full payment received - No remaining balance
+              </p>
+            </div>
+          )}
 
           {/* Terms and Conditions */}
           <div className="border-t pt-4 text-xs text-muted-foreground space-y-2">

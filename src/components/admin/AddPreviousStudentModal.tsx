@@ -19,6 +19,7 @@ import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
+import { PartialPaymentStep } from "@/components/billing/PartialPaymentStep";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [isEditMode, setIsEditMode] = useState(false);
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState<number>(0);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   
   const [isTranslating, setIsTranslating] = useState(false);
@@ -151,7 +153,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   };
 
   const handleNext = () => {
-    if (step < 7) {
+    if (step < 8) {
       setStep(step + 1);
     }
   };
@@ -338,12 +340,12 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         total_fee: totalFee,
         discount_percentage: discountPercent,
         fee_after_discount: feeAfterDiscount,
-        amount_paid: 0,
-        amount_remaining: feeAfterDiscount,
+        amount_paid: partialPaymentAmount,
+        amount_remaining: feeAfterDiscount - partialPaymentAmount,
         signature_url: signatureFileName,
         language: 'en',
-        first_payment: feeAfterDiscount * 0.5,
-        second_payment: feeAfterDiscount * 0.5,
+        first_payment: partialPaymentAmount,
+        second_payment: feeAfterDiscount - partialPaymentAmount,
       };
 
       const { data: billing, error: billingError } = await supabase
@@ -368,10 +370,10 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           total_fee: totalFee,
           discount_percentage: discountPercent,
           fee_after_discount: feeAfterDiscount,
-          amount_paid: 0,
-          amount_remaining: feeAfterDiscount,
-          first_payment: feeAfterDiscount * 0.5,
-          second_payment: feeAfterDiscount * 0.5,
+          amount_paid: partialPaymentAmount,
+          amount_remaining: feeAfterDiscount - partialPaymentAmount,
+          first_payment: partialPaymentAmount,
+          second_payment: feeAfterDiscount - partialPaymentAmount,
           signature_url: signatureFileName,
         });
 
@@ -412,6 +414,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       });
       setStep(1);
       setSignature(null);
+      setPartialPaymentAmount(0);
       
       onStudentAdded();
       onOpenChange(false);
@@ -436,7 +439,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Add Previous Student - Step {step} of 7</DialogTitle>
+            <DialogTitle>Add Previous Student - Step {step} of 8</DialogTitle>
             <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
               {isEditMode ? "Done Editing" : "Edit Form"}
             </Button>
@@ -604,9 +607,49 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
             {step === 7 && (
               <div className="space-y-4">
-                <BillingFormStep formData={formData} onSignatureSave={handleSignatureSave} signature={signature} courseDurations={courseDurations} />
+                <Label className="text-lg font-semibold">Partial Payment</Label>
+                <PartialPaymentStep
+                  totalFee={(() => {
+                    const durationMonths = formData.customDuration 
+                      ? parseInt(formData.customDuration) 
+                      : parseInt(formData.courseDuration || "1");
+                    const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+                    return pricing?.price || (durationMonths * 500);
+                  })()}
+                  feeAfterDiscount={(() => {
+                    const durationMonths = formData.customDuration 
+                      ? parseInt(formData.customDuration) 
+                      : parseInt(formData.courseDuration || "1");
+                    const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+                    const totalFee = pricing?.price || (durationMonths * 500);
+                    return totalFee * 0.9;
+                  })()}
+                  discountPercentage={10}
+                  courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
+                  paymentDeadline={format(addDays(addDays(new Date(), 1), 30), "yyyy-MM-dd")}
+                  onAmountChange={setPartialPaymentAmount}
+                  initialPayment={partialPaymentAmount}
+                />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(6)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>
+                    Next <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {step === 8 && (
+              <div className="space-y-4">
+                <BillingFormStep 
+                  formData={formData} 
+                  onSignatureSave={handleSignatureSave} 
+                  signature={signature} 
+                  courseDurations={courseDurations}
+                  partialPaymentAmount={partialPaymentAmount}
+                />
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(7)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
                     {loading ? "Creating..." : "Create Student"}
                   </Button>
@@ -620,11 +663,12 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       {/* Floating Navigation Button */}
       {open && !configLoading && (
         <FloatingNavigationButton
-          onNext={step === 7 ? handleSubmit : handleNext}
+          onNext={step === 8 ? handleSubmit : handleNext}
           onBack={step > 1 ? () => setStep(step - 1) : undefined}
-          nextLabel={step === 7 ? "Create Student" : "Next"}
+          nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
+          disabled={step === 7 && partialPaymentAmount === 0}
           showBack={step > 1}
           showNext={true}
         />
