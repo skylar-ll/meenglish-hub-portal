@@ -185,7 +185,7 @@ export type Database = {
       classes: {
         Row: {
           class_name: string
-          course_name: string
+          courses: string[] | null
           created_at: string
           id: string
           levels: string[] | null
@@ -195,7 +195,7 @@ export type Database = {
         }
         Insert: {
           class_name: string
-          course_name: string
+          courses?: string[] | null
           created_at?: string
           id?: string
           levels?: string[] | null
@@ -205,7 +205,7 @@ export type Database = {
         }
         Update: {
           class_name?: string
-          course_name?: string
+          courses?: string[] | null
           created_at?: string
           id?: string
           levels?: string[] | null

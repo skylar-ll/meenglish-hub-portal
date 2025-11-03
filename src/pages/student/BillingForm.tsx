@@ -341,11 +341,11 @@ const BillingForm = () => {
         const studentLevel = sessionStorage.getItem("courseLevel");
         
         for (const course of studentCourses) {
-          // Find classes that match this course (ignore timing)
+          // Find classes that match this course (courses array contains course)
           const { data: matchingClasses } = await supabase
             .from('classes')
-            .select('id, levels')
-            .eq('course_name', course.trim());
+            .select('id, levels, courses')
+            .contains('courses', [course.trim()]);
 
           if (matchingClasses && matchingClasses.length > 0) {
             // Filter classes where student's level matches any class level

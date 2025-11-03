@@ -25,7 +25,7 @@ interface CreateClassModalProps {
 interface ExistingClass {
   id: string;
   class_name: string;
-  course_name: string;
+  courses: string[];
   levels: string[];
   timing: string;
   teacher_id: string;
@@ -73,7 +73,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [className, setClassName] = useState("");
   const [timing, setTiming] = useState("");
-  const [courseName, setCourseName] = useState("");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
@@ -114,7 +114,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
         .select(`
           id,
           class_name,
-          course_name,
+          courses,
           levels,
           timing,
           teacher_id,
@@ -133,7 +133,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
           return {
             id: cls.id,
             class_name: cls.class_name,
-            course_name: cls.course_name,
+            courses: cls.courses || [],
             levels: cls.levels || [],
             timing: cls.timing,
             teacher_id: cls.teacher_id,
@@ -155,8 +155,8 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       toast.error("Please enter a class name");
       return;
     }
-    if (!courseName.trim()) {
-      toast.error("Please select a course");
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course");
       return;
     }
     if (selectedLevels.length === 0) {
@@ -181,7 +181,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
           teacher_id: selectedTeacher,
           class_name: className,
           timing: timing,
-          course_name: courseName,
+          courses: selectedCourses,
           levels: selectedLevels,
         })
         .select()
@@ -190,7 +190,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       if (classError) throw classError;
 
       // Auto-enroll matching students
-      await autoEnrollStudents(classData.id, courseName, selectedLevels);
+      await autoEnrollStudents(classData.id, selectedCourses, selectedLevels);
 
       toast.success("Class created successfully!");
       
@@ -205,7 +205,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     }
   };
 
-  const autoEnrollStudents = async (classId: string, course: string, levels: string[]) => {
+  const autoEnrollStudents = async (classId: string, courses: string[], levels: string[]) => {
     try {
       // Find students whose program matches the course and whose course_level matches any of the class levels
       const { data: matchingStudents } = await supabase
@@ -216,8 +216,10 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
 
       // Filter students where their level overlaps with class levels
       const studentsToEnroll = matchingStudents.filter((student) => {
-        // Check if student's program contains the course name
-        const programMatch = student.course_level?.toLowerCase().includes(course.toLowerCase());
+        // Check if student's program matches any of the class courses
+        const programMatch = courses.some(course => 
+          student.course_level?.toLowerCase().includes(course.toLowerCase())
+        );
         
         // Check if any of the student's levels match any class level
         if (!student.course_level) return false;
@@ -264,7 +266,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     setSelectedTeacher("");
     setClassName("");
     setTiming("");
-    setCourseName("");
+    setSelectedCourses([]);
     setSelectedLevels([]);
     setEditingClass(null);
   };
@@ -272,7 +274,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const handleEditClass = (cls: ExistingClass) => {
     setEditingClass(cls.id);
     setClassName(cls.class_name);
-    setCourseName(cls.course_name);
+    setSelectedCourses(cls.courses);
     setSelectedLevels(cls.levels);
     setTiming(cls.timing);
     setSelectedTeacher(cls.teacher_id);
@@ -286,7 +288,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const handleUpdateClass = async () => {
     if (!editingClass) return;
 
-    if (!className.trim() || !courseName.trim() || selectedLevels.length === 0 || !timing.trim() || !selectedTeacher) {
+    if (!className.trim() || selectedCourses.length === 0 || selectedLevels.length === 0 || !timing.trim() || !selectedTeacher) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -298,7 +300,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
         .from("classes")
         .update({
           class_name: className,
-          course_name: courseName,
+          courses: selectedCourses,
           levels: selectedLevels,
           timing: timing,
           teacher_id: selectedTeacher,
@@ -371,21 +373,18 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                 />
               </div>
 
-              {/* Course */}
+              {/* Course (Multi-select) */}
               <div>
-                <Label htmlFor="courseName">Course</Label>
-                <Select value={courseName} onValueChange={setCourseName}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COURSE_OPTIONS.map((course) => (
-                      <SelectItem key={course.value} value={course.value}>
-                        {course.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Course</Label>
+                <MultiSelect
+                  options={COURSE_OPTIONS.map(c => ({ label: c.label, value: c.value }))}
+                  selected={selectedCourses}
+                  onChange={setSelectedCourses}
+                  placeholder="Select courses..."
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select one or more courses for this class
+                </p>
               </div>
 
               {/* Level (Multi-select) */}
@@ -466,7 +465,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg">{cls.class_name}</h3>
                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                              <p><span className="font-medium">Course:</span> {cls.course_name}</p>
+                              <p><span className="font-medium">Courses:</span> {cls.courses.join(", ") || "None"}</p>
                               <p><span className="font-medium">Levels:</span> {cls.levels.join(", ") || "None"}</p>
                               <p><span className="font-medium">Timing:</span> {cls.timing}</p>
                               <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>

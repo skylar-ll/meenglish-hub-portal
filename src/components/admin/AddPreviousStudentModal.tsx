@@ -332,11 +332,11 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         const studentCourses = formData.courses;
         
         for (const course of studentCourses) {
-          // Find classes that match this course (ignore timing)
+          // Find classes that match this course (courses array contains course)
           const { data: matchingClasses } = await supabase
             .from('classes')
-            .select('id, levels')
-            .eq('course_name', course);
+            .select('id, levels, courses')
+            .contains('courses', [course]);
 
           if (matchingClasses && matchingClasses.length > 0) {
             // Filter classes where student's levels overlap with class levels
