@@ -327,51 +327,48 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Automatically enroll student in matching classes based on course and levels
+      // Automatically enroll student in matching classes based on courses
       try {
         const studentCourses = formData.courses;
         
-        for (const course of studentCourses) {
-          // Find classes that match this course (courses array contains course)
-          const { data: matchingClasses } = await supabase
-            .from('classes')
-            .select('id, levels, courses')
-            .contains('courses', [course]);
+        // Find all classes that match any of the student's courses
+        const { data: allClasses } = await supabase
+          .from('classes')
+          .select('id, courses');
 
-          if (matchingClasses && matchingClasses.length > 0) {
-            // Filter classes where student's levels overlap with class levels
-            const relevantClasses = matchingClasses.filter(cls => {
-              if (!cls.levels || cls.levels.length === 0) return false;
-              
-              // Check if any student level (from formData.courses) matches any class level
-              return formData.courses.some(studentCourse => 
-                cls.levels.some(classLevel => 
-                  studentCourse.toLowerCase().includes(classLevel.toLowerCase().replace('level ', ''))
-                )
-              );
-            });
+        if (allClasses && allClasses.length > 0) {
+          // Filter classes where any of the student's courses matches any of the class's courses
+          const matchingClasses = allClasses.filter(cls => {
+            if (!cls.courses || cls.courses.length === 0) return false;
+            // Check if any student course matches any class course
+            return studentCourses.some(studentCourse => 
+              cls.courses.some(classCourse => 
+                classCourse.trim().toLowerCase() === studentCourse.trim().toLowerCase()
+              )
+            );
+          });
 
-            if (relevantClasses.length > 0) {
-              // Check which classes the student is not already enrolled in
-              const { data: existingEnrollments } = await supabase
-                .from('class_students')
-                .select('class_id')
-                .eq('student_id', studentData.id)
-                .in('class_id', relevantClasses.map(c => c.id));
+          if (matchingClasses.length > 0) {
+            // Check which classes the student is not already enrolled in
+            const { data: existingEnrollments } = await supabase
+              .from('class_students')
+              .select('class_id')
+              .eq('student_id', studentData.id)
+              .in('class_id', matchingClasses.map(c => c.id));
 
-              const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
-              
-              // Enroll in classes not yet enrolled
-              const newEnrollments = relevantClasses
-                .filter(c => !enrolledClassIds.has(c.id))
-                .map(c => ({
-                  class_id: c.id,
-                  student_id: studentData.id
-                }));
+            const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
+            
+            // Enroll in classes not yet enrolled
+            const newEnrollments = matchingClasses
+              .filter(c => !enrolledClassIds.has(c.id))
+              .map(c => ({
+                class_id: c.id,
+                student_id: studentData.id
+              }));
 
-              if (newEnrollments.length > 0) {
-                await supabase.from('class_students').insert(newEnrollments);
-              }
+            if (newEnrollments.length > 0) {
+              await supabase.from('class_students').insert(newEnrollments);
+              console.log(`Auto-enrolled student in ${newEnrollments.length} class(es)`);
             }
           }
         }
