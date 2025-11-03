@@ -188,7 +188,7 @@ export type Database = {
           course_name: string
           created_at: string
           id: string
-          level: string | null
+          levels: string[] | null
           teacher_id: string
           timing: string
           updated_at: string
@@ -198,7 +198,7 @@ export type Database = {
           course_name: string
           created_at?: string
           id?: string
-          level?: string | null
+          levels?: string[] | null
           teacher_id: string
           timing: string
           updated_at?: string
@@ -208,7 +208,7 @@ export type Database = {
           course_name?: string
           created_at?: string
           id?: string
-          level?: string | null
+          levels?: string[] | null
           teacher_id?: string
           timing?: string
           updated_at?: string
