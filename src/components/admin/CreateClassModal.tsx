@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
-import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 
 interface Teacher {
   id: string;
@@ -42,11 +41,32 @@ const TIMING_OPTIONS = [
   "6:00 PM – 7:30 PM",
 ];
 
-// Level options (1-9)
-const LEVEL_OPTIONS: MultiSelectOption[] = Array.from({ length: 9 }, (_, i) => ({
-  label: `Level ${i + 1}`,
-  value: `Level ${i + 1}`,
-}));
+// Course options with bilingual labels
+const COURSE_OPTIONS = [
+  { label: "Speaking class", value: "Speaking class", category: "Speaking program" },
+  { label: "1:1 class - privet class كلاس فردي", value: "1:1 class - privet class كلاس فردي", category: "Privet class" },
+  { label: "French language لغة فرنسية", value: "French language لغة فرنسية", category: "Other languages" },
+  { label: "Chinese Language لغة صينية", value: "Chinese Language لغة صينية", category: "Other languages" },
+  { label: "Spanish language لغة اسبانية", value: "Spanish language لغة اسبانية", category: "Other languages" },
+  { label: "Italian Language لغة ايطالية", value: "Italian Language لغة ايطالية", category: "Other languages" },
+  { label: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", value: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", category: "Other languages" },
+];
+
+// Level options (1-12) with bilingual labels
+const LEVEL_OPTIONS: MultiSelectOption[] = [
+  { label: "level-1 (pre1) مستوى اول", value: "level-1 (pre1) مستوى اول" },
+  { label: "level-2 (pre2) مستوى ثاني", value: "level-2 (pre2) مستوى ثاني" },
+  { label: "level-3 (intro A) مستوى ثالث", value: "level-3 (intro A) مستوى ثالث" },
+  { label: "level-4 (intro B) مستوى رابع", value: "level-4 (intro B) مستوى رابع" },
+  { label: "level-5 (1A) مستوى خامس", value: "level-5 (1A) مستوى خامس" },
+  { label: "level-6 (1B) مستوى سادس", value: "level-6 (1B) مستوى سادس" },
+  { label: "level-7 (2A) مستوى سابع", value: "level-7 (2A) مستوى سابع" },
+  { label: "level-8 (2B) مستوى ثامن", value: "level-8 (2B) مستوى ثامن" },
+  { label: "level-9 (3A) مستوى تاسع", value: "level-9 (3A) مستوى تاسع" },
+  { label: "level-10 (3B) مستوى عاشر", value: "level-10 (3B) مستوى عاشر" },
+  { label: "level-11 (IELTS 1 - STEP 1) مستوى-11", value: "level-11 (IELTS 1 - STEP 1) مستوى-11" },
+  { label: "level-12 (IELTS 2 - STEP 2) مستوى -12", value: "level-12 (IELTS 2 - STEP 2) مستوى -12" },
+];
 
 export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -59,8 +79,6 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const [fetchingData, setFetchingData] = useState(true);
   const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
   const [editingClass, setEditingClass] = useState<string | null>(null);
-  
-  const { courses, loading: configsLoading } = useFormConfigurations();
 
   useEffect(() => {
     if (open) {
@@ -316,7 +334,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     }
   };
 
-  const isLoading = fetchingData || configsLoading;
+  const isLoading = fetchingData;
 
   return (
     <Dialog open={open} onOpenChange={(open) => {
@@ -353,16 +371,16 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                 />
               </div>
 
-              {/* Course Name */}
+              {/* Course */}
               <div>
-                <Label htmlFor="courseName">Course Name</Label>
+                <Label htmlFor="courseName">Course</Label>
                 <Select value={courseName} onValueChange={setCourseName}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a course" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.label} value={course.label}>
+                    {COURSE_OPTIONS.map((course) => (
+                      <SelectItem key={course.value} value={course.value}>
                         {course.label}
                       </SelectItem>
                     ))}
