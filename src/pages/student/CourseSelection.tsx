@@ -102,7 +102,13 @@ const CourseSelection = () => {
                               className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                                 isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
                               }`}
-                              onClick={() => isAvailable && toggleCourse(course.value)}
+                              onClick={() => {
+                                if (isAvailable) {
+                                  toggleCourse(course.value);
+                                } else {
+                                  toast.error("❌ This option isn't available for your selected branch. / هذا الخيار غير متاح في هذا الفرع.");
+                                }
+                              }}
                             >
                               <Checkbox
                                 id={course.value}

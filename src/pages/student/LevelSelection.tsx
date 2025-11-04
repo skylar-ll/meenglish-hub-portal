@@ -128,7 +128,13 @@ const LevelSelection = () => {
                     className={`flex items-center space-x-3 p-4 rounded-lg transition-colors ${
                       isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
                     } ${selectedLevels.includes(level.config_value) ? 'bg-primary/10 border-2 border-primary' : 'border border-border'}`}
-                    onClick={() => isAvailable && toggleLevel(level.config_value)}
+                    onClick={() => {
+                      if (isAvailable) {
+                        toggleLevel(level.config_value);
+                      } else {
+                        toast.error("❌ This option isn't available for your selected branch. / هذا الخيار غير متاح في هذا الفرع.");
+                      }
+                    }}
                   >
                     <Checkbox
                       id={level.id}

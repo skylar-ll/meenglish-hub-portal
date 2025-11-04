@@ -120,7 +120,13 @@ const TimingSelection = () => {
                           ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
                           : "opacity-50 cursor-not-allowed"
                     }`}
-                    onClick={() => isAvailable && setSelectedTiming(timing.config_value)}
+                    onClick={() => {
+                      if (isAvailable) {
+                        setSelectedTiming(timing.config_value);
+                      } else {
+                        toast.error("❌ This option isn't available for your selected branch. / هذا الخيار غير متاح في هذا الفرع.");
+                      }
+                    }}
                   >
                     <p className="font-medium text-lg text-center">{timing.config_value}</p>
                   </Card>

@@ -69,31 +69,43 @@ const BillingForm = () => {
         }
       }
 
-      // Fetch enrolled class to get start date
-      const { data: studentData } = await supabase
-        .from("students")
-        .select("id")
-        .eq("email", user.email)
-        .single();
-
-      let actualStartDate = null;
-      if (studentData) {
-        const { data: enrollments } = await supabase
-          .from("enrollments")
-          .select("classes(start_date)")
-          .eq("student_id", studentData.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        if (enrollments && enrollments.length > 0 && enrollments[0].classes?.start_date) {
-          actualStartDate = enrollments[0].classes.start_date;
-        }
-      }
-
       // Get current date in KSA timezone
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
       const registrationDate = format(ksaDate, "dd MMMM yyyy");
+
+      // Fetch matching classes to get actual start date
+      const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+      let actualStartDate = null;
+      
+      if (registration.branch_id && registration.timing && registration.selectedLevels) {
+        const { data: matchingClasses } = await supabase
+          .from("classes")
+          .select("start_date, program, levels, timing")
+          .eq("branch_id", registration.branch_id)
+          .eq("timing", registration.timing)
+          .eq("status", "active");
+
+        if (matchingClasses && matchingClasses.length > 0) {
+          // Find class that matches student's program and has overlapping levels
+          const matchedClass = matchingClasses.find(cls => {
+            const programMatch = registration.courses && (
+              Array.isArray(registration.courses)
+                ? registration.courses.includes(cls.program)
+                : registration.courses === cls.program
+            );
+            const levelMatch = cls.levels && cls.levels.some(level => 
+              registration.selectedLevels.includes(level)
+            );
+            return programMatch && levelMatch;
+          });
+
+          if (matchedClass?.start_date) {
+            actualStartDate = matchedClass.start_date;
+          }
+        }
+      }
+
       const courseStartDate = actualStartDate 
         ? format(new Date(actualStartDate), "dd MMMM yyyy")
         : format(addDays(ksaDate, 1), "dd MMMM yyyy");
@@ -218,6 +230,27 @@ const BillingForm = () => {
       // Use storage path (bucket is private); we'll sign when needed
       const signatureStoragePath = signatureFileName;
 
+      // Get registration data to determine actual course start date
+      const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+      let actualCourseStartDate = format(addDays(toZonedTime(new Date(), ksaTimezone), 1), "yyyy-MM-dd");
+      
+      // Try to get the actual start date from matched classes
+      if (registration.branch_id && registration.timing && registration.selectedLevels) {
+        const { data: matchingClasses } = await supabase
+          .from("classes")
+          .select("start_date")
+          .eq("branch_id", registration.branch_id)
+          .eq("timing", registration.timing)
+          .eq("status", "active");
+
+        if (matchingClasses && matchingClasses.length > 0) {
+          const classWithStartDate = matchingClasses.find(cls => cls.start_date);
+          if (classWithStartDate?.start_date) {
+            actualCourseStartDate = classWithStartDate.start_date;
+          }
+        }
+      }
+
       // Create billing record
       const billingRecord = {
         student_id: user.id,
@@ -226,7 +259,7 @@ const BillingForm = () => {
         phone: billData.contactNumber,
         course_package: billData.courseName,
         registration_date: format(toZonedTime(new Date(), ksaTimezone), "yyyy-MM-dd"),
-        course_start_date: format(addDays(toZonedTime(new Date(), ksaTimezone), 1), "yyyy-MM-dd"),
+        course_start_date: actualCourseStartDate,
         time_slot: billData.timeSlot,
         level_count: billData.levelCount,
         total_fee: billData.totalFee,
@@ -284,9 +317,6 @@ const BillingForm = () => {
       } catch (pdfErr) {
         console.error('PDF generation/upload failed:', pdfErr);
       }
-
-      // Get registration data with all info
-      const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
 
       // Create or update student record (avoid duplicates)
       const { data: existingStudent } = await supabase
@@ -364,14 +394,45 @@ const BillingForm = () => {
       // Auto-enroll student in matching classes based on branch, program, levels, timing
       try {
         if (registration.branch_id && registration.courses && registration.selectedLevels && registration.timing) {
-          await autoEnrollStudent({
-            id: studentData.id,
-            branch_id: registration.branch_id,
-            program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
-            course_level: registration.selectedLevels.join(", "),
-            timing: registration.timing,
-          });
-          console.log("Auto-enrollment completed");
+          const { data: matchingClasses } = await supabase
+            .from("classes")
+            .select("id, program, levels, timing, start_date")
+            .eq("branch_id", registration.branch_id)
+            .eq("timing", registration.timing)
+            .eq("status", "active");
+
+          if (matchingClasses && matchingClasses.length > 0) {
+            const studentCourses = Array.isArray(registration.courses) 
+              ? registration.courses 
+              : [registration.courses];
+            const studentLevels = registration.selectedLevels;
+
+            // Filter classes that match program and have overlapping levels
+            const eligibleClasses = matchingClasses.filter(cls => {
+              const programMatch = studentCourses.includes(cls.program);
+              const levelMatch = cls.levels && cls.levels.some(level => 
+                studentLevels.includes(level)
+              );
+              return programMatch && levelMatch;
+            });
+
+            if (eligibleClasses.length > 0) {
+              // Enroll in each eligible class
+              const enrollments = eligibleClasses.map(cls => ({
+                student_id: studentData.id,
+                class_id: cls.id
+              }));
+
+              const { error: enrollError } = await supabase
+                .from("enrollments")
+                .insert(enrollments);
+
+              if (!enrollError) {
+                console.log(`✅ Auto-enrolled student in ${eligibleClasses.length} class(es)`);
+                toast.success(`Enrollment complete! You've been added to ${eligibleClasses.length} class(es).`);
+              }
+            }
+          }
         }
       } catch (enrollError) {
         console.error("Auto-enrollment failed:", enrollError);

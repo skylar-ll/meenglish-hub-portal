@@ -187,11 +187,19 @@ const StudentSignUp = () => {
         return;
       }
 
+      // Get the selected branch ID
+      const selectedBranch = branches.find(b => b.name_en === formData.branch);
+      if (!selectedBranch) {
+        toast.error("Invalid branch selection");
+        return;
+      }
+
       // Store registration data WITHOUT password in sessionStorage
       const { password, ...dataWithoutPassword } = validatedData;
       sessionStorage.setItem("studentRegistration", JSON.stringify({
         ...dataWithoutPassword,
         branch: formData.branch,
+        branch_id: selectedBranch.id, // Save branch_id for filtering
         userId: authData.user.id, // Store user ID for later use
       }));
       
