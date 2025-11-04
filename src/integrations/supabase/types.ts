@@ -343,6 +343,7 @@ export type Database = {
           discount_percentage: number | null
           full_name_ar: string | null
           full_name_en: string | null
+          gender: string | null
           id: string
           national_id: string | null
           next_payment_date: string | null
@@ -366,6 +367,7 @@ export type Database = {
           discount_percentage?: number | null
           full_name_ar?: string | null
           full_name_en?: string | null
+          gender?: string | null
           id: string
           national_id?: string | null
           next_payment_date?: string | null
@@ -389,6 +391,7 @@ export type Database = {
           discount_percentage?: number | null
           full_name_ar?: string | null
           full_name_en?: string | null
+          gender?: string | null
           id?: string
           national_id?: string | null
           next_payment_date?: string | null
@@ -787,6 +790,7 @@ export type Database = {
           expiration_date: string | null
           full_name_ar: string
           full_name_en: string
+          gender: string | null
           id: string
           national_id: string
           next_payment_date: string | null
@@ -818,6 +822,7 @@ export type Database = {
           expiration_date?: string | null
           full_name_ar: string
           full_name_en: string
+          gender?: string | null
           id?: string
           national_id: string
           next_payment_date?: string | null
@@ -849,6 +854,7 @@ export type Database = {
           expiration_date?: string | null
           full_name_ar?: string
           full_name_en?: string
+          gender?: string | null
           id?: string
           national_id?: string
           next_payment_date?: string | null
