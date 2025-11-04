@@ -5,15 +5,15 @@ import { Clock, Users, BookOpen } from "lucide-react";
 interface ClassCardProps {
   className: string;
   timing: string;
-  courseName: string;
-  level?: string;
+  courses?: string[];
+  levels?: string[];
   students: Array<{
     id: string;
     full_name_en: string;
   }>;
 }
 
-export const ClassCard = ({ className, timing, courseName, level, students }: ClassCardProps) => {
+export const ClassCard = ({ className, timing, courses, levels, students }: ClassCardProps) => {
   return (
     <Card className="p-4 hover:bg-muted/50 transition-colors">
       <div className="flex items-start justify-between mb-3">
@@ -30,12 +30,36 @@ export const ClassCard = ({ className, timing, courseName, level, students }: Cl
         </Badge>
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <BookOpen className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm">
-          {courseName}
-          {level && ` - ${level}`}
-        </span>
+      <div className="space-y-2 mb-3">
+        <div className="flex items-start gap-2">
+          <BookOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
+          <div className="text-sm flex-1">
+            <p className="text-muted-foreground mb-1">Courses:</p>
+            <div className="flex flex-wrap gap-1">
+              {courses && courses.length > 0 ? (
+                courses.map((course, idx) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    {course}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-muted-foreground">No courses assigned</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {levels && levels.length > 0 && (
+          <div className="text-sm">
+            <p className="text-muted-foreground mb-1">Levels:</p>
+            <div className="flex flex-wrap gap-1">
+              {levels.map((level, idx) => (
+                <Badge key={idx} variant="secondary" className="text-xs">
+                  {level}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="pt-3 border-t">

@@ -114,8 +114,8 @@ const TeacherDashboard = () => {
           id,
           class_name,
           timing,
-          course_name,
-          level,
+          courses,
+          levels,
           class_students (
             student_id,
             students (
@@ -257,8 +257,8 @@ const TeacherDashboard = () => {
                   key={classItem.id}
                   className={classItem.class_name}
                   timing={classItem.timing}
-                  courseName={classItem.course_name}
-                  level={classItem.level}
+                  courses={classItem.courses}
+                  levels={classItem.levels}
                   students={classItem.students}
                 />
               ))}
