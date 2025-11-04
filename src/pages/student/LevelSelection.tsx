@@ -44,7 +44,7 @@ const LevelSelection = () => {
       const { data, error } = await supabase
         .from('form_configurations')
         .select('*')
-        .eq('config_type', 'level')
+        .eq('config_type', 'program')
         .eq('is_active', true)
         .order('display_order');
 
