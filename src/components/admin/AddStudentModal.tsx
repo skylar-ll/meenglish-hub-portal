@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -93,6 +94,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [formData, setFormData] = useState({
     fullNameAr: "",
     fullNameEn: "",
+    gender: "",
     phone1: "",
     phone2: "",
     email: "",
@@ -201,7 +203,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
   const handleSubmit = async () => {
     // Validate all required fields before submission
-    if (!formData.fullNameAr || !formData.fullNameEn || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
+    if (!formData.fullNameAr || !formData.fullNameEn || !formData.gender || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
       toast.error("Please fill in all required fields in Personal Information");
       return;
     }
@@ -243,6 +245,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       const validatedData = studentSignupSchema.parse({
         fullNameAr: formData.fullNameAr,
         fullNameEn: formData.fullNameEn,
+        gender: formData.gender,
         phone1: formData.countryCode1 + formData.phone1,
         phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
         email: formData.email,
@@ -343,6 +346,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           id: authData.user.id,
           full_name_ar: validatedData.fullNameAr,
           full_name_en: validatedData.fullNameEn,
+          gender: validatedData.gender,
           phone1: validatedData.phone1,
           phone2: validatedData.phone2 || null,
           email: validatedData.email,
@@ -372,25 +376,35 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Automatically enroll student in matching classes based on courses
+      // Automatically enroll student in matching classes based on courses and levels
       try {
         const studentCourses = formData.courses;
         
-        // Find all classes that match any of the student's courses
+        // Find all classes that match any of the student's courses OR levels
         const { data: allClasses } = await supabase
           .from('classes')
-          .select('id, courses');
+          .select('id, courses, levels');
 
         if (allClasses && allClasses.length > 0) {
-          // Filter classes where any of the student's courses matches any of the class's courses
+          // Filter classes where any of the student's courses matches any of the class's courses OR levels
           const matchingClasses = allClasses.filter(cls => {
-            if (!cls.courses || cls.courses.length === 0) return false;
             // Check if any student course matches any class course
-            return studentCourses.some(studentCourse => 
-              cls.courses.some(classCourse => 
-                classCourse.trim().toLowerCase() === studentCourse.trim().toLowerCase()
-              )
-            );
+            const courseMatch = cls.courses && cls.courses.length > 0 && 
+              studentCourses.some(studentCourse => 
+                cls.courses.some(classCourse => 
+                  classCourse.trim().toLowerCase() === studentCourse.trim().toLowerCase()
+                )
+              );
+            
+            // Check if any student course matches any class level
+            const levelMatch = cls.levels && cls.levels.length > 0 && 
+              studentCourses.some(studentCourse => 
+                cls.levels.some(classLevel => 
+                  classLevel.trim().toLowerCase() === studentCourse.trim().toLowerCase()
+                )
+              );
+            
+            return courseMatch || levelMatch;
           });
 
           if (matchingClasses.length > 0) {
@@ -512,6 +526,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       setFormData({
         fullNameAr: "",
         fullNameEn: "",
+        gender: "",
         phone1: "",
         phone2: "",
         email: "",
@@ -668,6 +683,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Gender *
+                  </Label>
+                  <RadioGroup
+                    value={formData.gender}
+                    onValueChange={(value) => handleInputChange("gender", value)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="male" id="male" />
+                        <Label htmlFor="male" className="cursor-pointer font-normal">Male</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="female" id="female" />
+                        <Label htmlFor="female" className="cursor-pointer font-normal">Female</Label>
+                      </div>
+                    </div>
+                  </RadioGroup>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

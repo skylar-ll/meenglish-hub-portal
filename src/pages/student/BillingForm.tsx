@@ -335,25 +335,35 @@ const BillingForm = () => {
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Automatically enroll student in matching classes based on courses
+      // Automatically enroll student in matching classes based on courses and levels
       try {
         const studentCourses = billData.courseName.split(', ').map(c => c.trim());
         
-        // Find all classes that match any of the student's courses
+        // Find all classes that match any of the student's courses OR levels
         const { data: allClasses } = await supabase
           .from('classes')
-          .select('id, courses');
+          .select('id, courses, levels');
 
         if (allClasses && allClasses.length > 0) {
-          // Filter classes where any of the student's courses matches any of the class's courses
+          // Filter classes where any of the student's courses matches any of the class's courses OR levels
           const matchingClasses = allClasses.filter(cls => {
-            if (!cls.courses || cls.courses.length === 0) return false;
             // Check if any student course matches any class course
-            return studentCourses.some(studentCourse => 
-              cls.courses.some(classCourse => 
-                classCourse.trim().toLowerCase() === studentCourse.toLowerCase()
-              )
-            );
+            const courseMatch = cls.courses && cls.courses.length > 0 && 
+              studentCourses.some(studentCourse => 
+                cls.courses.some(classCourse => 
+                  classCourse.trim().toLowerCase() === studentCourse.toLowerCase()
+                )
+              );
+            
+            // Check if any student course matches any class level
+            const levelMatch = cls.levels && cls.levels.length > 0 && 
+              studentCourses.some(studentCourse => 
+                cls.levels.some(classLevel => 
+                  classLevel.trim().toLowerCase() === studentCourse.toLowerCase()
+                )
+              );
+            
+            return courseMatch || levelMatch;
           });
 
           if (matchingClasses.length > 0) {
