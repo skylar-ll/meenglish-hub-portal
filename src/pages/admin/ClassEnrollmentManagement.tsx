@@ -51,20 +51,23 @@ export default function ClassEnrollmentManagement() {
   }, []);
 
   const checkAdminAccess = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/admin/login");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/admin/login');
       return;
     }
 
     const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
 
-    if (roleData?.role !== "admin") {
-      navigate("/admin/login");
+    if (!roleData) {
+      toast.error('Unauthorized access');
+      navigate('/admin/login');
+      return;
     }
   };
 
