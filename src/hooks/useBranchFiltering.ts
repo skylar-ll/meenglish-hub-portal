@@ -32,13 +32,18 @@ export const useBranchFiltering = (branchId: string | null) => {
   const fetchAvailableOptions = async () => {
     setLoading(true);
     try {
+      console.log("🔍 Branch filtering - Starting fetch for branchId:", branchId);
+      
       // Fetch ALL classes to get all possible options
       const { data: allClasses, error: allError } = await supabase
         .from("classes")
-        .select("program, levels, timing, courses")
+        .select("program, levels, timing, courses, branch_id")
         .eq("status", "active");
 
       if (allError) throw allError;
+
+      console.log("📋 All active classes found:", allClasses?.length || 0);
+      console.log("📊 Sample class data:", allClasses?.[0]);
 
       // Get all possible options across all branches
       const allPrograms = new Set<string>();
@@ -57,7 +62,15 @@ export const useBranchFiltering = (branchId: string | null) => {
         }
       });
 
+      console.log("🌍 All available across branches:", {
+        programs: Array.from(allPrograms),
+        levels: Array.from(allLevels),
+        timings: Array.from(allTimings),
+        courses: Array.from(allCourses),
+      });
+
       if (!branchId) {
+        console.log("ℹ️ No branch selected - showing all options");
         setFilteredOptions({
           allowedPrograms: Array.from(allPrograms),
           allowedLevels: Array.from(allLevels),
@@ -75,11 +88,14 @@ export const useBranchFiltering = (branchId: string | null) => {
       // Fetch classes for the selected branch
       const { data: branchClasses, error } = await supabase
         .from("classes")
-        .select("program, levels, timing, courses")
+        .select("program, levels, timing, courses, branch_id, class_name")
         .eq("branch_id", branchId)
         .eq("status", "active");
 
       if (error) throw error;
+
+      console.log(`🎯 Classes found for branch ${branchId}:`, branchClasses?.length || 0);
+      console.log("📝 Branch classes details:", branchClasses);
 
       const programs = new Set<string>();
       const levels = new Set<string>();
@@ -87,17 +103,31 @@ export const useBranchFiltering = (branchId: string | null) => {
       const courses = new Set<string>();
 
       (branchClasses || []).forEach((cls) => {
-        if (cls.program) programs.add(cls.program);
-        if (cls.timing) timings.add(cls.timing);
+        if (cls.program) {
+          programs.add(cls.program);
+          console.log("  ✓ Program:", cls.program);
+        }
+        if (cls.timing) {
+          timings.add(cls.timing);
+          console.log("  ✓ Timing:", cls.timing);
+        }
         if (cls.levels && Array.isArray(cls.levels)) {
-          cls.levels.forEach((level: string) => levels.add(level));
+          cls.levels.forEach((level: string) => {
+            levels.add(level);
+            console.log("  ✓ Level:", level);
+          });
         }
         if (cls.courses && Array.isArray(cls.courses)) {
-          cls.courses.forEach((course: string) => courses.add(course));
+          cls.courses.forEach((course: string) => {
+            // Normalize course name for matching (remove extra spaces, case-insensitive)
+            const normalizedCourse = course.trim();
+            courses.add(normalizedCourse);
+            console.log("  ✓ Course:", normalizedCourse);
+          });
         }
       });
 
-      setFilteredOptions({
+      const filteredResult = {
         allowedPrograms: Array.from(programs),
         allowedLevels: Array.from(levels),
         allowedTimings: Array.from(timings),
@@ -106,9 +136,13 @@ export const useBranchFiltering = (branchId: string | null) => {
         allLevels: Array.from(allLevels),
         allTimings: Array.from(allTimings),
         allCourses: Array.from(allCourses),
-      });
+      };
+
+      console.log("✅ Filtered options for branch:", filteredResult);
+      
+      setFilteredOptions(filteredResult);
     } catch (error) {
-      console.error("Error fetching available options:", error);
+      console.error("❌ Error fetching available options:", error);
     } finally {
       setLoading(false);
     }

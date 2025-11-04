@@ -27,6 +27,8 @@ const CourseSelection = () => {
 
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+    console.log("📦 CourseSelection - Registration data:", registration);
+    console.log("🏢 CourseSelection - Branch ID:", registration.branch_id);
     setBranchId(registration.branch_id || null);
   }, []);
 
@@ -95,7 +97,26 @@ const CourseSelection = () => {
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => {
-                          const isAvailable = branchId ? filteredOptions.allowedCourses.includes(course.value) : true;
+                          // Flexible matching: check if the course value matches any allowed course
+                          // This handles cases where names might be slightly different
+                          const normalizeForMatch = (str: string) => 
+                            str.toLowerCase().trim().replace(/[\s-]/g, '');
+                          
+                          const isAvailable = branchId 
+                            ? filteredOptions.allowedCourses.some(allowedCourse => 
+                                normalizeForMatch(allowedCourse).includes(normalizeForMatch(course.value)) ||
+                                normalizeForMatch(course.value).includes(normalizeForMatch(allowedCourse))
+                              )
+                            : true;
+                          
+                          if (branchId) {
+                            console.log(`🔍 Checking course "${course.value}":`, {
+                              isAvailable,
+                              allowedCourses: filteredOptions.allowedCourses,
+                              normalized: normalizeForMatch(course.value)
+                            });
+                          }
+                          
                           const courseItem = (
                             <div 
                               key={course.value} 
