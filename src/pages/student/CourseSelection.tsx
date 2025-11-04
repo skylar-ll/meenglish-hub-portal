@@ -95,7 +95,7 @@ const CourseSelection = () => {
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => {
-                          const isAvailable = !branchId || filteredOptions.allowedCourses.length === 0 || filteredOptions.allowedCourses.includes(course.value);
+                          const isAvailable = branchId ? filteredOptions.allowedCourses.includes(course.value) : true;
                           const courseItem = (
                             <div 
                               key={course.value} 

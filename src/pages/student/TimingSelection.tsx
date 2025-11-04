@@ -109,7 +109,7 @@ const TimingSelection = () => {
             
             <div className="grid gap-4">
               {timingOptions.map((timing) => {
-                const isAvailable = !branchId || filteredOptions.allowedTimings.length === 0 || filteredOptions.allowedTimings.includes(timing.config_value);
+                const isAvailable = branchId ? filteredOptions.allowedTimings.includes(timing.config_value) : true;
                 const timingCard = (
                   <Card
                     key={timing.id}
