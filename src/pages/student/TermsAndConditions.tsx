@@ -65,7 +65,7 @@ const TermsAndConditions = () => {
     registrationData.agreedToTerms = true;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/partial-payment-selection");
+    navigate("/student/billing-form");
   };
 
   return (
@@ -74,7 +74,7 @@ const TermsAndConditions = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/payment-selection")}
+            onClick={() => navigate("/student/partial-payment-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -137,7 +137,7 @@ const TermsAndConditions = () => {
 
         <FloatingNavigationButton
           onNext={handleNext}
-          onBack={() => navigate("/student/payment-selection")}
+          onBack={() => navigate("/student/partial-payment-selection")}
           nextLabel={t('student.next')}
           backLabel={t('student.back')}
           disabled={!agreed}

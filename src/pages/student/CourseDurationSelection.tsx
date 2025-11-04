@@ -30,7 +30,7 @@ const CourseDurationSelection = () => {
       courseDurationMonths: durationMonths,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(durationData));
-    navigate("/student/course-selection");
+    navigate("/student/payment-selection");
   };
 
   return (
