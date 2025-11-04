@@ -44,7 +44,7 @@ const TIMING_OPTIONS = [
 // Course options with bilingual labels
 const COURSE_OPTIONS = [
   { label: "Speaking class", value: "Speaking class", category: "Speaking program" },
-  { label: "1:1 class - privet class كلاس فردي", value: "1:1 class - privet class كلاس فردي", category: "Privet class" },
+  { label: "1:1 class - private class كلاس فردي", value: "1:1 class - private class كلاس فردي", category: "Private class" },
   { label: "French language لغة فرنسية", value: "French language لغة فرنسية", category: "Other languages" },
   { label: "Chinese Language لغة صينية", value: "Chinese Language لغة صينية", category: "Other languages" },
   { label: "Spanish language لغة اسبانية", value: "Spanish language لغة اسبانية", category: "Other languages" },

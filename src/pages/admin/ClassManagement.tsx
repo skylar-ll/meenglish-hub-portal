@@ -40,6 +40,33 @@ interface CourseConfig {
   category: string;
 }
 
+// Hardcoded course options with bilingual labels
+const COURSE_OPTIONS = [
+  { label: "Speaking class", value: "Speaking class", category: "Speaking program" },
+  { label: "1:1 class - private class كلاس فردي", value: "1:1 class - private class كلاس فردي", category: "Private class" },
+  { label: "French language لغة فرنسية", value: "French language لغة فرنسية", category: "Other languages" },
+  { label: "Chinese Language لغة صينية", value: "Chinese Language لغة صينية", category: "Other languages" },
+  { label: "Spanish language لغة اسبانية", value: "Spanish language لغة اسبانية", category: "Other languages" },
+  { label: "Italian Language لغة ايطالية", value: "Italian Language لغة ايطالية", category: "Other languages" },
+  { label: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", value: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", category: "Other languages" },
+];
+
+// Hardcoded level options with bilingual labels
+const LEVEL_OPTIONS = [
+  "level-1 (pre1) مستوى اول",
+  "level-2 (pre2) مستوى ثاني",
+  "level-3 (intro A) مستوى ثالث",
+  "level-4 (intro B) مستوى رابع",
+  "level-5 (1A) مستوى خامس",
+  "level-6 (1B) مستوى سادس",
+  "level-7 (2A) مستوى سابع",
+  "level-8 (2B) مستوى ثامن",
+  "level-9 (3A) مستوى تاسع",
+  "level-10 (3B) مستوى عاشر",
+  "level-11 (IELTS 1 - STEP 1) مستوى-11",
+  "level-12 (IELTS 2 - STEP 2) مستوى -12",
+];
+
 interface ExistingClass {
   id: string;
   class_name: string;
@@ -62,15 +89,12 @@ export default function ClassManagement() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [courses, setCourses] = useState<CourseConfig[]>([]);
-  const [levels, setLevels] = useState<string[]>([]);
   const [timings, setTimings] = useState<string[]>([]);
   const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
 
   // Form state
   const [className, setClassName] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
-  const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState("");
@@ -142,18 +166,6 @@ export default function ClassManagement() {
         .order("display_order");
 
       if (configError) throw configError;
-
-      // Parse courses
-      const courseConfigs = configData
-        ?.filter((c) => c.config_type === "course")
-        .map((c) => JSON.parse(c.config_value) as CourseConfig) || [];
-      setCourses(courseConfigs);
-
-      // Parse levels (level-1 to level-10)
-      const levelConfigs = configData
-        ?.filter((c) => c.config_type === "program")
-        .map((c) => c.config_value) || [];
-      setLevels(levelConfigs);
 
       // Parse timings
       const timingConfigs = configData
@@ -266,10 +278,6 @@ export default function ClassManagement() {
       toast.error("Please select a branch");
       return;
     }
-    if (!selectedProgram) {
-      toast.error("Please select a program");
-      return;
-    }
     if (selectedCourses.length === 0) {
       toast.error("Please select at least one course");
       return;
@@ -299,7 +307,6 @@ export default function ClassManagement() {
         .insert({
           class_name: className,
           branch_id: selectedBranch,
-          program: selectedProgram,
           courses: selectedCourses,
           levels: selectedLevels,
           teacher_id: selectedTeacher,
@@ -331,7 +338,6 @@ export default function ClassManagement() {
       // Reset form
       setClassName("");
       setSelectedBranch("");
-      setSelectedProgram("");
       setSelectedCourses([]);
       setSelectedLevels([]);
       setSelectedTeacher("");
@@ -426,21 +432,6 @@ export default function ClassManagement() {
                   </Select>
                 </div>
 
-                {/* Program */}
-                <div>
-                  <Label>Program</Label>
-                  <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select program..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      <SelectItem value="English">English</SelectItem>
-                      <SelectItem value="Chinese">Chinese</SelectItem>
-                      <SelectItem value="Arabic for Non-Speakers">Arabic for Non-Speakers</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Start Date */}
                 <div>
                   <Label>Start Date</Label>
@@ -459,8 +450,8 @@ export default function ClassManagement() {
                       <SelectValue placeholder="Select courses..." />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
-                      {courses.map((course) => (
-                        <SelectItem key={course.label} value={course.label}>
+                      {COURSE_OPTIONS.map((course) => (
+                        <SelectItem key={course.value} value={course.value}>
                           {course.label}
                         </SelectItem>
                       ))}
@@ -489,7 +480,7 @@ export default function ClassManagement() {
                       <SelectValue placeholder="Select levels..." />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
-                      {levels.map((level) => (
+                      {LEVEL_OPTIONS.map((level) => (
                         <SelectItem key={level} value={level}>
                           {level}
                         </SelectItem>
