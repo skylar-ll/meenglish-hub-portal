@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -270,6 +270,15 @@ const AdminDashboard = () => {
             >
               <Users className="w-5 h-5" />
               Student Management
+            </Button>
+            <Button 
+              onClick={() => navigate("/admin/class-enrollments")}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-secondary to-accent"
+              size="lg"
+            >
+              <BookOpen className="w-5 h-5" />
+              Class Enrollments
             </Button>
           </div>
         </Card>
