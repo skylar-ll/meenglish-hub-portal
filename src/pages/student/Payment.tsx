@@ -207,7 +207,7 @@ const Payment = () => {
               <div className="flex gap-3 pt-6">
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/student/branch-selection")}
+                  onClick={() => navigate("/student/payment-selection")}
                   className="flex-1"
                   size="lg"
                 >
