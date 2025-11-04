@@ -404,21 +404,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         if (allClasses && allClasses.length > 0) {
           // Filter classes where any of the student's courses matches any of the class's courses OR levels
           const matchingClasses = allClasses.filter(cls => {
+            // Normalize student course for matching (remove spaces, hyphens, lowercase)
+            const normalizeForMatch = (str: string) => 
+              str.toLowerCase().replace(/[\s-]/g, '');
+            
             // Check if any student course matches any class course
             const courseMatch = cls.courses && cls.courses.length > 0 && 
-              studentCourses.some(studentCourse => 
-                cls.courses.some(classCourse => 
-                  classCourse.trim().toLowerCase() === studentCourse.trim().toLowerCase()
-                )
-              );
+              studentCourses.some(studentCourse => {
+                const normalizedStudentCourse = normalizeForMatch(studentCourse);
+                return cls.courses.some(classCourse => 
+                  normalizeForMatch(classCourse).includes(normalizedStudentCourse)
+                );
+              });
             
             // Check if any student course matches any class level
             const levelMatch = cls.levels && cls.levels.length > 0 && 
-              studentCourses.some(studentCourse => 
-                cls.levels.some(classLevel => 
-                  classLevel.trim().toLowerCase() === studentCourse.trim().toLowerCase()
-                )
-              );
+              studentCourses.some(studentCourse => {
+                const normalizedStudentCourse = normalizeForMatch(studentCourse);
+                return cls.levels.some(classLevel => 
+                  normalizeForMatch(classLevel).includes(normalizedStudentCourse)
+                );
+              });
             
             return courseMatch || levelMatch;
           });
