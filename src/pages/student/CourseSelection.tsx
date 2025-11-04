@@ -85,7 +85,11 @@ const CourseSelection = () => {
         {/* Course Selection Form */}
         <Card className="p-8 animate-slide-up">
           {loading ? (
-            <div className="text-center py-8">Loading courses...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-muted-foreground">Scanning available classes for your branch...</p>
+              <p className="text-sm text-muted-foreground mt-2">جاري فحص الفصول المتاحة لفرعك...</p>
+            </div>
           ) : (
             <div className="space-y-6">
               <div className="space-y-4">
@@ -97,25 +101,35 @@ const CourseSelection = () => {
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => {
-                          // Flexible matching: check if the course value matches any allowed course
-                          // This handles cases where names might be slightly different
+                          // More flexible matching: normalize and compare
                           const normalizeForMatch = (str: string) => 
-                            str.toLowerCase().trim().replace(/[\s-]/g, '');
+                            str.toLowerCase()
+                              .trim()
+                              .replace(/[\s\-_]/g, '') // Remove spaces, hyphens, underscores
+                              .replace(/[أإآا]/g, 'ا') // Normalize Arabic alef variants
+                              .replace(/[ىي]/g, 'ي');  // Normalize Arabic ya variants
                           
                           const isAvailable = branchId 
-                            ? filteredOptions.allowedCourses.some(allowedCourse => 
-                                normalizeForMatch(allowedCourse).includes(normalizeForMatch(course.value)) ||
-                                normalizeForMatch(course.value).includes(normalizeForMatch(allowedCourse))
-                              )
+                            ? filteredOptions.allowedCourses.some(allowedCourse => {
+                                const normalizedAllowed = normalizeForMatch(allowedCourse);
+                                const normalizedCourse = normalizeForMatch(course.value);
+                                
+                                // Check if either contains the other (flexible matching)
+                                const matches = normalizedAllowed.includes(normalizedCourse) || 
+                                               normalizedCourse.includes(normalizedAllowed);
+                                
+                                if (branchId && course.value) {
+                                  console.log(`🔍 Matching "${course.value}":`, {
+                                    allowedCourse,
+                                    normalizedCourse,
+                                    normalizedAllowed,
+                                    matches
+                                  });
+                                }
+                                
+                                return matches;
+                              })
                             : true;
-                          
-                          if (branchId) {
-                            console.log(`🔍 Checking course "${course.value}":`, {
-                              isAvailable,
-                              allowedCourses: filteredOptions.allowedCourses,
-                              normalized: normalizeForMatch(course.value)
-                            });
-                          }
                           
                           const courseItem = (
                             <div 

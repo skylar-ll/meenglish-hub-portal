@@ -37,13 +37,15 @@ export const useBranchFiltering = (branchId: string | null) => {
       // Fetch ALL classes to get all possible options
       const { data: allClasses, error: allError } = await supabase
         .from("classes")
-        .select("program, levels, timing, courses, branch_id")
+        .select("program, levels, timing, courses, branch_id, class_name, start_date")
         .eq("status", "active");
 
       if (allError) throw allError;
 
       console.log("📋 All active classes found:", allClasses?.length || 0);
-      console.log("📊 Sample class data:", allClasses?.[0]);
+      if (allClasses && allClasses.length > 0) {
+        console.log("📊 Sample class data:", JSON.stringify(allClasses[0], null, 2));
+      }
 
       // Get all possible options across all branches
       const allPrograms = new Set<string>();
@@ -88,14 +90,18 @@ export const useBranchFiltering = (branchId: string | null) => {
       // Fetch classes for the selected branch
       const { data: branchClasses, error } = await supabase
         .from("classes")
-        .select("program, levels, timing, courses, branch_id, class_name")
+        .select("program, levels, timing, courses, branch_id, class_name, start_date")
         .eq("branch_id", branchId)
         .eq("status", "active");
 
       if (error) throw error;
 
       console.log(`🎯 Classes found for branch ${branchId}:`, branchClasses?.length || 0);
-      console.log("📝 Branch classes details:", branchClasses);
+      if (branchClasses && branchClasses.length > 0) {
+        console.log("📝 Branch classes details:", JSON.stringify(branchClasses, null, 2));
+      } else {
+        console.warn("⚠️ No active classes found for this branch!");
+      }
 
       const programs = new Set<string>();
       const levels = new Set<string>();
