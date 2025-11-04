@@ -10,6 +10,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
@@ -90,13 +96,13 @@ const CourseSelection = () => {
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => {
                           const isAvailable = !branchId || filteredOptions.allowedPrograms.length === 0 || filteredOptions.allowedPrograms.includes(course.label);
-                          return (
+                          const courseItem = (
                             <div 
                               key={course.value} 
                               className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                                isAvailable ? 'hover:bg-muted/50' : 'opacity-50 cursor-not-allowed'
+                                isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
                               }`}
-                              title={!isAvailable ? "This option is not available for your selected branch." : ""}
+                              onClick={() => isAvailable && toggleCourse(course.value)}
                             >
                               <Checkbox
                                 id={course.value}
@@ -112,6 +118,24 @@ const CourseSelection = () => {
                               </label>
                             </div>
                           );
+
+                          if (!isAvailable) {
+                            return (
+                              <TooltipProvider key={course.value}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {courseItem}
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>This option is not available for your selected branch.</p>
+                                    <p className="text-xs text-muted-foreground">هذا الخيار غير متاح في هذا الفرع.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          }
+
+                          return courseItem;
                         })}
                       </div>
                     );

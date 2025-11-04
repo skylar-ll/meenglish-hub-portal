@@ -10,37 +10,48 @@ interface StudentData {
 
 export const autoEnrollStudent = async (studentData: StudentData) => {
   try {
-    // Get student's chosen level as array
+    // Get student's chosen levels as array
     const studentLevels = studentData.course_level.split(",").map(l => l.trim());
 
-    // Find matching classes
+    // Find ALL classes in the student's branch with status active
     const { data: classes, error: classError } = await supabase
       .from("classes")
-      .select("id, levels, program, timing")
+      .select("id, levels, program, timing, courses")
       .eq("branch_id", studentData.branch_id)
-      .eq("program", studentData.program)
-      .eq("timing", studentData.timing)
       .eq("status", "active");
 
     if (classError) throw classError;
 
     if (!classes || classes.length === 0) {
-      console.log("No matching classes found for auto-enrollment");
+      console.log("No active classes found in branch for auto-enrollment");
       return;
     }
 
-    // Filter classes that have overlapping levels
+    // Filter classes that match ALL criteria:
+    // 1. Same branch (already filtered above)
+    // 2. Same program
+    // 3. Same timing
+    // 4. At least one overlapping level
     const matchingClasses = classes.filter((cls) => {
+      // Check program match
+      if (cls.program !== studentData.program) return false;
+      
+      // Check timing match
+      if (cls.timing !== studentData.timing) return false;
+      
+      // Check if class has levels array
       if (!cls.levels || !Array.isArray(cls.levels)) return false;
       
       // Check if any of the student's levels are in the class levels
-      return studentLevels.some(studentLevel => 
+      const hasMatchingLevel = studentLevels.some(studentLevel => 
         cls.levels.includes(studentLevel)
       );
+      
+      return hasMatchingLevel;
     });
 
     if (matchingClasses.length === 0) {
-      console.log("No classes with matching levels found");
+      console.log("No classes matching student's program, timing, and levels found");
       return;
     }
 
@@ -61,7 +72,7 @@ export const autoEnrollStudent = async (studentData: StudentData) => {
       }
     }
 
-    console.log(`Successfully enrolled student in ${matchingClasses.length} class(es)`);
+    console.log(`Successfully auto-enrolled student in ${matchingClasses.length} class(es)`);
   } catch (error) {
     console.error("Error in auto-enrollment:", error);
     throw error;

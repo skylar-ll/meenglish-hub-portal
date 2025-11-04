@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
+import { useBranchFiltering } from "@/hooks/useBranchFiltering";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TimingOption {
   id: string;
@@ -22,8 +29,12 @@ const TimingSelection = () => {
   const [timingOptions, setTimingOptions] = useState<TimingOption[]>([]);
   const [selectedTiming, setSelectedTiming] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const { filteredOptions } = useBranchFiltering(branchId);
 
   useEffect(() => {
+    const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+    setBranchId(registration.branch_id || null);
     fetchTimingOptions();
   }, []);
 
@@ -97,19 +108,42 @@ const TimingSelection = () => {
             </Label>
             
             <div className="grid gap-4">
-              {timingOptions.map((timing) => (
-                <Card
-                  key={timing.id}
-                  className={`p-6 cursor-pointer transition-all ${
-                    selectedTiming === timing.config_value
-                      ? "border-primary border-2 bg-primary/5 shadow-lg"
-                      : "hover:bg-muted/50 hover:shadow-md"
-                  }`}
-                  onClick={() => setSelectedTiming(timing.config_value)}
-                >
-                  <p className="font-medium text-lg text-center">{timing.config_value}</p>
-                </Card>
-              ))}
+              {timingOptions.map((timing) => {
+                const isAvailable = !branchId || filteredOptions.allowedTimings.length === 0 || filteredOptions.allowedTimings.includes(timing.config_value);
+                const timingCard = (
+                  <Card
+                    key={timing.id}
+                    className={`p-6 transition-all ${
+                      selectedTiming === timing.config_value
+                        ? "border-primary border-2 bg-primary/5 shadow-lg"
+                        : isAvailable 
+                          ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
+                          : "opacity-50 cursor-not-allowed"
+                    }`}
+                    onClick={() => isAvailable && setSelectedTiming(timing.config_value)}
+                  >
+                    <p className="font-medium text-lg text-center">{timing.config_value}</p>
+                  </Card>
+                );
+
+                if (!isAvailable) {
+                  return (
+                    <TooltipProvider key={timing.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {timingCard}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This option is not available for your selected branch.</p>
+                          <p className="text-xs text-muted-foreground">هذا الخيار غير متاح في هذا الفرع.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+
+                return timingCard;
+              })}
             </div>
 
             {/* Hide inline button on mobile when floating button shows */}
