@@ -4,18 +4,22 @@ import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
+import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface LevelOption {
   id: string;
@@ -28,10 +32,11 @@ const LevelSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [levelOptions, setLevelOptions] = useState<LevelOption[]>([]);
-  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [selectedChoice, setSelectedChoice] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [branchId, setBranchId] = useState<string | null>(null);
   const { filteredOptions } = useBranchFiltering(branchId);
+  const { courses } = useFormConfigurations();
 
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
@@ -59,22 +64,29 @@ const LevelSelection = () => {
     }
   };
 
-  const toggleLevel = (levelValue: string) => {
-    setSelectedLevels(prev => 
-      prev.includes(levelValue)
-        ? prev.filter(l => l !== levelValue)
-        : [...prev, levelValue]
-    );
+  // Helpers for matching
+  const extractLevelKey = (val: string): string | null => {
+    if (!val) return null;
+    const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+    return m ? `level-${m[1]}` : null;
   };
 
+  const normalize = (str: string) =>
+    (str || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s\-_]/g, "")
+      .replace(/[أإآا]/g, "ا")
+      .replace(/[ىي]/g, "ي");
+
   const handleNext = () => {
-    if (selectedLevels.length === 0) {
-      toast.error("Please select at least one level");
+    if (!selectedChoice) {
+      toast.error("Please select your starting level or course");
       return;
     }
 
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    registration.course_level = selectedLevels.join(", ");
+    registration.course_level = selectedChoice;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
     navigate("/student/timing-selection");
@@ -101,10 +113,10 @@ const LevelSelection = () => {
             {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Select Your Levels
+            Choose your starting level or course
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Choose the levels you want to study (You can select multiple)
+            Select one option based on your branch availability
           </p>
         </div>
 
@@ -112,94 +124,83 @@ const LevelSelection = () => {
           <div className="space-y-6">
             <Label className="text-lg font-semibold flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
-              Available Levels
+              Select one option
             </Label>
-            
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-              {levelOptions.map((level) => {
-                // Normalize for flexible matching (handles Arabic variants and spacing)
-                const normalizeForMatch = (str: string) =>
-                  (str || "")
-                    .toLowerCase()
-                    .trim()
-                    .replace(/[\s\-_]/g, '')
-                    .replace(/[أإآا]/g, 'ا')
-                    .replace(/[ىي]/g, 'ي');
 
-                const isAvailable = branchId
-                  ? filteredOptions.allowedLevels.some((allowedLevel) => {
-                      const normalizedAllowed = normalizeForMatch(allowedLevel);
-                      const normalizedKey = normalizeForMatch(level.config_key);
-                      const normalizedValue = normalizeForMatch(level.config_value);
-                      const matches =
-                        normalizedAllowed.includes(normalizedKey) ||
-                        normalizedAllowed.includes(normalizedValue) ||
-                        normalizedKey.includes(normalizedAllowed) ||
-                        normalizedValue.includes(normalizedAllowed);
-
-                      console.log(`🔍 Level match for "${level.config_value}":`, {
-                        allowedLevel,
-                        normalizedAllowed,
-                        normalizedKey,
-                        normalizedValue,
-                        matches,
-                      });
-
-                      return matches;
+            <Select value={selectedChoice} onValueChange={setSelectedChoice}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select level or course" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>English program</SelectLabel>
+                  {levelOptions
+                    .filter((lvl) => {
+                      if (!branchId || filteredOptions.allowedLevelKeys.length === 0) return true;
+                      const key = extractLevelKey(lvl.config_key);
+                      return key ? filteredOptions.allowedLevelKeys.includes(key) : false;
                     })
-                  : true;
-                const levelItem = (
-                  <div 
-                    key={level.id}
-                    className={`flex items-center space-x-3 p-4 rounded-lg transition-colors ${
-                      isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                    } ${selectedLevels.includes(level.config_value) ? 'bg-primary/10 border-2 border-primary' : 'border border-border'}`}
-                    onClick={() => {
-                      if (isAvailable) {
-                        toggleLevel(level.config_value);
-                      } else {
-                        toast.error("❌ This option isn't available for your selected branch. / هذا الخيار غير متاح في هذا الفرع.");
-                      }
-                    }}
+                    .map((lvl) => (
+                      <SelectItem key={lvl.id} value={lvl.config_value}>
+                        {lvl.config_value}
+                      </SelectItem>
+                    ))}
+                </SelectGroup>
+
+                <SelectSeparator />
+
+                <SelectGroup>
+                  <SelectLabel>Speaking program</SelectLabel>
+                  <SelectItem
+                    value="Speaking class"
+                    disabled={branchId ? !filteredOptions.allowedCourses.some((ac) => {
+                      const a = normalize(ac); const b = normalize('Speaking class');
+                      return a.includes(b) || b.includes(a);
+                    }) : false}
                   >
-                    <Checkbox
-                      id={level.id}
-                      checked={selectedLevels.includes(level.config_value)}
-                      onCheckedChange={() => isAvailable && toggleLevel(level.config_value)}
-                      disabled={!isAvailable}
-                    />
-                    <label
-                      htmlFor={level.id}
-                      className={`text-base font-medium flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                    >
-                      {level.config_value}
-                    </label>
-                  </div>
-                );
+                    Speaking class
+                  </SelectItem>
+                </SelectGroup>
 
-                if (!isAvailable) {
-                  return (
-                    <TooltipProvider key={level.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          {levelItem}
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>This option is not available for your selected branch.</p>
-                          <p className="text-xs text-muted-foreground">هذا الخيار غير متاح في هذا الفرع.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                }
+                <SelectGroup>
+                  <SelectLabel>Private class</SelectLabel>
+                  <SelectItem
+                    value="1:1 class - private class كلاس فردي"
+                    disabled={branchId ? !filteredOptions.allowedCourses.some((ac) => {
+                      const a = normalize(ac); const b = normalize('1:1 class - private class كلاس فردي');
+                      return a.includes(b) || b.includes(a);
+                    }) : false}
+                  >
+                    1:1 class - private class كلاس فردي
+                  </SelectItem>
+                </SelectGroup>
 
-                return levelItem;
-              })}
-            </div>
+                <SelectSeparator />
 
-            {selectedLevels.length > 0 && (
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <p className="text-sm font-medium">Selected: {selectedLevels.length} level(s)</p>
+                <SelectGroup>
+                  <SelectLabel>Other languages</SelectLabel>
+                  {courses
+                    .filter((c) => c.category === 'Other languages')
+                    .map((c) => {
+                      const disabled = branchId ? !filteredOptions.allowedCourses.some((ac) => {
+                        const a = normalize(ac); const b = normalize(c.value);
+                        return a.includes(b) || b.includes(a);
+                      }) : false;
+                      return (
+                        <SelectItem key={c.id} value={c.label} disabled={disabled}>
+                          {c.label}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            {branchId && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Available timings for your branch: {filteredOptions.allowedTimings.join(', ') || '—'}
+                </p>
               </div>
             )}
 
