@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const CourseSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const { courses, loading } = useFormConfigurations();
+  const { filteredOptions } = useBranchFiltering(branchId);
+
+  useEffect(() => {
+    const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+    setBranchId(registration.branch_id || null);
+  }, []);
 
   const toggleCourse = (courseValue: string) => {
     setSelectedCourses(prev => 
@@ -80,21 +88,31 @@ const CourseSelection = () => {
                     return (
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
-                        {coursesInCategory.map((course) => (
-                          <div key={course.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <Checkbox
-                              id={course.value}
-                              checked={selectedCourses.includes(course.value)}
-                              onCheckedChange={() => toggleCourse(course.value)}
-                            />
-                            <label
-                              htmlFor={course.value}
-                              className="text-sm flex-1 cursor-pointer"
+                        {coursesInCategory.map((course) => {
+                          const isAvailable = !branchId || filteredOptions.allowedPrograms.length === 0 || filteredOptions.allowedPrograms.includes(course.label);
+                          return (
+                            <div 
+                              key={course.value} 
+                              className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                                isAvailable ? 'hover:bg-muted/50' : 'opacity-50 cursor-not-allowed'
+                              }`}
+                              title={!isAvailable ? "This option is not available for your selected branch." : ""}
                             >
-                              {course.label}
-                            </label>
-                          </div>
-                        ))}
+                              <Checkbox
+                                id={course.value}
+                                checked={selectedCourses.includes(course.value)}
+                                onCheckedChange={() => isAvailable && toggleCourse(course.value)}
+                                disabled={!isAvailable}
+                              />
+                              <label
+                                htmlFor={course.value}
+                                className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                              >
+                                {course.label}
+                              </label>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -129,9 +147,9 @@ const CourseSelection = () => {
         </Card>
         
         {/* Floating Navigation Button */}
-        <FloatingNavigationButton
+          <FloatingNavigationButton
           onNext={handleNext}
-          onBack={() => navigate("/student/signup")}
+          onBack={() => navigate("/student/branch-selection")}
           nextLabel={t('student.next')}
           backLabel={t('student.back')}
           showBack={true}

@@ -10,6 +10,7 @@ import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { ArrowLeft, FileText, Calendar, Download } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
+import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 
 const BillingForm = () => {
@@ -68,11 +69,34 @@ const BillingForm = () => {
         }
       }
 
+      // Fetch enrolled class to get start date
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      let actualStartDate = null;
+      if (studentData) {
+        const { data: enrollments } = await supabase
+          .from("enrollments")
+          .select("classes(start_date)")
+          .eq("student_id", studentData.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (enrollments && enrollments.length > 0 && enrollments[0].classes?.start_date) {
+          actualStartDate = enrollments[0].classes.start_date;
+        }
+      }
+
       // Get current date in KSA timezone
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
       const registrationDate = format(ksaDate, "dd MMMM yyyy");
-      const courseStartDate = format(addDays(ksaDate, 1), "dd MMMM yyyy");
+      const courseStartDate = actualStartDate 
+        ? format(new Date(actualStartDate), "dd MMMM yyyy")
+        : format(addDays(ksaDate, 1), "dd MMMM yyyy");
 
       // Calculate fees
       const totalFee = pricing?.price || (durationMonths * 500); // Default 500 per month
@@ -283,9 +307,11 @@ const BillingForm = () => {
         phone2: billData.phone2 || null,
         email: billData.email,
         national_id: billData.nationalId,
+        branch_id: registration.branch_id || null,
         branch: billData.branch,
-        program: billData.courseName,
+        program: registration.courses || billData.courseName,
         class_type: billData.courseName,
+        course_level: registration.selectedLevels?.join(", ") || "Level 1",
         payment_method: registration.paymentMethod || "Cash",
         subscription_status: "active",
         course_duration_months: billData.levelCount,
@@ -335,70 +361,21 @@ const BillingForm = () => {
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Automatically enroll student in matching classes based on courses and levels
+      // Auto-enroll student in matching classes based on branch, program, levels, timing
       try {
-        const studentCourses = billData.courseName.split(', ').map(c => c.trim());
-        
-        // Find all classes that match any of the student's courses OR levels
-        const { data: allClasses } = await supabase
-          .from('classes')
-          .select('id, courses, levels');
-
-        if (allClasses && allClasses.length > 0) {
-          // Filter classes where any of the student's courses matches any of the class's courses OR levels
-          const matchingClasses = allClasses.filter(cls => {
-            // Normalize student course for matching (remove spaces, hyphens, lowercase)
-            const normalizeForMatch = (str: string) => 
-              str.toLowerCase().replace(/[\s-]/g, '');
-            
-            // Check if any student course matches any class course
-            const courseMatch = cls.courses && cls.courses.length > 0 && 
-              studentCourses.some(studentCourse => {
-                const normalizedStudentCourse = normalizeForMatch(studentCourse);
-                return cls.courses.some(classCourse => 
-                  normalizeForMatch(classCourse).includes(normalizedStudentCourse)
-                );
-              });
-            
-            // Check if any student course matches any class level
-            const levelMatch = cls.levels && cls.levels.length > 0 && 
-              studentCourses.some(studentCourse => {
-                const normalizedStudentCourse = normalizeForMatch(studentCourse);
-                return cls.levels.some(classLevel => 
-                  normalizeForMatch(classLevel).includes(normalizedStudentCourse)
-                );
-              });
-            
-            return courseMatch || levelMatch;
+        if (registration.branch_id && registration.courses && registration.selectedLevels && registration.timing) {
+          await autoEnrollStudent({
+            id: studentData.id,
+            branch_id: registration.branch_id,
+            program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
+            course_level: registration.selectedLevels.join(", "),
+            timing: registration.timing,
           });
-
-          if (matchingClasses.length > 0) {
-            // Check which classes the student is not already enrolled in
-            const { data: existingEnrollments } = await supabase
-              .from('class_students')
-              .select('class_id')
-              .eq('student_id', studentData.id)
-              .in('class_id', matchingClasses.map(c => c.id));
-
-            const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
-            
-            // Enroll in classes not yet enrolled
-            const newEnrollments = matchingClasses
-              .filter(c => !enrolledClassIds.has(c.id))
-              .map(c => ({
-                class_id: c.id,
-                student_id: studentData.id
-              }));
-
-            if (newEnrollments.length > 0) {
-              await supabase.from('class_students').insert(newEnrollments);
-              console.log(`Auto-enrolled student in ${newEnrollments.length} class(es)`);
-            }
-          }
+          console.log("Auto-enrollment completed");
         }
-      } catch (classEnrollError) {
-        console.error('Error auto-enrolling in classes:', classEnrollError);
-        // Don't fail the whole registration if class enrollment fails
+      } catch (enrollError) {
+        console.error("Auto-enrollment failed:", enrollError);
+        // Don't block registration if auto-enrollment fails
       }
 
       // Update profile
