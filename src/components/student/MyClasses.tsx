@@ -32,7 +32,7 @@ export const MyClasses = () => {
         .from("students")
         .select("id")
         .eq("email", session.user.email)
-        .single();
+        .maybeSingle();
 
       if (!student) return;
 
@@ -57,8 +57,8 @@ export const MyClasses = () => {
           id,
           class_name,
           timing,
-          course_name,
-          level,
+          courses,
+          levels,
           teacher_id,
           teachers (full_name)
         `)
@@ -70,8 +70,8 @@ export const MyClasses = () => {
         id: cls.id,
         class_name: cls.class_name,
         timing: cls.timing,
-        course_name: cls.course_name,
-        level: cls.level || "",
+        course_name: cls.courses?.join(", ") || "N/A",
+        level: cls.levels?.join(", ") || undefined,
         teacher_name: cls.teachers?.full_name || "N/A",
       })) || [];
 
@@ -107,29 +107,36 @@ export const MyClasses = () => {
       <h3 className="text-xl font-semibold">My Classes</h3>
       <div className="grid gap-4">
         {classes.map((classInfo) => (
-          <Card key={classInfo.id} className="p-4 hover:bg-muted/50 transition-colors">
+          <Card key={classInfo.id} className="p-4 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
             <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-semibold text-lg">{classInfo.class_name}</h4>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>{classInfo.timing}</span>
-                  </div>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-lg text-primary">{classInfo.class_name}</h4>
+                <Badge variant="secondary">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {classInfo.timing}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Courses:</span>
+                  <span className="font-medium">{classInfo.course_name}</span>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 text-sm">
-                <BookOpen className="w-4 h-4 text-primary" />
-                <span>
-                  {classInfo.course_name}
-                  {classInfo.level && ` - ${classInfo.level}`}
-                </span>
-              </div>
+                {classInfo.level && (
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-secondary" />
+                    <span className="text-muted-foreground">Levels:</span>
+                    <span className="font-medium">{classInfo.level}</span>
+                  </div>
+                )}
 
-              <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-secondary" />
-                <span>Teacher: {classInfo.teacher_name}</span>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-accent" />
+                  <span className="text-muted-foreground">Teacher:</span>
+                  <span className="font-medium">{classInfo.teacher_name}</span>
+                </div>
               </div>
             </div>
           </Card>

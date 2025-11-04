@@ -25,6 +25,8 @@ interface Teacher {
 interface Student {
   id: string;
   full_name_en: string;
+  program: string;
+  course_level: string;
 }
 
 interface CourseConfig {
@@ -101,10 +103,10 @@ export default function ClassManagement() {
       if (teachersError) throw teachersError;
       setTeachers(teachersData || []);
 
-      // Fetch students
+      // Fetch students with their course info
       const { data: studentsData, error: studentsError } = await supabase
         .from("students")
-        .select("id, full_name_en")
+        .select("id, full_name_en, program, course_level")
         .order("full_name_en");
 
       if (studentsError) throw studentsError;
@@ -460,10 +462,15 @@ export default function ClassManagement() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select students..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-background max-h-[200px]">
+                    <SelectContent className="bg-background max-h-[300px] overflow-y-auto">
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.full_name_en}
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{student.full_name_en}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({student.program} - {student.course_level})
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -472,8 +479,13 @@ export default function ClassManagement() {
                     {selectedStudents.map((studentId) => {
                       const student = students.find((s) => s.id === studentId);
                       return student ? (
-                        <Badge key={studentId} variant="secondary">
-                          {student.full_name_en}
+                        <Badge key={studentId} variant="secondary" className="py-1.5">
+                          <div className="flex flex-col gap-0.5">
+                            <span>{student.full_name_en}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {student.program} - {student.course_level}
+                            </span>
+                          </div>
                           <button
                             onClick={() => toggleStudent(studentId)}
                             className="ml-2 text-xs"
