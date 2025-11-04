@@ -31,7 +31,7 @@ const PaymentMethodSelection = () => {
     registrationData.paymentMethod = selectedMethod;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/terms");
+    navigate("/student/partial-payment-selection");
   };
 
   return (
