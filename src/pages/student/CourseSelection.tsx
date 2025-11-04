@@ -16,11 +16,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
+
+interface LevelOption {
+  id: string;
+  config_key: string;
+  config_value: string;
+  display_order: number;
+}
 
 const CourseSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [levelOptions, setLevelOptions] = useState<LevelOption[]>([]);
   const [branchId, setBranchId] = useState<string | null>(null);
   const { courses, loading } = useFormConfigurations();
   const { filteredOptions } = useBranchFiltering(branchId);
@@ -32,6 +42,24 @@ const CourseSelection = () => {
     setBranchId(registration.branch_id || null);
   }, []);
 
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('form_configurations')
+          .select('*')
+          .eq('config_type', 'level')
+          .eq('is_active', true)
+          .order('display_order');
+        if (error) throw error;
+        setLevelOptions((data || []) as LevelOption[]);
+      } catch (e) {
+        console.error('Failed to load levels', e);
+      }
+    };
+    fetchLevels();
+  }, []);
+
   const toggleCourse = (courseValue: string) => {
     setSelectedCourses(prev => 
       prev.includes(courseValue)
@@ -40,19 +68,28 @@ const CourseSelection = () => {
     );
   };
 
+  const toggleLevel = (levelValue: string) => {
+    setSelectedLevels(prev =>
+      prev.includes(levelValue)
+        ? prev.filter(l => l !== levelValue)
+        : [...prev, levelValue]
+    );
+  };
+
   const handleNext = () => {
-    if (selectedCourses.length === 0) {
-      toast.error("Please select at least one course");
+    if (selectedCourses.length === 0 && selectedLevels.length === 0) {
+      toast.error("Please select at least one option (course or level)");
       return;
     }
 
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    const courseData = {
+    const updated = {
       ...registration,
       courses: selectedCourses,
+      course_level: selectedLevels.join(", "),
     };
-    sessionStorage.setItem("studentRegistration", JSON.stringify(courseData));
-    navigate("/student/level-selection");
+    sessionStorage.setItem("studentRegistration", JSON.stringify(updated));
+    navigate("/student/timing-selection");
   };
 
   // Group courses by category, excluding any entries that look like levels (e.g., level-1)
@@ -94,6 +131,87 @@ const CourseSelection = () => {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* English Program - Levels (from classes and form_configurations) */}
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">English Program (Select your starting level)</Label>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {levelOptions.map((level) => {
+                    const extractLevelKey = (val: string): string | null => {
+                      if (!val) return null;
+                      const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+                      return m ? `level-${m[1]}` : null;
+                    };
+                    const normalize = (str: string) =>
+                      (str || "")
+                        .toLowerCase()
+                        .trim()
+                        .replace(/[\s\-_]/g, "")
+                        .replace(/[أإآا]/g, "ا")
+                        .replace(/[ىي]/g, "ي");
+
+                    const key = extractLevelKey(level.config_key) || extractLevelKey(level.config_value);
+                    const isAvailable = branchId
+                      ? (key
+                          ? filteredOptions.allowedLevelKeys.includes(key)
+                          : filteredOptions.allowedLevels.some((al) => {
+                              const a = normalize(al);
+                              const b = normalize(level.config_value);
+                              return a.includes(b) || b.includes(a);
+                            }))
+                      : true;
+
+                    const item = (
+                      <div
+                        key={level.id}
+                        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                          isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => isAvailable && toggleLevel(level.config_value)}
+                      >
+                        <Checkbox
+                          id={`lvl-${level.id}`}
+                          checked={selectedLevels.includes(level.config_value)}
+                          onCheckedChange={() => isAvailable && toggleLevel(level.config_value)}
+                          disabled={!isAvailable}
+                        />
+                        <label htmlFor={`lvl-${level.id}`} className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                          {level.config_value}
+                        </label>
+                      </div>
+                    );
+
+                    if (!isAvailable) {
+                      return (
+                        <TooltipProvider key={level.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>{item}</TooltipTrigger>
+                            <TooltipContent>
+                              <p>This level is not available for your selected branch.</p>
+                              <p className="text-xs text-muted-foreground">هذا المستوى غير متاح في هذا الفرع.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    }
+
+                    return item;
+                  })}
+                </div>
+                {branchId && (
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Available timings for your branch: {filteredOptions.allowedTimings.join(', ') || '—'}
+                    </p>
+                  </div>
+                )}
+                {selectedLevels.length > 0 && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected: {selectedLevels.length} level(s)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Courses */}
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Your Courses (You can select multiple)</Label>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
