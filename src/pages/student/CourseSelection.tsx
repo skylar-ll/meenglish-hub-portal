@@ -50,7 +50,7 @@ const CourseSelection = () => {
       courses: selectedCourses,
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(courseData));
-    navigate("/student/teacher-selection");
+    navigate("/student/level-selection");
   };
 
   // Group courses by category
@@ -95,7 +95,7 @@ const CourseSelection = () => {
                       <div key={category} className="space-y-2">
                         <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
                         {coursesInCategory.map((course) => {
-                          const isAvailable = !branchId || filteredOptions.allowedPrograms.length === 0 || filteredOptions.allowedPrograms.includes(course.label);
+                          const isAvailable = !branchId || filteredOptions.allowedCourses.length === 0 || filteredOptions.allowedCourses.includes(course.value);
                           const courseItem = (
                             <div 
                               key={course.value} 
@@ -171,9 +171,9 @@ const CourseSelection = () => {
         </Card>
         
         {/* Floating Navigation Button */}
-          <FloatingNavigationButton
+        <FloatingNavigationButton
           onNext={handleNext}
-          onBack={() => navigate("/student/branch-selection")}
+          onBack={() => navigate("/student/signup")}
           nextLabel={t('student.next')}
           backLabel={t('student.back')}
           showBack={true}

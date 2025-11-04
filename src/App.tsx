@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import StudentSignUp from "./pages/student/StudentSignUp";
 import StudentLogin from "./pages/student/StudentLogin";
 import CourseSelection from "./pages/student/CourseSelection";
+import LevelSelection from "./pages/student/LevelSelection";
 import TeacherSelection from "./pages/student/TeacherSelection";
 import TimingSelection from "./pages/student/TimingSelection";
 import CourseDurationSelection from "./pages/student/CourseDurationSelection";
@@ -70,9 +71,10 @@ const App = () => (
           {/* Student Portal Routes */}
           <Route path="/student/login" element={<StudentLogin />} />
           <Route path="/student/signup" element={<StudentSignUp />} />
-          <Route path="/student/course-selection" element={<CourseSelection />} />
-          <Route path="/student/teacher-selection" element={<TeacherSelection />} />
-          <Route path="/student/timing-selection" element={<TimingSelection />} />
+            <Route path="/student/course-selection" element={<CourseSelection />} />
+            <Route path="/student/level-selection" element={<LevelSelection />} />
+            <Route path="/student/teacher-selection" element={<TeacherSelection />} />
+            <Route path="/student/timing-selection" element={<TimingSelection />} />
           <Route path="/student/duration-selection" element={<CourseDurationSelection />} />
           <Route path="/student/payment-selection" element={<PaymentMethodSelection />} />
           <Route path="/student/partial-payment-selection" element={<PartialPaymentSelection />} />

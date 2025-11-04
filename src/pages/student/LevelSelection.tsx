@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,18 +17,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-interface TimingOption {
+interface LevelOption {
   id: string;
   config_key: string;
   config_value: string;
   display_order: number;
 }
 
-const TimingSelection = () => {
+const LevelSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [timingOptions, setTimingOptions] = useState<TimingOption[]>([]);
-  const [selectedTiming, setSelectedTiming] = useState<string>("");
+  const [levelOptions, setLevelOptions] = useState<LevelOption[]>([]);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchId, setBranchId] = useState<string | null>(null);
   const { filteredOptions } = useBranchFiltering(branchId);
@@ -35,41 +36,48 @@ const TimingSelection = () => {
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
     setBranchId(registration.branch_id || null);
-    fetchTimingOptions();
+    fetchLevelOptions();
   }, []);
 
-  const fetchTimingOptions = async () => {
+  const fetchLevelOptions = async () => {
     try {
       const { data, error } = await supabase
         .from('form_configurations')
         .select('*')
-        .eq('config_type', 'timing')
+        .eq('config_type', 'level')
         .eq('is_active', true)
         .order('display_order');
 
       if (error) throw error;
 
-      setTimingOptions(data || []);
+      setLevelOptions(data || []);
     } catch (error: any) {
-      toast.error("Failed to load timing options");
+      toast.error("Failed to load level options");
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleLevel = (levelValue: string) => {
+    setSelectedLevels(prev => 
+      prev.includes(levelValue)
+        ? prev.filter(l => l !== levelValue)
+        : [...prev, levelValue]
+    );
+  };
+
   const handleNext = () => {
-    if (!selectedTiming) {
-      toast.error("Please select a timing");
+    if (selectedLevels.length === 0) {
+      toast.error("Please select at least one level");
       return;
     }
 
-    // Store timing selection
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    registration.timing = selectedTiming;
+    registration.course_level = selectedLevels.join(", ");
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
-    navigate("/student/duration-selection");
+    navigate("/student/timing-selection");
   };
 
   if (loading) {
@@ -86,52 +94,59 @@ const TimingSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/level-selection")}
+            onClick={() => navigate("/student/course-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Select Your Timing
+            Select Your Levels
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Choose your preferred class time
+            Choose the levels you want to study (You can select multiple)
           </p>
         </div>
 
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
             <Label className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Available Time Slots
+              <BookOpen className="w-5 h-5" />
+              Available Levels
             </Label>
             
-            <div className="grid gap-4">
-              {timingOptions.map((timing) => {
-                const isAvailable = !branchId || filteredOptions.allowedTimings.length === 0 || filteredOptions.allowedTimings.includes(timing.config_value);
-                const timingCard = (
-                  <Card
-                    key={timing.id}
-                    className={`p-6 transition-all ${
-                      selectedTiming === timing.config_value
-                        ? "border-primary border-2 bg-primary/5 shadow-lg"
-                        : isAvailable 
-                          ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
-                          : "opacity-50 cursor-not-allowed"
-                    }`}
-                    onClick={() => isAvailable && setSelectedTiming(timing.config_value)}
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+              {levelOptions.map((level) => {
+                const isAvailable = !branchId || filteredOptions.allowedLevels.length === 0 || filteredOptions.allowedLevels.includes(level.config_value);
+                const levelItem = (
+                  <div 
+                    key={level.id}
+                    className={`flex items-center space-x-3 p-4 rounded-lg transition-colors ${
+                      isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                    } ${selectedLevels.includes(level.config_value) ? 'bg-primary/10 border-2 border-primary' : 'border border-border'}`}
+                    onClick={() => isAvailable && toggleLevel(level.config_value)}
                   >
-                    <p className="font-medium text-lg text-center">{timing.config_value}</p>
-                  </Card>
+                    <Checkbox
+                      id={level.id}
+                      checked={selectedLevels.includes(level.config_value)}
+                      onCheckedChange={() => isAvailable && toggleLevel(level.config_value)}
+                      disabled={!isAvailable}
+                    />
+                    <label
+                      htmlFor={level.id}
+                      className={`text-base font-medium flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    >
+                      {level.config_value}
+                    </label>
+                  </div>
                 );
 
                 if (!isAvailable) {
                   return (
-                    <TooltipProvider key={timing.id}>
+                    <TooltipProvider key={level.id}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          {timingCard}
+                          {levelItem}
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>This option is not available for your selected branch.</p>
@@ -142,11 +157,16 @@ const TimingSelection = () => {
                   );
                 }
 
-                return timingCard;
+                return levelItem;
               })}
             </div>
 
-            {/* Hide inline button on mobile when floating button shows */}
+            {selectedLevels.length > 0 && (
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <p className="text-sm font-medium">Selected: {selectedLevels.length} level(s)</p>
+              </div>
+            )}
+
             <Button
               onClick={handleNext}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
@@ -158,10 +178,9 @@ const TimingSelection = () => {
           </div>
         </Card>
         
-        {/* Floating Navigation Button */}
         <FloatingNavigationButton
           onNext={handleNext}
-          onBack={() => navigate("/student/level-selection")}
+          onBack={() => navigate("/student/course-selection")}
           nextLabel={t('student.next')}
           backLabel={t('student.back')}
           showBack={true}
@@ -172,4 +191,4 @@ const TimingSelection = () => {
   );
 };
 
-export default TimingSelection;
+export default LevelSelection;

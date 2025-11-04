@@ -5,9 +5,11 @@ interface FilteredOptions {
   allowedPrograms: string[];
   allowedLevels: string[];
   allowedTimings: string[];
+  allowedCourses: string[];
   allPrograms: string[];
   allLevels: string[];
   allTimings: string[];
+  allCourses: string[];
 }
 
 export const useBranchFiltering = (branchId: string | null) => {
@@ -15,9 +17,11 @@ export const useBranchFiltering = (branchId: string | null) => {
     allowedPrograms: [],
     allowedLevels: [],
     allowedTimings: [],
+    allowedCourses: [],
     allPrograms: [],
     allLevels: [],
     allTimings: [],
+    allCourses: [],
   });
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +35,7 @@ export const useBranchFiltering = (branchId: string | null) => {
       // Fetch ALL classes to get all possible options
       const { data: allClasses, error: allError } = await supabase
         .from("classes")
-        .select("program, levels, timing")
+        .select("program, levels, timing, courses")
         .eq("status", "active");
 
       if (allError) throw allError;
@@ -40,12 +44,16 @@ export const useBranchFiltering = (branchId: string | null) => {
       const allPrograms = new Set<string>();
       const allLevels = new Set<string>();
       const allTimings = new Set<string>();
+      const allCourses = new Set<string>();
 
       (allClasses || []).forEach((cls) => {
         if (cls.program) allPrograms.add(cls.program);
         if (cls.timing) allTimings.add(cls.timing);
         if (cls.levels && Array.isArray(cls.levels)) {
           cls.levels.forEach((level: string) => allLevels.add(level));
+        }
+        if (cls.courses && Array.isArray(cls.courses)) {
+          cls.courses.forEach((course: string) => allCourses.add(course));
         }
       });
 
@@ -54,9 +62,11 @@ export const useBranchFiltering = (branchId: string | null) => {
           allowedPrograms: Array.from(allPrograms),
           allowedLevels: Array.from(allLevels),
           allowedTimings: Array.from(allTimings),
+          allowedCourses: Array.from(allCourses),
           allPrograms: Array.from(allPrograms),
           allLevels: Array.from(allLevels),
           allTimings: Array.from(allTimings),
+          allCourses: Array.from(allCourses),
         });
         setLoading(false);
         return;
@@ -65,7 +75,7 @@ export const useBranchFiltering = (branchId: string | null) => {
       // Fetch classes for the selected branch
       const { data: branchClasses, error } = await supabase
         .from("classes")
-        .select("program, levels, timing")
+        .select("program, levels, timing, courses")
         .eq("branch_id", branchId)
         .eq("status", "active");
 
@@ -74,6 +84,7 @@ export const useBranchFiltering = (branchId: string | null) => {
       const programs = new Set<string>();
       const levels = new Set<string>();
       const timings = new Set<string>();
+      const courses = new Set<string>();
 
       (branchClasses || []).forEach((cls) => {
         if (cls.program) programs.add(cls.program);
@@ -81,15 +92,20 @@ export const useBranchFiltering = (branchId: string | null) => {
         if (cls.levels && Array.isArray(cls.levels)) {
           cls.levels.forEach((level: string) => levels.add(level));
         }
+        if (cls.courses && Array.isArray(cls.courses)) {
+          cls.courses.forEach((course: string) => courses.add(course));
+        }
       });
 
       setFilteredOptions({
         allowedPrograms: Array.from(programs),
         allowedLevels: Array.from(levels),
         allowedTimings: Array.from(timings),
+        allowedCourses: Array.from(courses),
         allPrograms: Array.from(allPrograms),
         allLevels: Array.from(allLevels),
         allTimings: Array.from(allTimings),
+        allCourses: Array.from(allCourses),
       });
     } catch (error) {
       console.error("Error fetching available options:", error);
