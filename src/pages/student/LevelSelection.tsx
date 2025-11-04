@@ -44,7 +44,7 @@ const LevelSelection = () => {
       const { data, error } = await supabase
         .from('form_configurations')
         .select('*')
-        .eq('config_type', 'program')
+        .eq('config_type', 'level')
         .eq('is_active', true)
         .order('display_order');
 
@@ -117,11 +117,37 @@ const LevelSelection = () => {
             
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
               {levelOptions.map((level) => {
-                const matchesByKey = filteredOptions.allowedLevels.some(l =>
-                  typeof l === 'string' && l.toLowerCase().includes(level.config_key.toLowerCase())
-                );
-                const matchesByValue = filteredOptions.allowedLevels.includes(level.config_value);
-                const isAvailable = branchId ? (matchesByKey || matchesByValue) : true;
+                // Normalize for flexible matching (handles Arabic variants and spacing)
+                const normalizeForMatch = (str: string) =>
+                  (str || "")
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[\s\-_]/g, '')
+                    .replace(/[أإآا]/g, 'ا')
+                    .replace(/[ىي]/g, 'ي');
+
+                const isAvailable = branchId
+                  ? filteredOptions.allowedLevels.some((allowedLevel) => {
+                      const normalizedAllowed = normalizeForMatch(allowedLevel);
+                      const normalizedKey = normalizeForMatch(level.config_key);
+                      const normalizedValue = normalizeForMatch(level.config_value);
+                      const matches =
+                        normalizedAllowed.includes(normalizedKey) ||
+                        normalizedAllowed.includes(normalizedValue) ||
+                        normalizedKey.includes(normalizedAllowed) ||
+                        normalizedValue.includes(normalizedAllowed);
+
+                      console.log(`🔍 Level match for "${level.config_value}":`, {
+                        allowedLevel,
+                        normalizedAllowed,
+                        normalizedKey,
+                        normalizedValue,
+                        matches,
+                      });
+
+                      return matches;
+                    })
+                  : true;
                 const levelItem = (
                   <div 
                     key={level.id}
