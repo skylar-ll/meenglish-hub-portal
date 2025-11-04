@@ -117,7 +117,11 @@ const LevelSelection = () => {
             
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
               {levelOptions.map((level) => {
-                const isAvailable = !branchId || filteredOptions.allowedLevels.length === 0 || filteredOptions.allowedLevels.includes(level.config_value);
+                const matchesByKey = filteredOptions.allowedLevels.some(l =>
+                  typeof l === 'string' && l.toLowerCase().includes(level.config_key.toLowerCase())
+                );
+                const matchesByValue = filteredOptions.allowedLevels.includes(level.config_value);
+                const isAvailable = branchId ? (matchesByKey || matchesByValue) : true;
                 const levelItem = (
                   <div 
                     key={level.id}
