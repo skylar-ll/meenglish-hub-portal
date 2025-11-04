@@ -79,7 +79,7 @@ const App = () => (
           <Route path="/student/payment-selection" element={<PaymentMethodSelection />} />
           <Route path="/student/partial-payment-selection" element={<PartialPaymentSelection />} />
           <Route path="/student/terms" element={<TermsAndConditions />} />
-          <Route path="/student/billing" element={<BillingForm />} />
+          <Route path="/student/billing-form" element={<BillingForm />} />
           <Route path="/student/payment" element={<Payment />} />
           <Route path="/student/course" element={<CoursePage />} />
           <Route path="/student/attendance" element={<StudentAttendance />} />
