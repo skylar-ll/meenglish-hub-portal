@@ -201,6 +201,21 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       return;
     }
 
+    // Validate next payment date if there's remaining balance
+    const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+    const durationMonths = formData.customDuration 
+      ? parseInt(formData.customDuration) 
+      : parseInt(formData.courseDuration);
+    const totalFee = pricing?.price || (durationMonths * 500);
+    const discountPercent = 10;
+    const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
+    const remainingBalance = feeAfterDiscount - partialPaymentAmount;
+
+    if (remainingBalance > 0 && !nextPaymentDate) {
+      toast.error("Please select when you plan to pay the remaining balance");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -314,6 +329,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           subscription_status: "active",
           course_duration_months: durationMonths,
           timing: formData.timing,
+          next_payment_date: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
         })
         .select()
         .single();
@@ -411,6 +427,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         language: 'en',
         first_payment: partialPaymentAmount,
         second_payment: feeAfterDiscount - partialPaymentAmount,
+        payment_deadline: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
       };
 
       const { data: billing, error: billingError } = await supabase
