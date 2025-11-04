@@ -31,7 +31,7 @@ const PaymentMethodSelection = () => {
     registrationData.paymentMethod = selectedMethod;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/partial-payment-selection");
+    navigate("/student/terms");
   };
 
   return (
@@ -40,7 +40,7 @@ const PaymentMethodSelection = () => {
         <div className="mb-8 text-center animate-fade-in">
           <Button
             variant="ghost"
-            onClick={() => navigate("/student/branch-selection")}
+            onClick={() => navigate("/student/duration-selection")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

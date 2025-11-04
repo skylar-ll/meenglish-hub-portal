@@ -65,7 +65,7 @@ const TermsAndConditions = () => {
     registrationData.agreedToTerms = true;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/billing");
+    navigate("/student/partial-payment-selection");
   };
 
   return (

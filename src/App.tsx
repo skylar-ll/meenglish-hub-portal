@@ -14,7 +14,6 @@ import CourseSelection from "./pages/student/CourseSelection";
 import TeacherSelection from "./pages/student/TeacherSelection";
 import TimingSelection from "./pages/student/TimingSelection";
 import CourseDurationSelection from "./pages/student/CourseDurationSelection";
-import BranchSelection from "./pages/student/BranchSelection";
 import PaymentMethodSelection from "./pages/student/PaymentMethodSelection";
 import PartialPaymentSelection from "./pages/student/PartialPaymentSelection";
 import TermsAndConditions from "./pages/student/TermsAndConditions";
@@ -75,10 +74,9 @@ const App = () => (
           <Route path="/student/teacher-selection" element={<TeacherSelection />} />
           <Route path="/student/timing-selection" element={<TimingSelection />} />
           <Route path="/student/duration-selection" element={<CourseDurationSelection />} />
-          <Route path="/student/branch-selection" element={<BranchSelection />} />
           <Route path="/student/payment-selection" element={<PaymentMethodSelection />} />
           <Route path="/student/partial-payment-selection" element={<PartialPaymentSelection />} />
-          <Route path="/student/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/student/terms" element={<TermsAndConditions />} />
           <Route path="/student/billing" element={<BillingForm />} />
           <Route path="/student/payment" element={<Payment />} />
           <Route path="/student/course" element={<CoursePage />} />

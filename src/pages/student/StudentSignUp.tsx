@@ -27,9 +27,12 @@ const StudentSignUp = () => {
     email: "",
     id: "",
     password: "",
+    branch: "",
     countryCode1: "+966",
     countryCode2: "+966",
   });
+
+  const [branches, setBranches] = useState<Array<{ id: string; name_en: string; name_ar: string }>>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -53,6 +56,19 @@ const StudentSignUp = () => {
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Auto-translate Arabic name to English
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      const { data } = await supabase
+        .from('branches')
+        .select('id, name_en, name_ar')
+        .order('name_en');
+      if (data) setBranches(data);
+    };
+    fetchBranches();
+  }, []);
 
   // Auto-translate Arabic name to English
   useEffect(() => {
@@ -165,17 +181,24 @@ const StudentSignUp = () => {
         }
       }
 
+      // Validate branch selection
+      if (!formData.branch) {
+        toast.error("Please select a branch");
+        return;
+      }
+
       // Store registration data WITHOUT password in sessionStorage
       const { password, ...dataWithoutPassword } = validatedData;
       sessionStorage.setItem("studentRegistration", JSON.stringify({
         ...dataWithoutPassword,
+        branch: formData.branch,
         userId: authData.user.id, // Store user ID for later use
       }));
       
       toast.success("Account created successfully! Please complete your registration.");
       
-      // Navigate to branch selection
-      navigate("/student/branch-selection");
+      // Navigate to course selection (skip separate branch step)
+      navigate("/student/course-selection");
     } catch (error: any) {
       if (error.errors) {
         toast.error(error.errors[0].message);
@@ -347,6 +370,22 @@ const StudentSignUp = () => {
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="branch">{getFieldLabel('branch')} / الفرع *</Label>
+              <Select value={formData.branch} onValueChange={(value) => handleInputChange("branch", value)}>
+                <SelectTrigger id="branch">
+                  <SelectValue placeholder="Select Branch / اختر الفرع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.name_en}>
+                      {branch.name_en} - {branch.name_ar}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Keep inline button for visual consistency, but hide on mobile when floating button shows */}
