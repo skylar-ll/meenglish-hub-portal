@@ -207,13 +207,13 @@ const AdminDashboard = () => {
         <Card className="p-6 mb-6">
           <div className="flex flex-wrap gap-3 justify-center">
             <Button 
-              onClick={() => navigate("/admin/class-enrollments")}
+              onClick={() => navigate("/admin/classes")}
               variant="default"
               className="gap-2 bg-gradient-to-r from-primary to-accent"
               size="lg"
             >
-              <BookOpen className="w-5 h-5" />
-              Class Enrollments
+              <GraduationCap className="w-5 h-5" />
+              Classes
             </Button>
             <Button 
               onClick={() => setShowAddNewStudentModal(true)}

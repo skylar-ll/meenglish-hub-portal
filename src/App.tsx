@@ -42,6 +42,7 @@ import AdminStudentReports from "./pages/admin/StudentReports";
 import StudentManagement from "./pages/admin/StudentManagement";
 import CoursePricingManagement from "./pages/admin/CoursePricingManagement";
 import ClassEnrollmentManagement from "./pages/admin/ClassEnrollmentManagement";
+import ClassManagement from "./pages/admin/ClassManagement";
 
 // Student Reports
 import StudentReports from "./pages/student/StudentReports";
@@ -103,6 +104,7 @@ const App = () => (
           <Route path="/admin/course-pricing" element={<CoursePricingManagement />} />
           <Route path="/admin/billing" element={<AdminBilling />} />
           <Route path="/admin/class-enrollments" element={<ClassEnrollmentManagement />} />
+          <Route path="/admin/classes" element={<ClassManagement />} />
           
           {/* Student Reports */}
           <Route path="/student/reports" element={<StudentReports />} />
