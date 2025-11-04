@@ -103,6 +103,16 @@ const CourseSelection = () => {
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
 
+  // English levels: prefer configured list, fallback to classes-derived allowed levels
+  const englishLevelOptions: LevelOption[] = levelOptions.length
+    ? levelOptions
+    : (filteredOptions.allowedLevels || []).map((v, i) => ({
+        id: `fallback-${i}`,
+        config_key: v,
+        config_value: v,
+        display_order: i,
+      }));
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <div className="container max-w-2xl mx-auto py-8">
@@ -135,7 +145,7 @@ const CourseSelection = () => {
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">English Program (Select your starting level)</Label>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                  {levelOptions.map((level) => {
+                  {englishLevelOptions.map((level) => {
                     const extractLevelKey = (val: string): string | null => {
                       if (!val) return null;
                       const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
