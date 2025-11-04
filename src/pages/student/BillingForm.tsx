@@ -393,28 +393,51 @@ const BillingForm = () => {
 
       // Auto-enroll student in matching classes based on branch, program, levels, timing
       try {
+        console.log("🔍 Auto-enrollment data:", {
+          branch_id: registration.branch_id,
+          courses: registration.courses,
+          selectedLevels: registration.selectedLevels,
+          timing: registration.timing
+        });
+
         if (registration.branch_id && registration.courses && registration.selectedLevels && registration.timing) {
-          const { data: matchingClasses } = await supabase
+          const { data: matchingClasses, error: classError } = await supabase
             .from("classes")
-            .select("id, program, levels, timing, start_date")
+            .select("id, program, levels, timing, start_date, class_name")
             .eq("branch_id", registration.branch_id)
             .eq("timing", registration.timing)
             .eq("status", "active");
+
+          console.log("📚 Matching classes found:", matchingClasses);
+          if (classError) console.error("Class query error:", classError);
 
           if (matchingClasses && matchingClasses.length > 0) {
             const studentCourses = Array.isArray(registration.courses) 
               ? registration.courses 
               : [registration.courses];
-            const studentLevels = registration.selectedLevels;
+            const studentLevels = Array.isArray(registration.selectedLevels)
+              ? registration.selectedLevels
+              : [registration.selectedLevels];
+
+            console.log("👤 Student selection:", { studentCourses, studentLevels });
 
             // Filter classes that match program and have overlapping levels
             const eligibleClasses = matchingClasses.filter(cls => {
-              const programMatch = studentCourses.includes(cls.program);
+              const programMatch = cls.program && studentCourses.some(course => 
+                course.toLowerCase() === cls.program.toLowerCase() ||
+                cls.program.toLowerCase().includes(course.toLowerCase()) ||
+                course.toLowerCase().includes(cls.program.toLowerCase())
+              );
               const levelMatch = cls.levels && cls.levels.some(level => 
                 studentLevels.includes(level)
               );
+              
+              console.log(`🔎 Class "${cls.class_name}": program=${cls.program}, levels=${cls.levels}, programMatch=${programMatch}, levelMatch=${levelMatch}`);
+              
               return programMatch && levelMatch;
             });
+
+            console.log("✅ Eligible classes for enrollment:", eligibleClasses);
 
             if (eligibleClasses.length > 0) {
               // Enroll in each eligible class
@@ -427,16 +450,30 @@ const BillingForm = () => {
                 .from("enrollments")
                 .insert(enrollments);
 
-              if (!enrollError) {
+              if (enrollError) {
+                console.error("❌ Enrollment error:", enrollError);
+              } else {
                 console.log(`✅ Auto-enrolled student in ${eligibleClasses.length} class(es)`);
                 toast.success(`Enrollment complete! You've been added to ${eligibleClasses.length} class(es).`);
               }
+            } else {
+              console.warn("⚠️ No eligible classes found for auto-enrollment");
+              toast.warning("No matching classes found. Please contact admin to enroll.");
             }
+          } else {
+            console.warn("⚠️ No active classes found with matching branch and timing");
           }
+        } else {
+          console.warn("⚠️ Missing required data for auto-enrollment:", {
+            hasBranch: !!registration.branch_id,
+            hasCourses: !!registration.courses,
+            hasLevels: !!registration.selectedLevels,
+            hasTiming: !!registration.timing
+          });
         }
       } catch (enrollError) {
-        console.error("Auto-enrollment failed:", enrollError);
-        // Don't block registration if auto-enrollment fails
+        console.error("❌ Auto-enrollment failed:", enrollError);
+        toast.error("Auto-enrollment failed. Please contact admin.");
       }
 
       // Update profile
