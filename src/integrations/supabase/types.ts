@@ -146,6 +146,33 @@ export type Database = {
         }
         Relationships: []
       }
+      branches: {
+        Row: {
+          created_at: string
+          id: string
+          is_online: boolean
+          name_ar: string
+          name_en: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          name_ar: string
+          name_en: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          name_ar?: string
+          name_en?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_students: {
         Row: {
           class_id: string
@@ -184,36 +211,55 @@ export type Database = {
       }
       classes: {
         Row: {
+          branch_id: string | null
           class_name: string
           courses: string[] | null
           created_at: string
           id: string
           levels: string[] | null
+          program: string | null
+          start_date: string | null
+          status: string | null
           teacher_id: string
           timing: string
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           class_name: string
           courses?: string[] | null
           created_at?: string
           id?: string
           levels?: string[] | null
+          program?: string | null
+          start_date?: string | null
+          status?: string | null
           teacher_id: string
           timing: string
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           class_name?: string
           courses?: string[] | null
           created_at?: string
           id?: string
           levels?: string[] | null
+          program?: string | null
+          start_date?: string | null
+          status?: string | null
           teacher_id?: string
           timing?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_teacher_id_fkey"
             columns: ["teacher_id"]
@@ -246,6 +292,42 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      enrollments: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       form_configurations: {
         Row: {
@@ -781,6 +863,7 @@ export type Database = {
           amount_remaining: number | null
           billing_id: string | null
           branch: string
+          branch_id: string | null
           class_type: string
           course_duration_months: number | null
           course_level: string | null
@@ -813,6 +896,7 @@ export type Database = {
           amount_remaining?: number | null
           billing_id?: string | null
           branch: string
+          branch_id?: string | null
           class_type: string
           course_duration_months?: number | null
           course_level?: string | null
@@ -845,6 +929,7 @@ export type Database = {
           amount_remaining?: number | null
           billing_id?: string | null
           branch?: string
+          branch_id?: string | null
           class_type?: string
           course_duration_months?: number | null
           course_level?: string | null
@@ -878,6 +963,13 @@ export type Database = {
             columns: ["billing_id"]
             isOneToOne: false
             referencedRelation: "billing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
@@ -952,6 +1044,30 @@ export type Database = {
           phone?: string | null
           student_count?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      terms_and_conditions: {
+        Row: {
+          content_ar: string
+          content_en: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content_ar: string
+          content_en: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content_ar?: string
+          content_en?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

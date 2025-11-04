@@ -97,7 +97,7 @@ const PartialPaymentSelection = () => {
     }
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/billing-form");
+    navigate("/student/terms-and-conditions");
   };
 
   if (loading || !billingData) {

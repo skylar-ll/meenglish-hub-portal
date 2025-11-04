@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, BookOpen, User } from "lucide-react";
+import { Clock, Users, BookOpen, User, Calendar, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +12,8 @@ interface ClassInfo {
   course_name: string;
   level?: string;
   teacher_name: string;
+  start_date?: string;
+  branch_name?: string;
 }
 
 export const MyClasses = () => {
@@ -37,20 +39,20 @@ export const MyClasses = () => {
       if (!student) return;
 
       // Get student's classes
-      const { data: classStudents, error: classStudentsError } = await supabase
-        .from("class_students")
+      const { data: enrollments, error: enrollmentsError } = await supabase
+        .from("enrollments")
         .select("class_id")
         .eq("student_id", student.id);
 
-      if (classStudentsError) throw classStudentsError;
+      if (enrollmentsError) throw enrollmentsError;
 
-      if (!classStudents || classStudents.length === 0) {
+      if (!enrollments || enrollments.length === 0) {
         setLoading(false);
         return;
       }
 
       // Get class details
-      const classIds = classStudents.map((cs) => cs.class_id);
+      const classIds = enrollments.map((e) => e.class_id);
       const { data: classesData, error: classesError } = await supabase
         .from("classes")
         .select(`
@@ -60,6 +62,9 @@ export const MyClasses = () => {
           courses,
           levels,
           teacher_id,
+          start_date,
+          branch_id,
+          branches (name_en, name_ar),
           teachers (full_name)
         `)
         .in("id", classIds);
@@ -73,6 +78,8 @@ export const MyClasses = () => {
         course_name: cls.courses?.join(", ") || "N/A",
         level: cls.levels?.join(", ") || undefined,
         teacher_name: cls.teachers?.full_name || "N/A",
+        start_date: cls.start_date || undefined,
+        branch_name: cls.branches?.name_en || "N/A",
       })) || [];
 
       setClasses(formattedClasses);
@@ -137,6 +144,22 @@ export const MyClasses = () => {
                   <span className="text-muted-foreground">Teacher:</span>
                   <span className="font-medium">{classInfo.teacher_name}</span>
                 </div>
+
+                {classInfo.branch_name && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">Branch:</span>
+                    <span className="font-medium">{classInfo.branch_name}</span>
+                  </div>
+                )}
+
+                {classInfo.start_date && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-secondary" />
+                    <span className="text-muted-foreground">Start Date:</span>
+                    <span className="font-medium">{new Date(classInfo.start_date).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </Card>

@@ -174,8 +174,8 @@ const StudentSignUp = () => {
       
       toast.success("Account created successfully! Please complete your registration.");
       
-      // Navigate without password - user is now authenticated
-      navigate("/student/course-selection");
+      // Navigate to branch selection
+      navigate("/student/branch-selection");
     } catch (error: any) {
       if (error.errors) {
         toast.error(error.errors[0].message);

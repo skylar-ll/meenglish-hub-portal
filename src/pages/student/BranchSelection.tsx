@@ -1,19 +1,48 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { supabase } from "@/integrations/supabase/client";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
+
+interface Branch {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  is_online: boolean;
+}
 
 const BranchSelection = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [selectedBranch, setSelectedBranch] = useState("");
-  const { branches, loading } = useFormConfigurations();
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBranches();
+  }, []);
+
+  const fetchBranches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("branches")
+        .select("*")
+        .order("name_en");
+
+      if (error) throw error;
+      setBranches(data || []);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+      toast.error("Failed to load branches");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNext = () => {
     if (!selectedBranch) {
@@ -29,10 +58,10 @@ const BranchSelection = () => {
     }
 
     const registrationData = JSON.parse(storedData);
-    registrationData.branch = selectedBranch;
+    registrationData.branch_id = selectedBranch;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
-    navigate("/student/payment-selection");
+    navigate("/student/duration-selection");
   };
 
   return (
@@ -48,10 +77,10 @@ const BranchSelection = () => {
             {t('student.back')}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Branch
+            {language === "ar" ? "الفرع" : "Branch"}
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Select your preferred branch location
+            {language === "ar" ? "اختر فرعك المفضل" : "Select your preferred branch location"}
           </p>
         </div>
 
@@ -67,15 +96,17 @@ const BranchSelection = () => {
               <div className="grid gap-4">
                 {branches.map((branch) => (
                   <Card
-                    key={branch.value}
+                    key={branch.id}
                     className={`p-6 cursor-pointer transition-all ${
-                      selectedBranch === branch.value
+                      selectedBranch === branch.id
                         ? "border-primary border-2 bg-primary/5 shadow-lg"
                         : "hover:bg-muted/50 hover:shadow-md"
                     }`}
-                    onClick={() => setSelectedBranch(branch.value)}
+                    onClick={() => setSelectedBranch(branch.id)}
                   >
-                    <p className="font-medium text-lg">{branch.label}</p>
+                    <p className="font-medium text-lg">
+                      {language === "ar" ? branch.name_ar : branch.name_en}
+                    </p>
                   </Card>
                 ))}
               </div>
@@ -97,7 +128,7 @@ const BranchSelection = () => {
         {/* Floating Navigation Button */}
         <FloatingNavigationButton
           onNext={handleNext}
-          onBack={() => navigate("/student/duration-selection")}
+          onBack={() => navigate("/student/signup")}
           nextLabel={t('student.next')}
           backLabel={t('student.back')}
           disabled={!selectedBranch}

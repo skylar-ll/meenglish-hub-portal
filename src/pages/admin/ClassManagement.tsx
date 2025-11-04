@@ -29,6 +29,12 @@ interface Student {
   course_level: string;
 }
 
+interface Branch {
+  id: string;
+  name_en: string;
+  name_ar: string;
+}
+
 interface CourseConfig {
   label: string;
   category: string;
@@ -40,6 +46,9 @@ interface ExistingClass {
   timing: string;
   courses: string[];
   levels: string[];
+  program?: string;
+  start_date?: string;
+  branch?: { name_en: string };
   teacher: {
     id: string;
     full_name: string;
@@ -52,6 +61,7 @@ export default function ClassManagement() {
   const [loading, setLoading] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [courses, setCourses] = useState<CourseConfig[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
   const [timings, setTimings] = useState<string[]>([]);
@@ -59,11 +69,14 @@ export default function ClassManagement() {
 
   // Form state
   const [className, setClassName] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedTiming, setSelectedTiming] = useState("");
+  const [startDate, setStartDate] = useState("");
 
   useEffect(() => {
     checkAdminAccess();
@@ -94,6 +107,15 @@ export default function ClassManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Fetch branches
+      const { data: branchesData, error: branchesError } = await supabase
+        .from("branches")
+        .select("*")
+        .order("name_en");
+
+      if (branchesError) throw branchesError;
+      setBranches(branchesData || []);
+
       // Fetch teachers
       const { data: teachersData, error: teachersError } = await supabase
         .from("teachers")
@@ -166,7 +188,11 @@ export default function ClassManagement() {
           timing,
           courses,
           levels,
+          program,
+          start_date,
+          branch_id,
           teacher_id,
+          branches (name_en),
           teachers!inner (
             id,
             full_name
@@ -179,7 +205,7 @@ export default function ClassManagement() {
       const classesWithCounts = await Promise.all(
         (classesData || []).map(async (cls: any) => {
           const { data: enrollments } = await supabase
-            .from("class_students")
+            .from("enrollments")
             .select("id")
             .eq("class_id", cls.id);
 
@@ -189,6 +215,9 @@ export default function ClassManagement() {
             timing: cls.timing,
             courses: cls.courses || [],
             levels: cls.levels || [],
+            program: cls.program,
+            start_date: cls.start_date,
+            branch: cls.branches,
             teacher: {
               id: cls.teachers.id,
               full_name: cls.teachers.full_name,
@@ -233,6 +262,14 @@ export default function ClassManagement() {
       toast.error("Please enter a class name");
       return;
     }
+    if (!selectedBranch) {
+      toast.error("Please select a branch");
+      return;
+    }
+    if (!selectedProgram) {
+      toast.error("Please select a program");
+      return;
+    }
     if (selectedCourses.length === 0) {
       toast.error("Please select at least one course");
       return;
@@ -249,6 +286,10 @@ export default function ClassManagement() {
       toast.error("Please select a timing");
       return;
     }
+    if (!startDate) {
+      toast.error("Please select a start date");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -257,10 +298,14 @@ export default function ClassManagement() {
         .from("classes")
         .insert({
           class_name: className,
+          branch_id: selectedBranch,
+          program: selectedProgram,
           courses: selectedCourses,
           levels: selectedLevels,
           teacher_id: selectedTeacher,
           timing: selectedTiming,
+          start_date: startDate,
+          status: 'active',
         })
         .select()
         .single();
@@ -275,7 +320,7 @@ export default function ClassManagement() {
         }));
 
         const { error: enrollError } = await supabase
-          .from("class_students")
+          .from("enrollments")
           .insert(enrollments);
 
         if (enrollError) throw enrollError;
@@ -285,11 +330,14 @@ export default function ClassManagement() {
       
       // Reset form
       setClassName("");
+      setSelectedBranch("");
+      setSelectedProgram("");
       setSelectedCourses([]);
       setSelectedLevels([]);
       setSelectedTeacher("");
       setSelectedStudents([]);
       setSelectedTiming("");
+      setStartDate("");
       
       // Refresh classes list
       fetchExistingClasses();
@@ -358,6 +406,48 @@ export default function ClassManagement() {
                     placeholder="e.g., English Level 1 - Morning Group"
                     value={className}
                     onChange={(e) => setClassName(e.target.value)}
+                  />
+                </div>
+
+                {/* Branch */}
+                <div>
+                  <Label>Branch</Label>
+                  <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Program */}
+                <div>
+                  <Label>Program</Label>
+                  <Select value={selectedProgram} onValueChange={setSelectedProgram}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select program..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Chinese">Chinese</SelectItem>
+                      <SelectItem value="Arabic for Non-Speakers">Arabic for Non-Speakers</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Start Date */}
+                <div>
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
 
@@ -525,9 +615,24 @@ export default function ClassManagement() {
                         <p className="text-sm text-muted-foreground mb-2">
                           Teacher: {cls.teacher.full_name}
                         </p>
+                        {cls.branch?.name_en && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Branch: {cls.branch.name_en}
+                          </p>
+                        )}
+                        {cls.program && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Program: {cls.program}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground mb-2">
                           Timing: {cls.timing}
                         </p>
+                        {cls.start_date && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Start Date: {new Date(cls.start_date).toLocaleDateString()}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground mb-2">
                           Students: {cls.student_count}
                         </p>
