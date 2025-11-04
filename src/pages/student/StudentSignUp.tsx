@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ const StudentSignUp = () => {
   const [formData, setFormData] = useState({
     fullNameAr: "",
     fullNameEn: "",
+    gender: "",
     phone1: "",
     phone2: "",
     email: "",
@@ -241,6 +243,24 @@ const StudentSignUp = () => {
               {isTranslating && (
                 <p className="text-xs text-muted-foreground">{t('translation.translating')}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>{getFieldLabel('gender')} *</Label>
+              <RadioGroup
+                value={formData.gender}
+                onValueChange={(value) => handleInputChange("gender", value)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="male" id="male" />
+                  <Label htmlFor="male" className="font-normal cursor-pointer">Male</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="female" id="female" />
+                  <Label htmlFor="female" className="font-normal cursor-pointer">Female</Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
