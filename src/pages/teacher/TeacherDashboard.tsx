@@ -61,9 +61,9 @@ const TeacherDashboard = () => {
       if (teacherData) {
         setTeacherName(teacherData.full_name);
 
-        // Fetch students assigned to this teacher via junction table
-        const { data: assignedStudents } = await supabase
-          .from("student_teachers")
+        // Fetch students enrolled in this teacher's classes
+        const { data: enrolledStudents } = await supabase
+          .from("class_students")
           .select(`
             student_id,
             students (
@@ -76,31 +76,29 @@ const TeacherDashboard = () => {
               course_level,
               total_grade,
               email
+            ),
+            classes!inner (
+              id,
+              teacher_id,
+              courses,
+              levels
             )
           `)
-          .eq("teacher_id", teacherData.id);
+          .eq("classes.teacher_id", teacherData.id);
 
-        // Get teacher's courses to filter student courses
-        const teacherCourses = teacherData.courses_assigned?.toLowerCase().split(',').map(c => c.trim()) || [];
-
-        // Extract student data and filter courses to show only ones this teacher teaches
-        const studentsData = assignedStudents?.map((item: any) => {
-          const allStudentCourses = (item.students.program || item.students.class_type || "").split(',').map(c => c.trim());
-          
-          // Filter to only courses this teacher teaches
-          const matchingCourses = allStudentCourses.filter(studentCourse => {
-            const studentCourseLower = studentCourse.toLowerCase();
-            return teacherCourses.some(tc => 
-              studentCourseLower.includes(tc) || tc.includes(studentCourseLower)
-            );
-          });
-
-          return {
-            ...item.students,
-            courses_with_teacher: matchingCourses.join(', ') || 'No matching courses'
-          };
-        }) || [];
+        // Extract unique students (a student might be in multiple classes)
+        const uniqueStudentsMap = new Map();
+        enrolledStudents?.forEach((item: any) => {
+          if (!uniqueStudentsMap.has(item.student_id)) {
+            uniqueStudentsMap.set(item.student_id, {
+              ...item.students,
+              enrolled_courses: item.classes.courses || [],
+              enrolled_levels: item.classes.levels || []
+            });
+          }
+        });
         
+        const studentsData = Array.from(uniqueStudentsMap.values());
         setStudents(studentsData);
       } else {
         // If no teacher record, use email as name
@@ -299,11 +297,31 @@ const TeacherDashboard = () => {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Courses</p>
-                      <p className="font-medium">{student.courses_with_teacher}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {student.enrolled_courses && student.enrolled_courses.length > 0 ? (
+                          student.enrolled_courses.map((course: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {course}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">N/A</span>
+                        )}
+                      </div>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Level</p>
-                      <p className="font-medium">{student.course_level || "Level 1"}</p>
+                      <p className="text-muted-foreground">Levels</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {student.enrolled_levels && student.enrolled_levels.length > 0 ? (
+                          student.enrolled_levels.map((level: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {level}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">N/A</span>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Grade</p>
