@@ -348,70 +348,105 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Automatically enroll student in matching classes based on courses and levels
+      // Automatically enroll student in matching classes based on branch, timing, program, and levels
       try {
-        const studentCourses = formData.courses;
-        
-        // Find all classes that match any of the student's courses OR levels
-        const { data: allClasses } = await supabase
-          .from('classes')
-          .select('id, courses, levels');
+        console.log("🔍 Auto-enrollment for previous student:", {
+          branch: formData.branch,
+          timing: formData.timing,
+          courses: formData.courses
+        });
 
-        if (allClasses && allClasses.length > 0) {
-          // Filter classes where any of the student's courses matches any of the class's courses OR levels
-          const matchingClasses = allClasses.filter(cls => {
-            // Normalize student course for matching (remove spaces, hyphens, lowercase)
-            const normalizeForMatch = (str: string) => 
-              str.toLowerCase().replace(/[\s-]/g, '');
-            
-            // Check if any student course matches any class course
-            const courseMatch = cls.courses && cls.courses.length > 0 && 
-              studentCourses.some(studentCourse => {
-                const normalizedStudentCourse = normalizeForMatch(studentCourse);
-                return cls.courses.some(classCourse => 
-                  normalizeForMatch(classCourse).includes(normalizedStudentCourse)
+        if (formData.branch && formData.timing && formData.courses.length > 0) {
+          // Get branch_id from branch name
+          const { data: branchData } = await supabase
+            .from('branches')
+            .select('id')
+            .eq('name_en', formData.branch)
+            .single();
+
+          if (branchData) {
+            const { data: matchingClasses, error: classError } = await supabase
+              .from('classes')
+              .select('id, program, levels, timing, class_name, courses')
+              .eq('branch_id', branchData.id)
+              .eq('timing', formData.timing)
+              .eq('status', 'active');
+
+            console.log("📚 Matching classes found:", matchingClasses);
+            if (classError) console.error("Class query error:", classError);
+
+            if (matchingClasses && matchingClasses.length > 0) {
+              const studentCourses = formData.courses;
+
+              // Filter classes that match program/courses OR levels
+              const eligibleClasses = matchingClasses.filter(cls => {
+                // Match by program
+                const programMatch = cls.program && studentCourses.some(course => 
+                  course.toLowerCase() === cls.program.toLowerCase() ||
+                  cls.program.toLowerCase().includes(course.toLowerCase()) ||
+                  course.toLowerCase().includes(cls.program.toLowerCase())
                 );
-              });
-            
-            // Check if any student course matches any class level
-            const levelMatch = cls.levels && cls.levels.length > 0 && 
-              studentCourses.some(studentCourse => {
-                const normalizedStudentCourse = normalizeForMatch(studentCourse);
-                return cls.levels.some(classLevel => 
-                  normalizeForMatch(classLevel).includes(normalizedStudentCourse)
+
+                // Match by class courses
+                const courseMatch = cls.courses && cls.courses.some(classCourse =>
+                  studentCourses.some(studentCourse =>
+                    classCourse.toLowerCase() === studentCourse.toLowerCase() ||
+                    classCourse.toLowerCase().includes(studentCourse.toLowerCase()) ||
+                    studentCourse.toLowerCase().includes(classCourse.toLowerCase())
+                  )
                 );
+
+                // Match by levels
+                const levelMatch = cls.levels && cls.levels.some(level =>
+                  studentCourses.some(course =>
+                    course.toLowerCase().includes(level.toLowerCase()) ||
+                    level.toLowerCase().includes(course.toLowerCase())
+                  )
+                );
+
+                console.log(`🔎 Class "${cls.class_name}": programMatch=${programMatch}, courseMatch=${courseMatch}, levelMatch=${levelMatch}`);
+                
+                return programMatch || courseMatch || levelMatch;
               });
-            
-            return courseMatch || levelMatch;
-          });
 
-          if (matchingClasses.length > 0) {
-            // Check which classes the student is not already enrolled in
-            const { data: existingEnrollments } = await supabase
-              .from('class_students')
-              .select('class_id')
-              .eq('student_id', studentData.id)
-              .in('class_id', matchingClasses.map(c => c.id));
+              console.log("✅ Eligible classes for enrollment:", eligibleClasses);
 
-            const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
-            
-            // Enroll in classes not yet enrolled
-            const newEnrollments = matchingClasses
-              .filter(c => !enrolledClassIds.has(c.id))
-              .map(c => ({
-                class_id: c.id,
-                student_id: studentData.id
-              }));
+              if (eligibleClasses.length > 0) {
+                // Check existing enrollments
+                const { data: existingEnrollments } = await supabase
+                  .from('enrollments')
+                  .select('class_id')
+                  .eq('student_id', studentData.id);
 
-            if (newEnrollments.length > 0) {
-              await supabase.from('class_students').insert(newEnrollments);
-              console.log(`Auto-enrolled student in ${newEnrollments.length} class(es)`);
+                const enrolledClassIds = new Set(existingEnrollments?.map(e => e.class_id) || []);
+                
+                // Enroll in new classes only
+                const newEnrollments = eligibleClasses
+                  .filter(cls => !enrolledClassIds.has(cls.id))
+                  .map(cls => ({
+                    student_id: studentData.id,
+                    class_id: cls.id
+                  }));
+
+                if (newEnrollments.length > 0) {
+                  const { error: enrollError } = await supabase
+                    .from('enrollments')
+                    .insert(newEnrollments);
+
+                  if (enrollError) {
+                    console.error("❌ Enrollment error:", enrollError);
+                  } else {
+                    console.log(`✅ Auto-enrolled previous student in ${newEnrollments.length} class(es)`);
+                  }
+                }
+              } else {
+                console.warn("⚠️ No eligible classes found for auto-enrollment");
+              }
             }
           }
         }
       } catch (classEnrollError) {
-        console.error('Error auto-enrolling in classes:', classEnrollError);
-        // Don't fail the whole registration if class enrollment fails
+        console.error('❌ Error auto-enrolling in classes:', classEnrollError);
       }
 
       const billingRecord = {
