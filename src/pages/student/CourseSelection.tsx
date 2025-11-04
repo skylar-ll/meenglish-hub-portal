@@ -55,8 +55,10 @@ const CourseSelection = () => {
     navigate("/student/level-selection");
   };
 
-  // Group courses by category
-  const coursesByCategory = courses.reduce((acc, course) => {
+  // Group courses by category, excluding any entries that look like levels (e.g., level-1)
+  const levelLike = (val: string) => /^level[\s\-_]?\d+/i.test(val);
+  const visibleCourses = courses.filter((c) => !levelLike(c.value));
+  const coursesByCategory = visibleCourses.reduce((acc, course) => {
     if (!acc[course.category]) {
       acc[course.category] = [];
     }

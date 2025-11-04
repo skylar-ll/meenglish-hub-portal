@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface FilteredOptions {
   allowedPrograms: string[];
   allowedLevels: string[];
+  allowedLevelKeys: string[]; // Normalized like level-1, level-2
   allowedTimings: string[];
   allowedCourses: string[];
+  allowedStartDates: string[];
   allPrograms: string[];
   allLevels: string[];
   allTimings: string[];
@@ -16,8 +18,10 @@ export const useBranchFiltering = (branchId: string | null) => {
   const [filteredOptions, setFilteredOptions] = useState<FilteredOptions>({
     allowedPrograms: [],
     allowedLevels: [],
+    allowedLevelKeys: [],
     allowedTimings: [],
     allowedCourses: [],
+    allowedStartDates: [],
     allPrograms: [],
     allLevels: [],
     allTimings: [],
@@ -76,8 +80,10 @@ export const useBranchFiltering = (branchId: string | null) => {
         setFilteredOptions({
           allowedPrograms: Array.from(allPrograms),
           allowedLevels: Array.from(allLevels),
+          allowedLevelKeys: [],
           allowedTimings: Array.from(allTimings),
           allowedCourses: Array.from(allCourses),
+          allowedStartDates: [],
           allPrograms: Array.from(allPrograms),
           allLevels: Array.from(allLevels),
           allTimings: Array.from(allTimings),
@@ -105,8 +111,16 @@ export const useBranchFiltering = (branchId: string | null) => {
 
       const programs = new Set<string>();
       const levels = new Set<string>();
+      const levelKeys = new Set<string>();
       const timings = new Set<string>();
       const courses = new Set<string>();
+      const startDates = new Set<string>();
+
+      const extractLevelKey = (val: string): string | null => {
+        if (!val) return null;
+        const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+        return m ? `level-${m[1]}` : null;
+      };
 
       (branchClasses || []).forEach((cls) => {
         if (cls.program) {
@@ -117,10 +131,16 @@ export const useBranchFiltering = (branchId: string | null) => {
           timings.add(cls.timing);
           console.log("  ✓ Timing:", cls.timing);
         }
+        if (cls.start_date) {
+          startDates.add(String(cls.start_date));
+          console.log("  ✓ Start Date:", cls.start_date);
+        }
         if (cls.levels && Array.isArray(cls.levels)) {
           cls.levels.forEach((level: string) => {
             levels.add(level);
-            console.log("  ✓ Level:", level);
+            const key = extractLevelKey(level);
+            if (key) levelKeys.add(key);
+            console.log("  ✓ Level:", level, "| key:", key);
           });
         }
         if (cls.courses && Array.isArray(cls.courses)) {
@@ -136,8 +156,10 @@ export const useBranchFiltering = (branchId: string | null) => {
       const filteredResult = {
         allowedPrograms: Array.from(programs),
         allowedLevels: Array.from(levels),
+        allowedLevelKeys: Array.from(levelKeys),
         allowedTimings: Array.from(timings),
         allowedCourses: Array.from(courses),
+        allowedStartDates: Array.from(startDates),
         allPrograms: Array.from(allPrograms),
         allLevels: Array.from(allLevels),
         allTimings: Array.from(allTimings),
