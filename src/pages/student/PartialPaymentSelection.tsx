@@ -15,6 +15,7 @@ const PartialPaymentSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [partialPaymentAmount, setPartialPaymentAmount] = useState(0);
+  const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
   const [loading, setLoading] = useState(true);
   const [billingData, setBillingData] = useState<any>(null);
   const ksaTimezone = "Asia/Riyadh";
@@ -76,6 +77,12 @@ const PartialPaymentSelection = () => {
       return;
     }
 
+    const remainingBalance = billingData ? billingData.feeAfterDiscount - partialPaymentAmount : 0;
+    if (remainingBalance > 0 && !nextPaymentDate) {
+      toast.error("Please select when you plan to pay the remaining balance");
+      return;
+    }
+
     const storedData = sessionStorage.getItem("studentRegistration");
     if (!storedData) {
       toast.error("Registration data not found");
@@ -85,6 +92,9 @@ const PartialPaymentSelection = () => {
 
     const registrationData = JSON.parse(storedData);
     registrationData.partialPaymentAmount = partialPaymentAmount;
+    if (nextPaymentDate) {
+      registrationData.nextPaymentDate = nextPaymentDate.toISOString();
+    }
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
     navigate("/student/billing-form");
@@ -126,6 +136,9 @@ const PartialPaymentSelection = () => {
             courseStartDate={billingData.courseStartDate}
             paymentDeadline={billingData.paymentDeadline}
             onAmountChange={setPartialPaymentAmount}
+            onNextPaymentDateChange={setNextPaymentDate}
+            initialPayment={partialPaymentAmount}
+            initialNextPaymentDate={nextPaymentDate}
           />
 
           <div className="mt-6 hidden md:flex gap-4">

@@ -3,8 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DollarSign, Calendar, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, Calendar as CalendarIcon, AlertCircle, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PartialPaymentStepProps {
   totalFee: number;
@@ -13,7 +17,9 @@ interface PartialPaymentStepProps {
   courseStartDate: string;
   paymentDeadline: string;
   onAmountChange: (amount: number) => void;
+  onNextPaymentDateChange: (date: Date | undefined) => void;
   initialPayment?: number;
+  initialNextPaymentDate?: Date;
 }
 
 export const PartialPaymentStep = ({
@@ -23,10 +29,18 @@ export const PartialPaymentStep = ({
   courseStartDate,
   paymentDeadline,
   onAmountChange,
+  onNextPaymentDateChange,
   initialPayment = 0,
+  initialNextPaymentDate,
 }: PartialPaymentStepProps) => {
   const [amountToPay, setAmountToPay] = useState<number>(initialPayment);
+  const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>(initialNextPaymentDate);
   const remainingBalance = feeAfterDiscount - amountToPay;
+
+  const handleNextPaymentDateChange = (date: Date | undefined) => {
+    setNextPaymentDate(date);
+    onNextPaymentDateChange(date);
+  };
 
   const handleAmountChange = (value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -136,10 +150,54 @@ export const PartialPaymentStep = ({
         </div>
       </Card>
 
+      {/* Next Payment Date Selection */}
+      {remainingBalance > 0 && (
+        <div className="space-y-4">
+          <Label htmlFor="next-payment-date" className="text-base font-semibold">
+            When do you plan to pay the remaining balance?
+          </Label>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !nextPaymentDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {nextPaymentDate ? format(nextPaymentDate, "MMMM dd, yyyy") : <span>Select date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={nextPaymentDate}
+                onSelect={handleNextPaymentDateChange}
+                initialFocus
+                disabled={(date) => date < new Date()}
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <p className="font-semibold">Important Notice</p>
+              <p className="text-sm mt-1">
+                Your child will not be moved to the next course level unless the remaining balance is paid in full by the selected date.
+              </p>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Payment Deadline Info */}
       {remainingBalance > 0 && (
         <Alert>
-          <Calendar className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           <AlertDescription>
             <div className="space-y-1">
               <p className="font-semibold">Payment Deadline</p>

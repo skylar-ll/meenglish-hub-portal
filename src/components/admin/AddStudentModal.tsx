@@ -37,6 +37,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [partialPaymentAmount, setPartialPaymentAmount] = useState<number>(0);
+  const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   
   // Fetch auto-translation setting
@@ -1168,7 +1169,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
                   paymentDeadline={format(addDays(addDays(new Date(), 1), 30), "yyyy-MM-dd")}
                   onAmountChange={setPartialPaymentAmount}
+                  onNextPaymentDateChange={setNextPaymentDate}
                   initialPayment={partialPaymentAmount}
+                  initialNextPaymentDate={nextPaymentDate}
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
