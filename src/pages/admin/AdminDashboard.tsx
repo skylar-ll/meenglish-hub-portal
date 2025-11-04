@@ -12,7 +12,6 @@ import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal"
 import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
 import { AddStudentModal } from "@/components/admin/AddStudentModal";
 import { CoursesManagement } from "@/components/admin/CoursesManagement";
-import { CreateClassModal } from "@/components/admin/CreateClassModal";
 import {
   Table,
   TableBody,
@@ -32,7 +31,6 @@ const AdminDashboard = () => {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showAddNewStudentModal, setShowAddNewStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showCreateClassModal, setShowCreateClassModal] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,13 +207,13 @@ const AdminDashboard = () => {
         <Card className="p-6 mb-6">
           <div className="flex flex-wrap gap-3 justify-center">
             <Button 
-              onClick={() => setShowCreateClassModal(true)}
+              onClick={() => navigate("/admin/class-enrollments")}
               variant="default"
               className="gap-2 bg-gradient-to-r from-primary to-accent"
               size="lg"
             >
-              <GraduationCap className="w-5 h-5" />
-              Create Class
+              <BookOpen className="w-5 h-5" />
+              Class Enrollments
             </Button>
             <Button 
               onClick={() => setShowAddNewStudentModal(true)}
@@ -270,15 +268,6 @@ const AdminDashboard = () => {
             >
               <Users className="w-5 h-5" />
               Student Management
-            </Button>
-            <Button 
-              onClick={() => navigate("/admin/class-enrollments")}
-              variant="default"
-              className="gap-2 bg-gradient-to-r from-secondary to-accent"
-              size="lg"
-            >
-              <BookOpen className="w-5 h-5" />
-              Class Enrollments
             </Button>
           </div>
         </Card>
@@ -598,12 +587,6 @@ const AdminDashboard = () => {
         open={showAddStudentModal}
         onOpenChange={setShowAddStudentModal}
         onStudentAdded={fetchData}
-      />
-
-      {/* Create Class Modal */}
-      <CreateClassModal
-        open={showCreateClassModal}
-        onOpenChange={setShowCreateClassModal}
       />
 
       {/* Attendance Records Modal */}
