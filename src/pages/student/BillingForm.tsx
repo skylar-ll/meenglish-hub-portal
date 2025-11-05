@@ -355,13 +355,26 @@ const BillingForm = () => {
       }
 
       // Create or update student record (avoid duplicates)
-      const { data: existingStudent } = await supabase
+      // Prefer matching existing student by auth user id, then fallback to email
+      let existingStudent: { id: string } | null = null;
+      const { data: byId } = await supabase
         .from("students")
         .select("id")
-        .eq("email", billData.email)
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .eq("id", user.id)
         .maybeSingle();
+
+      if (byId) {
+        existingStudent = byId;
+      } else {
+        const { data: byEmail } = await supabase
+          .from("students")
+          .select("id")
+          .eq("email", billData.email)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        existingStudent = byEmail || null;
+      }
 
       let studentData: any = null;
       let studentError: any = null;

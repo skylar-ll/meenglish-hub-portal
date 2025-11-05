@@ -46,13 +46,14 @@ export default function OffersManagement() {
         return;
       }
 
-      const { data: roles, error } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
+        .eq("role", "admin")
         .maybeSingle();
 
-      if (error || !roles || roles.role !== "admin") {
+      if (roleError || !roleData) {
         navigate("/admin/login");
         return;
       }

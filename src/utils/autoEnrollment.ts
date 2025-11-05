@@ -46,12 +46,17 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
       .filter(Boolean)
       .map(toLevelKey);
 
-    // Find ALL classes in the student's branch with status active
-    const { data: classes, error: classError } = await supabase
+    // Find classes with status active, optionally filtered by branch
+    let classesQuery = supabase
       .from("classes")
       .select("id, levels, timing, courses, start_date")
-      .eq("branch_id", studentData.branch_id)
       .eq("status", "active");
+
+    if (studentData.branch_id) {
+      classesQuery = classesQuery.eq("branch_id", studentData.branch_id);
+    }
+
+    const { data: classes, error: classError } = await classesQuery;
 
     if (classError) throw classError;
     if (!classes || classes.length === 0) {
