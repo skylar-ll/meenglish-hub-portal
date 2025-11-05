@@ -104,7 +104,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
 
       // Get enrolled students only
       const { data: studentsData, error: studentsError } = await supabase
-        .from("profiles")
+        .from("students")
         .select("id, full_name_en, full_name_ar, phone1, program")
         .in("id", studentIds)
         .order("full_name_en");

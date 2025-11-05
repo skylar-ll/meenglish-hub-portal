@@ -96,6 +96,7 @@ export default function ClassManagement() {
   const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
   const [editingClass, setEditingClass] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   // Form state
   const [className, setClassName] = useState("");
@@ -390,6 +391,22 @@ export default function ClassManagement() {
     setEditingClass(null);
   };
 
+  const handleBackfill = async () => {
+    if (!confirm('Scan all students and assign them to matching classes now?')) return;
+    setBackfilling(true);
+    try {
+      const { backfillAllEnrollments, syncTeacherAssignmentsFromEnrollments } = await import("@/utils/autoEnrollment");
+      const processed = await backfillAllEnrollments();
+      const linked = await syncTeacherAssignmentsFromEnrollments();
+      toast.success(`Synced ${processed} students and ${linked} teacher links`);
+      await fetchExistingClasses();
+    } catch (e: any) {
+      toast.error(e.message || 'Backfill failed');
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   if (loading && teachers.length === 0) {
     return (
       <div className="min-h-screen bg-background p-8 flex items-center justify-center">
@@ -410,7 +427,12 @@ export default function ClassManagement() {
           Back to Dashboard
         </Button>
 
-        <h1 className="text-3xl font-bold mb-6">Class Management</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold">Class Management</h1>
+          <Button variant="secondary" onClick={handleBackfill} disabled={backfilling}>
+            {backfilling ? 'Scanning…' : 'Scan & Assign Students'}
+          </Button>
+        </div>
 
         <AutoEnrollmentInfo />
 

@@ -69,7 +69,7 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
     // Find classes with status active, optionally filtered by branch
     let classesQuery = supabase
       .from("classes")
-      .select("id, levels, timing, courses, start_date")
+      .select("id, levels, timing, courses, start_date, teacher_id")
       .eq("status", "active");
 
     if (studentData.branch_id) {
@@ -123,11 +123,25 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
 
     const { error: enrollError } = await supabase.from("enrollments").insert(enrollments);
 
-    if (enrollError) {
-      // Ignore unique constraint violations (student already enrolled)
-      if (!enrollError.message?.includes("duplicate key")) {
-        throw enrollError;
+    if (enrollError && !String(enrollError.message || '').includes('duplicate key')) {
+      // Allow duplicates to pass silently
+      throw enrollError;
+    }
+
+    // Also ensure teacher-student links for visibility (best-effort)
+    try {
+      const uniqueTeacherIds = Array.from(
+        new Set((eligible || []).map((c: any) => c.teacher_id).filter(Boolean))
+      );
+      if (uniqueTeacherIds.length > 0) {
+        const links = uniqueTeacherIds.map((tid) => ({
+          student_id: studentData.id,
+          teacher_id: tid as string,
+        }));
+        await supabase.from("student_teachers").insert(links);
       }
+    } catch (linkErr) {
+      console.warn("student_teachers link insert skipped:", linkErr);
     }
 
     // Compute earliest start date from eligible classes
@@ -145,4 +159,68 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
     console.error("Error in auto-enrollment:", error);
     throw error;
   }
+};
+
+// Backfill auto-enrollments for all existing students
+export const backfillAllEnrollments = async (): Promise<number> => {
+  const { data: allStudents, error } = await supabase
+    .from("students")
+    .select("id, branch_id, program, course_level, timing");
+  if (error || !allStudents) return 0;
+
+  let processed = 0;
+  for (const s of allStudents) {
+    try {
+      const courses = typeof s.program === 'string' && s.program
+        ? s.program.split(',').map((c: string) => c.trim()).filter(Boolean)
+        : [];
+      await autoEnrollStudent({
+        id: s.id,
+        branch_id: (s as any).branch_id || '',
+        program: courses,
+        course_level: (s as any).course_level || '',
+        timing: (s as any).timing || '',
+        courses,
+      });
+      processed++;
+    } catch (e) {
+      console.warn('Auto-enroll failed for student', s.id, e);
+    }
+  }
+  return processed;
+};
+
+// Ensure student_teachers links exist for all enrollments so teachers can view students
+export const syncTeacherAssignmentsFromEnrollments = async (): Promise<number> => {
+  const { data: enrolls } = await supabase
+    .from("enrollments")
+    .select("student_id, class_id");
+  if (!enrolls || enrolls.length === 0) return 0;
+
+  const classIds = Array.from(new Set(enrolls.map((e: any) => e.class_id)));
+  const { data: classRows } = await supabase
+    .from("classes")
+    .select("id, teacher_id")
+    .in("id", classIds);
+  const teacherByClass = new Map<string, string>();
+  (classRows || []).forEach((c: any) => {
+    if (c.teacher_id) teacherByClass.set(c.id, c.teacher_id);
+  });
+
+  const links: { student_id: string; teacher_id: string }[] = [];
+  for (const e of enrolls) {
+    const tid = teacherByClass.get(e.class_id);
+    if (tid) links.push({ student_id: e.student_id, teacher_id: tid });
+  }
+
+  if (links.length === 0) return 0;
+
+  try {
+    const { error: linkErr } = await supabase.from("student_teachers").insert(links);
+    if (linkErr && !String(linkErr.message || '').includes('duplicate key')) throw linkErr;
+  } catch (err) {
+    console.warn('Sync teacher links encountered errors (some may already exist):', err);
+  }
+
+  return links.length;
 };

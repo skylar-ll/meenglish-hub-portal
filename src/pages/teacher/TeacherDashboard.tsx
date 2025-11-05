@@ -80,11 +80,11 @@ const TeacherDashboard = () => {
             const studentIds = (enrolls || []).map((e: any) => e.student_id);
             let studentsList: any[] = [];
             if (studentIds.length > 0) {
-              const { data: profiles } = await supabase
-                .from("profiles")
-                .select("id, full_name_en")
-                .in("id", studentIds);
-              studentsList = (profiles || []).map((p: any) => ({ id: p.id, full_name_en: p.full_name_en }));
+            const { data: studentRows } = await supabase
+              .from("students")
+              .select("id, full_name_en")
+              .in("id", studentIds);
+            studentsList = (studentRows || []).map((s: any) => ({ id: s.id, full_name_en: s.full_name_en }));
             }
             
             formatted.push({
@@ -112,7 +112,7 @@ const TeacherDashboard = () => {
           } else {
             // 3) Load students table (teachers can view students via RLS)
             const { data: studentsData } = await supabase
-              .from("profiles")
+              .from("students")
               .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level, total_course_fee, amount_paid, amount_remaining, discount_percentage, email")
               .in("id", studentIds);
             
