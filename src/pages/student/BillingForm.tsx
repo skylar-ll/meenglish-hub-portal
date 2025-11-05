@@ -450,7 +450,7 @@ const BillingForm = () => {
           branch_id: registration.branch_id,
           program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
           courses: Array.isArray(registration.courses) ? registration.courses : (registration.courses ? [registration.courses] : []),
-          course_level: Array.isArray(registration.selectedLevels) ? registration.selectedLevels.join(", ") : (registration.selectedLevels || ""),
+          course_level: registration.course_level || "",
           timing: registration.timing,
         });
         if (result?.count) {
