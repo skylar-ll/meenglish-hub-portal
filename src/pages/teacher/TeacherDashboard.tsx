@@ -180,7 +180,7 @@ const TeacherDashboard = () => {
 
   const stats = [
     { label: t('teacher.totalStudents'), value: students.length, icon: Users, color: "from-primary to-secondary" },
-    { label: t('teacher.activeClasses'), value: classes.length.toString(), icon: BookOpen, color: "from-secondary to-accent" },
+    { label: t('teacher.activeClasses'), value: classes.length, icon: BookOpen, color: "from-secondary to-accent" },
     { label: t('teacher.pendingAttendance'), value: "12", icon: Calendar, color: "from-accent to-primary" },
   ];
 
@@ -266,10 +266,14 @@ const TeacherDashboard = () => {
           </Button>
         </div>
 
-        {/* Classes Section */}
-        {classes.length > 0 && (
-          <Card className="p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-6">My Classes</h2>
+        {/* My Classes Section - Always visible */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-2xl font-bold mb-6">My Classes</h2>
+          {classes.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No classes assigned yet. Contact admin to assign you to a class.</p>
+            </div>
+          ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {classes.map((classItem) => (
                 <ClassCard
@@ -282,10 +286,10 @@ const TeacherDashboard = () => {
                 />
               ))}
             </div>
-          </Card>
-        )}
+          )}
+        </Card>
 
-        {/* Students List */}
+        {/* My Students Section */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-6">{t('teacher.myStudents')}</h2>
           {students.length === 0 ? (
