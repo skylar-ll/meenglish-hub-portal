@@ -78,30 +78,28 @@ const BillingForm = () => {
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
       let actualStartDate = null;
       
-      if (registration.branch_id && registration.timing && registration.selectedLevels) {
+      if (registration.branch_id && registration.timing) {
         const { data: matchingClasses } = await supabase
           .from("classes")
-          .select("start_date, program, levels, timing")
+          .select("start_date, courses, levels, timing")
           .eq("branch_id", registration.branch_id)
           .eq("timing", registration.timing)
           .eq("status", "active");
 
         if (matchingClasses && matchingClasses.length > 0) {
-          // Find class that matches student's program and has overlapping levels
-          const matchedClass = matchingClasses.find(cls => {
-            const programMatch = registration.courses && (
-              Array.isArray(registration.courses)
-                ? registration.courses.includes(cls.program)
-                : registration.courses === cls.program
-            );
-            const levelMatch = cls.levels && cls.levels.some(level => 
-              registration.selectedLevels.includes(level)
-            );
-            return programMatch && levelMatch;
-          });
-
-          if (matchedClass?.start_date) {
-            actualStartDate = matchedClass.start_date;
+          const studentCourses = Array.isArray(registration.courses)
+            ? registration.courses
+            : registration.courses ? [registration.courses] : [];
+          const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const courseMatches = (clsCourses?: string[]) => {
+            if (!clsCourses || clsCourses.length === 0 || studentCourses.length === 0) return true;
+            const normAllowed = clsCourses.map(normalize);
+            return studentCourses.some(c => normAllowed.some(a => a.includes(normalize(c)) || normalize(c).includes(a)));
+          };
+          const withDates = matchingClasses.filter(cls => courseMatches(cls.courses) && cls.start_date);
+          if (withDates.length > 0) {
+            withDates.sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+            actualStartDate = withDates[0].start_date;
           }
         }
       }
@@ -234,19 +232,30 @@ const BillingForm = () => {
       const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
       let actualCourseStartDate = format(addDays(toZonedTime(new Date(), ksaTimezone), 1), "yyyy-MM-dd");
       
-      // Try to get the actual start date from matched classes
-      if (registration.branch_id && registration.timing && registration.selectedLevels) {
+      // Try to get the actual start date from matched classes (by branch, timing and course)
+      if (registration.branch_id && registration.timing) {
         const { data: matchingClasses } = await supabase
           .from("classes")
-          .select("start_date")
+          .select("start_date, courses, timing")
           .eq("branch_id", registration.branch_id)
           .eq("timing", registration.timing)
           .eq("status", "active");
 
         if (matchingClasses && matchingClasses.length > 0) {
-          const classWithStartDate = matchingClasses.find(cls => cls.start_date);
-          if (classWithStartDate?.start_date) {
-            actualCourseStartDate = classWithStartDate.start_date;
+          const studentCourses = Array.isArray(registration.courses)
+            ? registration.courses
+            : registration.courses ? [registration.courses] : [];
+          const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const courseMatches = (clsCourses?: string[]) => {
+            if (!clsCourses || clsCourses.length === 0 || studentCourses.length === 0) return true;
+            const normAllowed = clsCourses.map(normalize);
+            return studentCourses.some(c => normAllowed.some(a => a.includes(normalize(c)) || normalize(c).includes(a)));
+          };
+
+          const withDates = matchingClasses.filter(cls => courseMatches(cls.courses) && cls.start_date);
+          if (withDates.length > 0) {
+            withDates.sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+            actualCourseStartDate = withDates[0].start_date;
           }
         }
       }
@@ -339,7 +348,7 @@ const BillingForm = () => {
         national_id: billData.nationalId,
         branch_id: registration.branch_id || null,
         branch: billData.branch,
-        program: registration.courses || billData.courseName,
+        program: Array.isArray(registration.courses) ? registration.courses.join(", ") : (registration.courses || billData.courseName),
         class_type: billData.courseName,
         course_level: registration.selectedLevels?.join(", ") || "Level 1",
         payment_method: registration.paymentMethod || "Cash",
@@ -391,85 +400,20 @@ const BillingForm = () => {
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Auto-enroll student in matching classes based on branch, program, levels, timing
+      // Auto-enroll student using shared utility (matches by branch, timing, courses and levels)
       try {
-        console.log("🔍 Auto-enrollment data:", {
+        const result = await autoEnrollStudent({
+          id: studentData.id,
           branch_id: registration.branch_id,
-          courses: registration.courses,
-          selectedLevels: registration.selectedLevels,
-          timing: registration.timing
+          program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
+          courses: Array.isArray(registration.courses) ? registration.courses : (registration.courses ? [registration.courses] : []),
+          course_level: Array.isArray(registration.selectedLevels) ? registration.selectedLevels.join(", ") : (registration.selectedLevels || ""),
+          timing: registration.timing,
         });
-
-        if (registration.branch_id && registration.courses && registration.selectedLevels && registration.timing) {
-          const { data: matchingClasses, error: classError } = await supabase
-            .from("classes")
-            .select("id, program, levels, timing, start_date, class_name")
-            .eq("branch_id", registration.branch_id)
-            .eq("timing", registration.timing)
-            .eq("status", "active");
-
-          console.log("📚 Matching classes found:", matchingClasses);
-          if (classError) console.error("Class query error:", classError);
-
-          if (matchingClasses && matchingClasses.length > 0) {
-            const studentCourses = Array.isArray(registration.courses) 
-              ? registration.courses 
-              : [registration.courses];
-            const studentLevels = Array.isArray(registration.selectedLevels)
-              ? registration.selectedLevels
-              : [registration.selectedLevels];
-
-            console.log("👤 Student selection:", { studentCourses, studentLevels });
-
-            // Filter classes that match program and have overlapping levels
-            const eligibleClasses = matchingClasses.filter(cls => {
-              const programMatch = cls.program && studentCourses.some(course => 
-                course.toLowerCase() === cls.program.toLowerCase() ||
-                cls.program.toLowerCase().includes(course.toLowerCase()) ||
-                course.toLowerCase().includes(cls.program.toLowerCase())
-              );
-              const levelMatch = cls.levels && cls.levels.some(level => 
-                studentLevels.includes(level)
-              );
-              
-              console.log(`🔎 Class "${cls.class_name}": program=${cls.program}, levels=${cls.levels}, programMatch=${programMatch}, levelMatch=${levelMatch}`);
-              
-              return programMatch && levelMatch;
-            });
-
-            console.log("✅ Eligible classes for enrollment:", eligibleClasses);
-
-            if (eligibleClasses.length > 0) {
-              // Enroll in each eligible class
-              const enrollments = eligibleClasses.map(cls => ({
-                student_id: studentData.id,
-                class_id: cls.id
-              }));
-
-              const { error: enrollError } = await supabase
-                .from("enrollments")
-                .insert(enrollments);
-
-              if (enrollError) {
-                console.error("❌ Enrollment error:", enrollError);
-              } else {
-                console.log(`✅ Auto-enrolled student in ${eligibleClasses.length} class(es)`);
-                toast.success(`Enrollment complete! You've been added to ${eligibleClasses.length} class(es).`);
-              }
-            } else {
-              console.warn("⚠️ No eligible classes found for auto-enrollment");
-              toast.warning("No matching classes found. Please contact admin to enroll.");
-            }
-          } else {
-            console.warn("⚠️ No active classes found with matching branch and timing");
-          }
+        if (result?.count) {
+          toast.success(`Enrollment complete! Added to ${result.count} class(es).`);
         } else {
-          console.warn("⚠️ Missing required data for auto-enrollment:", {
-            hasBranch: !!registration.branch_id,
-            hasCourses: !!registration.courses,
-            hasLevels: !!registration.selectedLevels,
-            hasTiming: !!registration.timing
-          });
+          toast.warning("No matching classes found for auto-enrollment.");
         }
       } catch (enrollError) {
         console.error("❌ Auto-enrollment failed:", enrollError);

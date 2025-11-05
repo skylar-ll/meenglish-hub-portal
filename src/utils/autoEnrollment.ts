@@ -3,76 +3,119 @@ import { supabase } from "@/integrations/supabase/client";
 interface StudentData {
   id: string;
   branch_id: string;
-  program: string;
-  course_level: string;
-  timing: string;
+  program?: string | string[];
+  course_level?: string;
+  timing?: string;
+  courses?: string[];
 }
 
-export const autoEnrollStudent = async (studentData: StudentData) => {
+interface AutoEnrollResult {
+  count: number;
+  classIds: string[];
+  earliestStartDate: string | null;
+}
+
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+const toLevelKey = (val: string) => {
+  const lower = val.toLowerCase();
+  const m = lower.match(/level[-\s]?(\d+)/);
+  if (m?.[1]) return `level-${m[1]}`;
+  return lower;
+};
+
+export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoEnrollResult> => {
   try {
-    // Get student's chosen levels as array
-    const studentLevels = studentData.course_level.split(",").map(l => l.trim());
+    // Build student course list from program/courses
+    let studentCourses: string[] = [];
+    if (Array.isArray(studentData.courses)) studentCourses = studentData.courses;
+    else if (Array.isArray(studentData.program)) studentCourses = studentData.program;
+    else if (typeof studentData.program === "string" && studentData.program) {
+      try {
+        const parsed = JSON.parse(studentData.program);
+        if (Array.isArray(parsed)) studentCourses = parsed;
+        else studentCourses = [studentData.program];
+      } catch {
+        studentCourses = [studentData.program];
+      }
+    }
+
+    // Student level keys
+    const studentLevelKeys = (studentData.course_level || "")
+      .split(",")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map(toLevelKey);
 
     // Find ALL classes in the student's branch with status active
     const { data: classes, error: classError } = await supabase
       .from("classes")
-      .select("id, levels, program, timing, courses")
+      .select("id, levels, timing, courses, start_date")
       .eq("branch_id", studentData.branch_id)
       .eq("status", "active");
 
     if (classError) throw classError;
-
     if (!classes || classes.length === 0) {
       console.log("No active classes found in branch for auto-enrollment");
-      return;
+      return { count: 0, classIds: [], earliestStartDate: null };
     }
 
-    // Filter classes that match ALL criteria:
-    // 1. Same branch (already filtered above)
-    // 2. Same program
-    // 3. Same timing
-    // 4. At least one overlapping level
-    const matchingClasses = classes.filter((cls) => {
-      // Check program match
-      if (cls.program !== studentData.program) return false;
-      
-      // Check timing match
-      if (cls.timing !== studentData.timing) return false;
-      
-      // Check if class has levels array
-      if (!cls.levels || !Array.isArray(cls.levels)) return false;
-      
-      // Check if any of the student's levels are in the class levels
-      const hasMatchingLevel = studentLevels.some(studentLevel => 
-        cls.levels.includes(studentLevel)
-      );
-      
-      return hasMatchingLevel;
+    const eligible = classes.filter((cls: any) => {
+      // Timing match (if provided)
+      if (studentData.timing && cls.timing !== studentData.timing) return false;
+
+      // Course/program match using class.courses array
+      if (studentCourses.length > 0) {
+        const allowed = Array.isArray(cls.courses) ? cls.courses : [];
+        const normAllowed = allowed.map(normalize);
+        const hasCourse = studentCourses.some((c) =>
+          normAllowed.some((a) => a.includes(normalize(c)) || normalize(c).includes(a))
+        );
+        if (!hasCourse) return false;
+      }
+
+      // Level overlap (if student specified)
+      if (studentLevelKeys.length > 0) {
+        const classLevelKeys = (Array.isArray(cls.levels) ? cls.levels : [])
+          .map(String)
+          .map(toLevelKey);
+        const hasLevel = studentLevelKeys.some((lk) => classLevelKeys.includes(lk));
+        if (!hasLevel) return false;
+      }
+
+      return true;
     });
 
-    if (matchingClasses.length === 0) {
-      console.log("No classes matching student's program, timing, and levels found");
-      return;
+    if (eligible.length === 0) {
+      console.log("No classes matching student's timing, course, and levels found");
+      return { count: 0, classIds: [], earliestStartDate: null };
     }
 
     // Create enrollment records
-    const enrollments = matchingClasses.map((cls) => ({
+    const enrollments = eligible.map((cls: any) => ({
       student_id: studentData.id,
       class_id: cls.id,
     }));
 
-    const { error: enrollError } = await supabase
-      .from("enrollments")
-      .insert(enrollments);
+    const { error: enrollError } = await supabase.from("enrollments").insert(enrollments);
 
     if (enrollError) {
       // Ignore unique constraint violations (student already enrolled)
-      if (!enrollError.message.includes("duplicate key")) {
+      if (!enrollError.message?.includes("duplicate key")) {
         throw enrollError;
       }
     }
 
-    console.log(`Successfully auto-enrolled student in ${matchingClasses.length} class(es)`);
+    // Compute earliest start date from eligible classes
+    const startDates = eligible
+      .map((c: any) => c.start_date)
+      .filter(Boolean)
+      .map((d: string) => new Date(d))
+      .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+    const earliestStartDate = startDates.length > 0 ? startDates[0].toISOString().slice(0, 10) : null;
+
+    console.log(`Successfully auto-enrolled student in ${eligible.length} class(es)`);
+    return { count: eligible.length, classIds: eligible.map((c: any) => c.id), earliestStartDate };
   } catch (error) {
     console.error("Error in auto-enrollment:", error);
     throw error;
