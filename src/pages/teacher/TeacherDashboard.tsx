@@ -83,8 +83,8 @@ const TeacherDashboard = () => {
           } else {
             // 3) Load students table (teachers can view students via RLS)
             const { data: studentsData } = await supabase
-              .from("students")
-              .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level, total_grade, email")
+              .from("profiles")
+              .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level, total_course_fee, amount_paid, amount_remaining, discount_percentage, email")
               .in("id", studentIds);
             
             // Build a map of student->enrolled courses/levels
