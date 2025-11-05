@@ -61,45 +61,63 @@ const TeacherDashboard = () => {
       if (teacherData) {
         setTeacherName(teacherData.full_name);
 
-        // Fetch students enrolled in this teacher's classes
-        const { data: enrolledStudents } = await supabase
-          .from("class_students")
-          .select(`
-            student_id,
-            students (
-              id,
-              full_name_en,
-              full_name_ar,
-              branch,
-              program,
-              class_type,
-              course_level,
-              total_grade,
-              email
-            ),
-            classes!inner (
-              id,
-              teacher_id,
-              courses,
-              levels
-            )
-          `)
-          .eq("classes.teacher_id", teacherData.id);
-
-        // Extract unique students (a student might be in multiple classes)
-        const uniqueStudentsMap = new Map();
-        enrolledStudents?.forEach((item: any) => {
-          if (!uniqueStudentsMap.has(item.student_id)) {
-            uniqueStudentsMap.set(item.student_id, {
-              ...item.students,
-              enrolled_courses: item.classes.courses || [],
-              enrolled_levels: item.classes.levels || []
-            });
-          }
-        });
+        // 1) Get teacher's classes
+        const { data: myClasses } = await supabase
+          .from("classes")
+          .select("id, courses, levels")
+          .eq("teacher_id", teacherData.id);
         
-        const studentsData = Array.from(uniqueStudentsMap.values());
-        setStudents(studentsData);
+        const classIds = (myClasses || []).map((c: any) => c.id);
+        if (classIds.length === 0) {
+          setStudents([]);
+        } else {
+          // 2) Get enrollments
+          const { data: enrolls } = await supabase
+            .from("enrollments")
+            .select("student_id, class_id")
+            .in("class_id", classIds);
+          
+          const studentIds = Array.from(new Set((enrolls || []).map((e: any) => e.student_id)));
+          if (studentIds.length === 0) {
+            setStudents([]);
+          } else {
+            // 3) Load profiles (teachers can view student profiles)
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level")
+              .in("id", studentIds);
+            
+            // Build a map of student->enrolled courses/levels
+            const studentEnrollMap = new Map<string, { courses: string[], levels: string[] }>();
+            enrolls?.forEach((enr: any) => {
+              const cls = myClasses?.find((c: any) => c.id === enr.class_id);
+              if (cls) {
+                const existing = studentEnrollMap.get(enr.student_id) || { courses: [], levels: [] };
+                if (cls.courses) existing.courses.push(...cls.courses);
+                if (cls.levels) existing.levels.push(...cls.levels);
+                studentEnrollMap.set(enr.student_id, existing);
+              }
+            });
+            
+            const studentsData = (profiles || []).map((p: any) => {
+              const enr = studentEnrollMap.get(p.id) || { courses: [], levels: [] };
+              return {
+                id: p.id,
+                full_name_en: p.full_name_en,
+                full_name_ar: p.full_name_ar,
+                branch: p.branch,
+                program: p.program,
+                class_type: p.class_type,
+                course_level: p.course_level,
+                total_grade: null,
+                email: "",
+                enrolled_courses: Array.from(new Set(enr.courses)),
+                enrolled_levels: Array.from(new Set(enr.levels)),
+              };
+            });
+            setStudents(studentsData);
+          }
+        }
       } else {
         // If no teacher record, use email as name
         setTeacherName(session.user.email?.split('@')[0] || "Teacher");
@@ -108,29 +126,34 @@ const TeacherDashboard = () => {
       // Fetch classes assigned to this teacher
       const { data: classesData } = await supabase
         .from("classes")
-        .select(`
-          id,
-          class_name,
-          timing,
-          courses,
-          levels,
-          class_students (
-            student_id,
-            students (
-              id,
-              full_name_en
-            )
-          )
-        `)
+        .select("id, class_name, timing, courses, levels")
         .eq("teacher_id", session.user.id);
 
       if (classesData) {
-        // Transform the data to include student information
-        const formattedClasses = classesData.map((classItem: any) => ({
-          ...classItem,
-          students: classItem.class_students?.map((cs: any) => cs.students) || []
-        }));
-        setClasses(formattedClasses);
+        // For each class, get enrollments
+        const formatted = [];
+        for (const cls of classesData) {
+          const { data: enrolls } = await supabase
+            .from("enrollments")
+            .select("student_id")
+            .eq("class_id", cls.id);
+          
+          const studentIds = (enrolls || []).map((e: any) => e.student_id);
+          let studentsList: any[] = [];
+          if (studentIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, full_name_en")
+              .in("id", studentIds);
+            studentsList = (profiles || []).map((p: any) => ({ id: p.id, full_name_en: p.full_name_en }));
+          }
+          
+          formatted.push({
+            ...cls,
+            students: studentsList,
+          });
+        }
+        setClasses(formatted);
       }
       
       setLoading(false);
