@@ -1,3 +1,23 @@
+/**
+ * AUTO-ENROLLMENT SYSTEM
+ * 
+ * This utility automatically enrolls students into matching classes based on:
+ * - Branch (student.branch_id must match class.branch_id)
+ * - Course/Program (student's courses must overlap with class.courses)
+ * - Level (student.course_level must match one of class.levels)
+ * - Timing (optional: student.timing must match class.timing if specified)
+ * 
+ * When a student completes registration, this function:
+ * 1. Finds all active classes matching their criteria
+ * 2. Creates enrollment records in the enrollments table
+ * 3. Returns the count of classes enrolled and the earliest start date
+ * 
+ * This ensures students automatically appear in:
+ * - Teacher dashboards (only for their assigned classes)
+ * - Attendance sheets (students self-mark)
+ * - Quiz distribution (through teacher-student relationships)
+ */
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface StudentData {

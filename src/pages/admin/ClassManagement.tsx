@@ -83,6 +83,8 @@ interface ExistingClass {
   student_count: number;
 }
 
+import { AutoEnrollmentInfo } from "@/components/admin/AutoEnrollmentInfo";
+
 export default function ClassManagement() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -333,7 +335,7 @@ export default function ClassManagement() {
         if (enrollError) throw enrollError;
       }
 
-      toast.success("Class created successfully!");
+      toast.success(`✅ Class "${className}" created! ${selectedStudents.length} students enrolled. New students will auto-enroll on registration.`);
       
       // Reset form
       setClassName("");
@@ -396,7 +398,9 @@ export default function ClassManagement() {
 
         <h1 className="text-3xl font-bold mb-6">Class Management</h1>
 
-        <Tabs defaultValue="create" className="w-full">
+        <AutoEnrollmentInfo />
+
+        <Tabs defaultValue="create" className="w-full mt-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="create">Create a Class</TabsTrigger>
             <TabsTrigger value="previous">Previous Classes</TabsTrigger>

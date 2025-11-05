@@ -156,6 +156,24 @@ const Payment = () => {
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
+      // AUTO-ENROLL student in matching classes
+      const { autoEnrollStudent } = await import("@/utils/autoEnrollment");
+      try {
+        const enrollResult = await autoEnrollStudent({
+          id: studentData.id,
+          branch_id: registration.branchId || '',
+          program: selectedCourses,
+          course_level: registration.courseLevel || '',
+          timing: registration.timing || '',
+          courses: selectedCourses
+        });
+        
+        console.log(`Auto-enrolled in ${enrollResult.count} class(es)`);
+      } catch (enrollError) {
+        console.error("Auto-enrollment error:", enrollError);
+        // Don't block registration if enrollment fails
+      }
+
       // Persist registration data for CoursePage
       const registrationData = {
         fullNameEn: registration.fullNameEn,
@@ -165,6 +183,8 @@ const Payment = () => {
         classType: registration.courses ? registration.courses.join(', ') : '',
         branch: registration.branch,
         courseLevel: registration.courseLevel || null,
+        timing: registration.timing || null,
+        branchId: registration.branchId || null,
       };
       sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
       

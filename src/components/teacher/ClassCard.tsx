@@ -63,14 +63,26 @@ export const ClassCard = ({ className, timing, courses, levels, students }: Clas
       </div>
 
       <div className="pt-3 border-t">
-        <p className="text-xs text-muted-foreground mb-2">Students:</p>
-        <div className="flex flex-wrap gap-1">
-          {students.map((student) => (
-            <Badge key={student.id} variant="outline" className="text-xs">
-              {student.full_name_en}
-            </Badge>
-          ))}
-        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          {students.length === 0 
+            ? "No students enrolled yet" 
+            : `Enrolled Students (${students.length}):`
+          }
+        </p>
+        {students.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {students.slice(0, 5).map((student) => (
+              <Badge key={student.id} variant="outline" className="text-xs">
+                {student.full_name_en}
+              </Badge>
+            ))}
+            {students.length > 5 && (
+              <Badge variant="secondary" className="text-xs">
+                +{students.length - 5} more
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
