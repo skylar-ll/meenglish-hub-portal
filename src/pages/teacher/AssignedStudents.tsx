@@ -55,14 +55,53 @@ const AssignedStudents = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from("students")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .order("created_at", { ascending: false });
+      // 1) Get all class IDs for this teacher
+      const { data: myClasses, error: classesErr } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("teacher_id", user.id);
+      if (classesErr) throw classesErr;
+      const classIds = (myClasses || []).map((c: any) => c.id);
+      if (classIds.length === 0) {
+        setStudents([]);
+        return;
+      }
 
-      if (error) throw error;
-      setStudents(data || []);
+      // 2) Get enrollments for these classes
+      const { data: enrolls, error: enrollErr } = await supabase
+        .from("enrollments")
+        .select("student_id, class_id")
+        .in("class_id", classIds);
+      if (enrollErr) throw enrollErr;
+      const studentIds = Array.from(new Set((enrolls || []).map((e: any) => e.student_id)));
+      if (studentIds.length === 0) {
+        setStudents([]);
+        return;
+      }
+
+      // 3) Load student details from profiles (teachers have policy to view student profiles)
+      const { data: profilesData, error: profilesErr } = await supabase
+        .from("profiles")
+        .select("id, full_name_en, email, program, class_type, course_level, total_course_fee, amount_paid, amount_remaining, discount_percentage")
+        .in("id", studentIds);
+      if (profilesErr) throw profilesErr;
+
+      // 4) Map into UI shape
+      const mapped: Student[] = (profilesData || []).map((p: any) => ({
+        id: p.id,
+        student_id: p.id, // no separate student_id in profiles
+        full_name_en: p.full_name_en || "N/A",
+        email: p.email || "",
+        course_duration_months: 0,
+        total_course_fee: Number(p.total_course_fee || 0),
+        amount_paid: Number(p.amount_paid || 0),
+        amount_remaining: Number(p.amount_remaining || 0),
+        discount_percentage: Number(p.discount_percentage || 0),
+        program: p.program || "",
+        class_type: p.class_type || "",
+      }));
+
+      setStudents(mapped);
     } catch (error: any) {
       toast.error("Failed to load students");
     } finally {
