@@ -280,7 +280,7 @@ const BillingForm = () => {
       }
 
       // Create billing record
-      const billingRecord = {
+      const billingRecord: any = {
         student_id: user.id,
         student_name_en: billData.clientName,
         student_name_ar: billData.clientNameAr,
@@ -299,9 +299,15 @@ const BillingForm = () => {
         language: 'en',
         first_payment: billData.firstPayment,
         second_payment: billData.secondPayment,
-        payment_deadline: registration.nextPaymentDate || null,
-        last_payment_date: registration.paymentDate || null,
       };
+
+      // Only add payment dates if they exist
+      if (registration.nextPaymentDate) {
+        billingRecord.payment_deadline = registration.nextPaymentDate;
+      }
+      if (registration.paymentDate) {
+        billingRecord.last_payment_date = registration.paymentDate;
+      }
 
       const { data: billing, error: billingError } = await supabase
         .from('billing')

@@ -36,27 +36,32 @@ export default function OffersManagement() {
 
   useEffect(() => {
     checkAdminAndFetch();
-  }, []);
+  }, [navigate]);
 
   const checkAdminAndFetch = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/admin/login");
+        return;
+      }
+
+      const { data: roles, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (error || !roles || roles.role !== "admin") {
+        navigate("/admin/login");
+        return;
+      }
+
+      fetchOffers();
+    } catch (error) {
+      console.error("Auth check error:", error);
       navigate("/admin/login");
-      return;
     }
-
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
-
-    if (roles?.role !== "admin") {
-      navigate("/admin/login");
-      return;
-    }
-
-    fetchOffers();
   };
 
   const fetchOffers = async () => {
