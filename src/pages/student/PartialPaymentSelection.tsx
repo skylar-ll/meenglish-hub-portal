@@ -16,6 +16,7 @@ const PartialPaymentSelection = () => {
   const { t } = useLanguage();
   const [partialPaymentAmount, setPartialPaymentAmount] = useState(0);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
+  const [paymentDate, setPaymentDate] = useState<Date | undefined>();
   const [loading, setLoading] = useState(true);
   const [billingData, setBillingData] = useState<any>(null);
   const ksaTimezone = "Asia/Riyadh";
@@ -36,6 +37,19 @@ const PartialPaymentSelection = () => {
 
       const registrationData = JSON.parse(storedData);
 
+      // Check for active offers
+      const now = new Date();
+      const { data: activeOffers } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('status', 'active')
+        .lte('start_date', now.toISOString().split('T')[0])
+        .gte('end_date', now.toISOString().split('T')[0])
+        .order('discount_percentage', { ascending: false })
+        .limit(1);
+
+      const activeOffer = activeOffers && activeOffers.length > 0 ? activeOffers[0] : null;
+
       // Fetch course pricing
       const durationMonths = registrationData.courseDurationMonths || 1;
       const { data: pricing } = await supabase
@@ -45,11 +59,11 @@ const PartialPaymentSelection = () => {
         .single();
 
       const totalFee = pricing?.price || (durationMonths * 500);
-      const discountPercent = 10;
+      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0; // Only use offer discount
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
 
-      const now = new Date();
-      const ksaDate = toZonedTime(now, ksaTimezone);
+      const nowDate = new Date();
+      const ksaDate = toZonedTime(nowDate, ksaTimezone);
       const registrationDate = format(ksaDate, "yyyy-MM-dd");
       const courseStartDate = format(addDays(ksaDate, 1), "yyyy-MM-dd");
       const paymentDeadline = format(addDays(ksaDate, 30), "yyyy-MM-dd");
@@ -62,7 +76,13 @@ const PartialPaymentSelection = () => {
         courseStartDate,
         paymentDeadline,
         durationMonths,
+        activeOffer,
       });
+
+      // Show offer notification if active
+      if (activeOffer) {
+        toast.success(`🎉 ${activeOffer.offer_name}: ${activeOffer.discount_percentage}% discount applied!`);
+      }
     } catch (error) {
       console.error("Error loading billing data:", error);
       toast.error("Failed to load billing information");
@@ -93,7 +113,10 @@ const PartialPaymentSelection = () => {
     const registrationData = JSON.parse(storedData);
     registrationData.partialPaymentAmount = partialPaymentAmount;
     if (nextPaymentDate) {
-      registrationData.nextPaymentDate = nextPaymentDate.toISOString();
+      registrationData.nextPaymentDate = format(nextPaymentDate, "yyyy-MM-dd");
+    }
+    if (paymentDate) {
+      registrationData.paymentDate = format(paymentDate, "yyyy-MM-dd");
     }
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
@@ -137,6 +160,7 @@ const PartialPaymentSelection = () => {
             paymentDeadline={billingData.paymentDeadline}
             onAmountChange={setPartialPaymentAmount}
             onNextPaymentDateChange={setNextPaymentDate}
+            onPaymentDateChange={setPaymentDate}
             initialPayment={partialPaymentAmount}
             initialNextPaymentDate={nextPaymentDate}
           />

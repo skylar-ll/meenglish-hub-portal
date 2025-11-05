@@ -18,6 +18,7 @@ interface PartialPaymentStepProps {
   paymentDeadline: string;
   onAmountChange: (amount: number) => void;
   onNextPaymentDateChange: (date: Date | undefined) => void;
+  onPaymentDateChange?: (date: Date | undefined) => void;
   initialPayment?: number;
   initialNextPaymentDate?: Date;
 }
@@ -30,11 +31,13 @@ export const PartialPaymentStep = ({
   paymentDeadline,
   onAmountChange,
   onNextPaymentDateChange,
+  onPaymentDateChange,
   initialPayment = 0,
   initialNextPaymentDate,
 }: PartialPaymentStepProps) => {
   const [amountToPay, setAmountToPay] = useState<number>(initialPayment);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>(initialNextPaymentDate);
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date());
   const remainingBalance = feeAfterDiscount - amountToPay;
 
   const handleNextPaymentDateChange = (date: Date | undefined) => {
@@ -131,6 +134,39 @@ export const PartialPaymentStep = ({
           >
             100%
           </button>
+        </div>
+
+        {/* Payment Date Selection */}
+        <div className="space-y-2 pt-2">
+          <Label className="text-sm font-medium">Payment Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !paymentDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {paymentDate ? format(paymentDate, "MMMM dd, yyyy") : <span>Select payment date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={paymentDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setPaymentDate(date);
+                    onPaymentDateChange?.(date);
+                  }
+                }}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

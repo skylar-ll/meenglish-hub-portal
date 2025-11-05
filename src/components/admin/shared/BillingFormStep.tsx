@@ -26,7 +26,7 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
 
   const pricing = courseDurations.find(d => d.value === formData.courseDuration);
   const totalFee = pricing?.price || (durationMonths * 500);
-  const discountPercent = 10;
+  const discountPercent = formData.discountPercent || 0; // Use discount from form data (from offers)
   const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
   const amountPaid = partialPaymentAmount;
   const remainingBalance = feeAfterDiscount - amountPaid;

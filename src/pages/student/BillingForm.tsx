@@ -123,7 +123,7 @@ const BillingForm = () => {
 
       // Calculate fees with offer discount if available
       const totalFee = pricing?.price || (durationMonths * 500); // Default 500 per month
-      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 10; // Use offer discount or default 10%
+      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0; // Only use offer discount, no default discount
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
       
       // Get partial payment amount from registration data
