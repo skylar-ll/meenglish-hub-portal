@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -84,6 +84,7 @@ interface ExistingClass {
 }
 
 import { AutoEnrollmentInfo } from "@/components/admin/AutoEnrollmentInfo";
+import { EditClassModal } from "@/components/admin/EditClassModal";
 
 export default function ClassManagement() {
   const navigate = useNavigate();
@@ -93,6 +94,8 @@ export default function ClassManagement() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [timings, setTimings] = useState<string[]>([]);
   const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
+  const [editingClass, setEditingClass] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Form state
   const [className, setClassName] = useState("");
@@ -376,6 +379,17 @@ export default function ClassManagement() {
     }
   };
 
+  const handleEditClass = (cls: any) => {
+    setEditingClass(cls);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    fetchExistingClasses();
+    setIsEditModalOpen(false);
+    setEditingClass(null);
+  };
+
   if (loading && teachers.length === 0) {
     return (
       <div className="min-h-screen bg-background p-8 flex items-center justify-center">
@@ -644,13 +658,22 @@ export default function ClassManagement() {
                           ))}
                         </div>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleDeleteClass(cls.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditClass(cls)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDeleteClass(cls.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))
@@ -658,6 +681,21 @@ export default function ClassManagement() {
             </div>
           </TabsContent>
         </Tabs>
+
+        <EditClassModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingClass(null);
+          }}
+          classData={editingClass}
+          onSuccess={handleEditSuccess}
+          teachers={teachers}
+          branches={branches}
+          timings={timings}
+          courseOptions={COURSE_OPTIONS}
+          levelOptions={LEVEL_OPTIONS}
+        />
       </div>
     </div>
   );

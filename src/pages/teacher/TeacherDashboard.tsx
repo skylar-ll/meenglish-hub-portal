@@ -59,13 +59,44 @@ const TeacherDashboard = () => {
       if (teacherData) {
         setTeacherName(teacherData.full_name);
 
-        // 1) Get teacher's classes
-        const { data: myClasses } = await supabase
+        // Fetch classes assigned to this teacher using teacher_id
+        const { data: classesData } = await supabase
           .from("classes")
-          .select("id, courses, levels")
+          .select("id, class_name, timing, courses, levels")
           .eq("teacher_id", teacherData.id);
-        
-        const classIds = (myClasses || []).map((c: any) => c.id);
+
+        console.log("Teacher ID:", teacherData.id);
+        console.log("Classes found:", classesData);
+
+        if (classesData) {
+          // For each class, get enrollments
+          const formatted = [];
+          for (const cls of classesData) {
+            const { data: enrolls } = await supabase
+              .from("enrollments")
+              .select("student_id")
+              .eq("class_id", cls.id);
+            
+            const studentIds = (enrolls || []).map((e: any) => e.student_id);
+            let studentsList: any[] = [];
+            if (studentIds.length > 0) {
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id, full_name_en")
+                .in("id", studentIds);
+              studentsList = (profiles || []).map((p: any) => ({ id: p.id, full_name_en: p.full_name_en }));
+            }
+            
+            formatted.push({
+              ...cls,
+              students: studentsList,
+            });
+          }
+          setClasses(formatted);
+        }
+
+        // Get students in teacher's classes (same as before)
+        const classIds = (classesData || []).map((c: any) => c.id);
         if (classIds.length === 0) {
           setStudents([]);
         } else {
@@ -88,7 +119,7 @@ const TeacherDashboard = () => {
             // Build a map of student->enrolled courses/levels
             const studentEnrollMap = new Map<string, { courses: string[], levels: string[] }>();
             enrolls?.forEach((enr: any) => {
-              const cls = myClasses?.find((c: any) => c.id === enr.class_id);
+              const cls = classesData?.find((c: any) => c.id === enr.class_id);
               if (cls) {
                 const existing = studentEnrollMap.get(enr.student_id) || { courses: [], levels: [] };
                 if (cls.courses) existing.courses.push(...cls.courses);
@@ -121,39 +152,6 @@ const TeacherDashboard = () => {
         setTeacherName(session.user.email?.split('@')[0] || "Teacher");
       }
 
-      // Fetch classes assigned to this teacher
-      const { data: classesData } = await supabase
-        .from("classes")
-        .select("id, class_name, timing, courses, levels")
-        .eq("teacher_id", session.user.id);
-
-      if (classesData) {
-        // For each class, get enrollments
-        const formatted = [];
-        for (const cls of classesData) {
-          const { data: enrolls } = await supabase
-            .from("enrollments")
-            .select("student_id")
-            .eq("class_id", cls.id);
-          
-          const studentIds = (enrolls || []).map((e: any) => e.student_id);
-          let studentsList: any[] = [];
-          if (studentIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from("profiles")
-              .select("id, full_name_en")
-              .in("id", studentIds);
-            studentsList = (profiles || []).map((p: any) => ({ id: p.id, full_name_en: p.full_name_en }));
-          }
-          
-          formatted.push({
-            ...cls,
-            students: studentsList,
-          });
-        }
-        setClasses(formatted);
-      }
-      
       setLoading(false);
     };
 
