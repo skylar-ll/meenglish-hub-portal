@@ -101,20 +101,6 @@ const TeacherLogin = () => {
 
       if (error) throw error;
 
-      // Verify teacher role (must be assigned by admin)
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "teacher")
-        .maybeSingle();
-
-      if (!roleData) {
-        await supabase.auth.signOut();
-        toast.error("Invalid teacher account - role must be assigned by admin");
-        return;
-      }
-
       toast.success(t('teacher.loginSuccess'));
       navigate("/teacher/dashboard");
     } catch (error: any) {

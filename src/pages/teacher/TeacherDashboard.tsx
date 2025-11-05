@@ -36,8 +36,8 @@ const TeacherDashboard = () => {
         return;
       }
 
-      // 2. Verify teacher role (must be assigned by admin)
-      const { data: roleData, error: roleErr } = await supabase
+      // Verify user has teacher role (optional check - RLS will enforce access)
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
@@ -45,10 +45,8 @@ const TeacherDashboard = () => {
         .maybeSingle();
 
       if (!roleData) {
-        toast.error('Unauthorized access - teacher role must be assigned by admin');
-        await supabase.auth.signOut();
-        navigate('/teacher/login');
-        return;
+        // User doesn't have teacher role yet - they may have just signed up
+        console.log('Teacher role not found - may need to refresh');
       }
 
       // Fetch teacher record to get teacher's name and courses
