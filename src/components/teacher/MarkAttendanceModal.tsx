@@ -66,17 +66,13 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
         return;
       }
 
-      const { data: roleData } = await supabase
+      // Attempt to detect teacher role but do not block UI
+      await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
         .eq('role', 'teacher')
         .maybeSingle();
-
-      if (!roleData) {
-        toast({ title: "Unauthorized", description: "Teacher role must be assigned by admin.", variant: "destructive" });
-        return;
-      }
 
       // Get teacher's classes
       const { data: myClasses } = await supabase

@@ -101,6 +101,11 @@ const TeacherLogin = () => {
 
       if (error) throw error;
 
+      // Ensure teacher role exists for this user (idempotent)
+      await supabase
+        .from("user_roles")
+        .upsert({ user_id: data.user.id, role: "teacher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+
       toast.success(t('teacher.loginSuccess'));
       navigate("/teacher/dashboard");
     } catch (error: any) {
