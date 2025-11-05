@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import confetti from "canvas-confetti";
 
 interface OfferCardProps {
   offerName: string;
@@ -10,6 +11,7 @@ interface OfferCardProps {
   startDate: string;
   endDate: string;
   language: string;
+  highPriority?: boolean;
 }
 
 export const OfferCard = ({
@@ -19,8 +21,22 @@ export const OfferCard = ({
   startDate,
   endDate,
   language,
+  highPriority = false,
 }: OfferCardProps) => {
   const navigate = useNavigate();
+
+  const handleClaim = () => {
+    try {
+      confetti({
+        particleCount: 90,
+        spread: 60,
+        startVelocity: 35,
+        scalar: 0.9,
+        origin: { y: 0.2 }
+      });
+    } catch {}
+    navigate("/student/signup");
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -47,9 +63,11 @@ export const OfferCard = ({
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border-2 border-primary/30 bg-gradient-to-r from-primary/95 via-secondary/95 to-accent/95 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] animate-fade-in">
+    <div className={`relative w-full overflow-hidden rounded-3xl border-2 border-primary/30 bg-gradient-to-r from-primary/95 via-secondary/95 to-accent/95 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] animate-fade-in ${highPriority ? 'sticky top-0 z-40' : ''}`}
+      role="banner"
+      aria-label={language === 'ar' ? 'عرض ترويجي نشط' : 'Active promotional offer'}
+    >
       {/* Animated gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
       
       {/* Decorative sparkle effects */}
       <div className="absolute top-4 left-4 w-16 h-16 bg-white/20 rounded-full blur-2xl" />
@@ -106,9 +124,10 @@ export const OfferCard = ({
         {/* Right section - CTA Button */}
         <div className="flex-shrink-0">
           <Button 
-            onClick={() => navigate("/student/signup")}
+            onClick={handleClaim}
             size="lg"
             className="bg-white text-primary hover:bg-white/90 font-bold px-8 py-6 rounded-2xl text-lg shadow-xl hover:shadow-2xl transition-all duration-300 group"
+            aria-label={language === 'ar' ? 'احصلي على العرض' : 'Claim Offer'}
           >
             <span className="mr-2">
               {language === "ar" ? "احصلي على العرض" : "Claim Offer"}

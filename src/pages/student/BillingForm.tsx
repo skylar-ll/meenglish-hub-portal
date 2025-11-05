@@ -177,6 +177,7 @@ const BillingForm = () => {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!signature) {
       toast.error("Please sign the billing form first");
       return;
@@ -187,9 +188,26 @@ const BillingForm = () => {
       return;
     }
 
+    // Lightweight validation against expected fields
+    const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+    const checks: Array<[string, any]> = [
+      ["name_en", billData.clientName],
+      ["name_ar", billData.clientNameAr],
+      ["phone", billData.contactNumber],
+      ["branch", billData.branch],
+      ["gender", registration?.gender],
+      ["programs_selected", Array.isArray(registration?.courses) ? registration.courses.length : !!registration?.courses],
+      ["levels_selected", Array.isArray(registration?.selectedLevels) ? registration.selectedLevels.length : !!registration?.selectedLevels],
+    ];
+    const missing = checks.filter(([_, v]) => !v).map(([k]) => k);
+    if (missing.length) {
+      toast.error(`Please complete: ${missing.join(", ")}`);
+      return;
+    }
+
     setSubmitting(true);
+    let succeeded = false;
     try {
-      // Get current authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -463,16 +481,18 @@ const BillingForm = () => {
       // Clear registration data
       sessionStorage.removeItem("studentRegistration");
 
+      succeeded = true;
       toast.success("Registration completed successfully! Redirecting to payment...");
-      
-      // Navigate to student payment page
-      navigate("/student/payments");
+      // Navigate to student payment page after a small delay
+      setTimeout(() => navigate("/student/payments"), 300);
     } catch (error: any) {
       console.error("Error completing registration:", error);
-      if (error?.errors?.[0]?.message) {
-        toast.error(error.errors[0].message);
-      } else {
-        toast.error(error?.message || "Failed to complete registration");
+      if (!succeeded) {
+        if (error?.errors?.[0]?.message) {
+          toast.error(error.errors[0].message);
+        } else {
+          toast.error(error?.message || "Failed to complete registration");
+        }
       }
     } finally {
       setSubmitting(false);
@@ -783,24 +803,7 @@ const BillingForm = () => {
           </div>
         </Card>
 
-        <div className="mt-6 flex gap-4 md:hidden">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/student/partial-payment-selection")}
-            className="flex-1"
-            disabled={submitting}
-          >
-            Back
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!signature || submitting}
-            className="flex-1 bg-gradient-to-r from-primary to-secondary"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            {submitting ? "Completing..." : "Sign & Complete"}
-          </Button>
-        </div>
+        {/* Single submission control: use floating navigation only to avoid duplicate triggers on mobile */}
         
         {/* Floating Navigation Button */}
         <FloatingNavigationButton

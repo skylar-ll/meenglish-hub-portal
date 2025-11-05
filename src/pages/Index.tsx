@@ -130,6 +130,7 @@ const Index = () => {
                   startDate={offer.start_date}
                   endDate={offer.end_date}
                   language={language}
+                  highPriority={index === 0}
                 />
               </div>
             ))}
