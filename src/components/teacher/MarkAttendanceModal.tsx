@@ -78,9 +78,39 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
         return;
       }
 
+      // Get teacher's classes
+      const { data: myClasses } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("teacher_id", session.user.id);
+      
+      const classIds = (myClasses || []).map((c: any) => c.id);
+      
+      if (classIds.length === 0) {
+        setAttendanceData([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get enrollments for these classes
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("student_id")
+        .in("class_id", classIds);
+      
+      const studentIds = Array.from(new Set((enrollments || []).map((e: any) => e.student_id)));
+      
+      if (studentIds.length === 0) {
+        setAttendanceData([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get enrolled students only
       const { data: studentsData, error: studentsError } = await supabase
-        .from("students")
-        .select("*")
+        .from("profiles")
+        .select("id, full_name_en, full_name_ar, phone1, program")
+        .in("id", studentIds)
         .order("full_name_en");
 
       if (studentsError) throw studentsError;
@@ -113,7 +143,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
       const maxWeekNum = Math.max(...Array.from(weekMap.values()), 4);
       setMaxWeek(maxWeekNum);
 
-      const processedData: StudentAttendance[] = (studentsData || []).map(student => {
+      const processedData: StudentAttendance[] = (studentsData || []).map((student: any) => {
         const studentRecords = attendanceRecords?.filter(r => r.student_id === student.id) || [];
         const todayRecord = studentRecords.find(r => r.date === today);
         

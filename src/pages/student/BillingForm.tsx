@@ -198,10 +198,12 @@ const BillingForm = () => {
       ["gender", registration?.gender],
       ["courses_selected", Array.isArray(registration?.courses) ? registration.courses.length : !!registration?.courses],
       ["level_selected", !!registration?.course_level],
+      ["timing_selected", !!registration?.timing],
+      ["terms_agreed", registration?.termsAgreed === true],
     ];
     const missing = checks.filter(([_, v]) => !v).map(([k]) => k);
     if (missing.length) {
-      toast.error(`Please complete the registration steps: ${missing.join(", ")}`);
+      toast.error(`Please fill all required fields: ${missing.join(", ")}`);
       return;
     }
 
