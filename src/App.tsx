@@ -56,6 +56,9 @@ import AssignedStudents from "./pages/teacher/AssignedStudents";
 // Admin Billing
 import AdminBilling from "./pages/admin/AdminBilling";
 
+// Admin Offers
+import OffersManagement from "./pages/admin/OffersManagement";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -106,6 +109,7 @@ const App = () => (
           <Route path="/admin/student-management" element={<StudentManagement />} />
           <Route path="/admin/course-pricing" element={<CoursePricingManagement />} />
           <Route path="/admin/billing" element={<AdminBilling />} />
+          <Route path="/admin/offers" element={<OffersManagement />} />
           <Route path="/admin/class-enrollments" element={<ClassEnrollmentManagement />} />
           <Route path="/admin/classes" element={<ClassManagement />} />
           <Route path="/admin/terms" element={<TermsManagement />} />

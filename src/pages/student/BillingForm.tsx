@@ -53,6 +53,19 @@ const BillingForm = () => {
         console.error("Pricing error:", pricingError);
       }
 
+      // Check for active offers
+      const now = new Date();
+      const { data: activeOffers } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('status', 'active')
+        .lte('start_date', now.toISOString().split('T')[0])
+        .gte('end_date', now.toISOString().split('T')[0])
+        .order('discount_percentage', { ascending: false })
+        .limit(1);
+
+      const activeOffer = activeOffers && activeOffers.length > 0 ? activeOffers[0] : null;
+
       // Fetch teacher details if any
       let teacherDetails: any[] = [];
       if (registrationData.teacherSelections) {
@@ -70,8 +83,8 @@ const BillingForm = () => {
       }
 
       // Get current date in KSA timezone
-      const now = new Date();
-      const ksaDate = toZonedTime(now, ksaTimezone);
+      const nowDate = new Date();
+      const ksaDate = toZonedTime(nowDate, ksaTimezone);
       const registrationDate = format(ksaDate, "dd MMMM yyyy");
 
       // Fetch matching classes to get actual start date
@@ -108,9 +121,9 @@ const BillingForm = () => {
         ? format(new Date(actualStartDate), "dd MMMM yyyy")
         : format(addDays(ksaDate, 1), "dd MMMM yyyy");
 
-      // Calculate fees
+      // Calculate fees with offer discount if available
       const totalFee = pricing?.price || (durationMonths * 500); // Default 500 per month
-      const discountPercent = 10; // Default 10% discount
+      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 10; // Use offer discount or default 10%
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
       
       // Get partial payment amount from registration data
@@ -141,9 +154,15 @@ const BillingForm = () => {
         nationalId: registrationData.id,
         phone2: registrationData.phone2 || "",
         teachers: teacherDetails,
+        activeOffer: activeOffer,
       };
 
       setBillData(billingData);
+      
+      // Show offer notification if active
+      if (activeOffer) {
+        toast.success(`🎉 ${activeOffer.offer_name}: ${activeOffer.discount_percentage}% discount applied!`);
+      }
     } catch (error: any) {
       console.error("Error preparing billing:", error);
       toast.error("Failed to prepare billing form");
@@ -586,12 +605,24 @@ const BillingForm = () => {
 
             {/* Payment Summary */}
             <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+              {billData.activeOffer && (
+                <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <span className="text-lg">🎉</span>
+                    <div>
+                      <p className="font-semibold">{billData.activeOffer.offer_name}</p>
+                      <p className="text-sm">{billData.activeOffer.offer_description}</p>
+                      <p className="text-xs mt-1">Special {billData.activeOffer.discount_percentage}% discount applied!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Subtotal:</span>
                 <span className="font-bold text-lg">{billData.totalFee.toLocaleString()} SAR</span>
               </div>
               <div className="flex justify-between items-center text-green-600">
-                <span className="font-semibold">Extra Discount:</span>
+                <span className="font-semibold">Extra Discount{billData.activeOffer ? ` (${billData.activeOffer.offer_name})` : ''}:</span>
                 <span className="font-bold">-{(billData.totalFee - billData.feeAfterDiscount).toLocaleString()} SAR</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t">

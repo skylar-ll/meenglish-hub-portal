@@ -261,6 +261,15 @@ const AdminDashboard = () => {
               Billing Forms
             </Button>
             <Button 
+              onClick={() => navigate("/admin/offers")}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-green-500 to-green-600"
+              size="lg"
+            >
+              <TrendingUp className="w-5 h-5" />
+              Offers
+            </Button>
+            <Button 
               onClick={() => navigate("/admin/student-management")}
               variant="outline"
               className="gap-2"

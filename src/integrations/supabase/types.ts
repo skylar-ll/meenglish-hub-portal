@@ -365,6 +365,45 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          discount_percentage: number
+          end_date: string
+          id: string
+          offer_description: string | null
+          offer_name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          discount_percentage: number
+          end_date: string
+          id?: string
+          offer_description?: string | null
+          offer_name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          discount_percentage?: number
+          end_date?: string
+          id?: string
+          offer_description?: string | null
+          offer_name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
           amount_paid: number
