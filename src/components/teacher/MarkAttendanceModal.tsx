@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -452,7 +452,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                         'bg-orange-100 dark:bg-orange-950'
                       ];
                       return (
-                        <>
+                        <React.Fragment key={`week-header-${weekNum}`}>
                           {weekDays.map(day => (
                             <th 
                               key={`${weekNum}-${day}`}
@@ -467,7 +467,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                           >
                             WE
                           </th>
-                        </>
+                        </React.Fragment>
                       );
                     })}
                   </tr>
@@ -489,7 +489,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                           'bg-orange-50 dark:bg-orange-950/30'
                         ];
                         return (
-                          <>
+                          <React.Fragment key={`student-${student.student_id}-week-${weekNum}`}>
                             {weekDays.map(day => {
                               const status = student.weeks[weekNum]?.[day] || '';
                               const statusColors = {
@@ -515,7 +515,7 @@ export const MarkAttendanceModal = ({ isOpen, onClose }: MarkAttendanceModalProp
                             >
                               {student.weekTotals[weekNum] || 0}
                             </td>
-                          </>
+                          </React.Fragment>
                         );
                       })}
                       <td className="border border-border p-1 text-xs text-center font-bold">

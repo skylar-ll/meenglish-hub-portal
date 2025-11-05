@@ -81,10 +81,10 @@ const TeacherDashboard = () => {
           if (studentIds.length === 0) {
             setStudents([]);
           } else {
-            // 3) Load profiles (teachers can view student profiles)
-            const { data: profiles } = await supabase
-              .from("profiles")
-              .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level")
+            // 3) Load students table (teachers can view students via RLS)
+            const { data: studentsData } = await supabase
+              .from("students")
+              .select("id, full_name_en, full_name_ar, branch, program, class_type, course_level, total_grade, email")
               .in("id", studentIds);
             
             // Build a map of student->enrolled courses/levels
@@ -99,23 +99,23 @@ const TeacherDashboard = () => {
               }
             });
             
-            const studentsData = (profiles || []).map((p: any) => {
-              const enr = studentEnrollMap.get(p.id) || { courses: [], levels: [] };
+            const formattedStudents = (studentsData || []).map((s: any) => {
+              const enr = studentEnrollMap.get(s.id) || { courses: [], levels: [] };
               return {
-                id: p.id,
-                full_name_en: p.full_name_en,
-                full_name_ar: p.full_name_ar,
-                branch: p.branch,
-                program: p.program,
-                class_type: p.class_type,
-                course_level: p.course_level,
-                total_grade: null,
-                email: "",
+                id: s.id,
+                full_name_en: s.full_name_en,
+                full_name_ar: s.full_name_ar,
+                branch: s.branch,
+                program: s.program,
+                class_type: s.class_type,
+                course_level: s.course_level,
+                total_grade: s.total_grade,
+                email: s.email,
                 enrolled_courses: Array.from(new Set(enr.courses)),
                 enrolled_levels: Array.from(new Set(enr.levels)),
               };
             });
-            setStudents(studentsData);
+            setStudents(formattedStudents);
           }
         }
       } else {
