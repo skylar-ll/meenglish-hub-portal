@@ -299,6 +299,8 @@ const BillingForm = () => {
         language: 'en',
         first_payment: billData.firstPayment,
         second_payment: billData.secondPayment,
+        payment_deadline: registration.nextPaymentDate || null,
+        last_payment_date: registration.paymentDate || null,
       };
 
       const { data: billing, error: billingError } = await supabase
