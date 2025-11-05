@@ -196,12 +196,12 @@ const BillingForm = () => {
       ["phone", billData.contactNumber],
       ["branch", billData.branch],
       ["gender", registration?.gender],
-      ["programs_selected", Array.isArray(registration?.courses) ? registration.courses.length : !!registration?.courses],
-      ["levels_selected", Array.isArray(registration?.selectedLevels) ? registration.selectedLevels.length : !!registration?.selectedLevels],
+      ["courses_selected", Array.isArray(registration?.courses) ? registration.courses.length : !!registration?.courses],
+      ["level_selected", !!registration?.course_level],
     ];
     const missing = checks.filter(([_, v]) => !v).map(([k]) => k);
     if (missing.length) {
-      toast.error(`Please complete: ${missing.join(", ")}`);
+      toast.error(`Please complete the registration steps: ${missing.join(", ")}`);
       return;
     }
 
