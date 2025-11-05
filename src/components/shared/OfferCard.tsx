@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Calendar } from "lucide-react";
+import { Sparkles, Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface OfferCardProps {
@@ -47,74 +47,79 @@ export const OfferCard = ({
   };
 
   return (
-    <Card className="relative overflow-hidden rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-background via-primary/5 to-secondary/10 shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] animate-fade-in">
-      {/* Decorative gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
+    <div className="relative w-full overflow-hidden rounded-3xl border-2 border-primary/30 bg-gradient-to-r from-primary/95 via-secondary/95 to-accent/95 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] animate-fade-in">
+      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
       
-      <div className="relative p-8">
-        {/* Header with icon */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-secondary">
-              <Sparkles className="w-6 h-6 text-white" />
+      {/* Decorative sparkle effects */}
+      <div className="absolute top-4 left-4 w-16 h-16 bg-white/20 rounded-full blur-2xl" />
+      <div className="absolute bottom-4 right-4 w-20 h-20 bg-accent/30 rounded-full blur-3xl" />
+      
+      <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 p-6 md:p-8">
+        {/* Left section - Discount badge */}
+        <div className="flex-shrink-0">
+          <div className="relative">
+            <div className="absolute inset-0 bg-white/20 rounded-3xl blur-xl" />
+            <div className="relative px-8 py-6 rounded-3xl bg-white/95 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-primary via-secondary to-accent bg-clip-text text-transparent">
+                  {discountPercentage}%
+                </div>
+                <div className="text-lg font-bold text-foreground/80 mt-1">
+                  {language === "ar" ? "خصم" : "OFF"}
+                </div>
+              </div>
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          </div>
+        </div>
+
+        {/* Middle section - Offer details */}
+        <div className="flex-1 text-center md:text-left text-white">
+          <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
+            <Sparkles className="w-6 h-6 text-white/90" />
+            <h3 className="text-2xl md:text-3xl font-bold drop-shadow-lg">
               {offerName}
             </h3>
           </div>
-        </div>
-
-        {/* Description */}
-        {offerDescription && (
-          <p className="text-muted-foreground mb-6 text-base md:text-lg leading-relaxed">
-            {offerDescription}
-          </p>
-        )}
-
-        {/* Date range */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Calendar className="w-4 h-4" />
-          <span>
-            {language === "ar" 
-              ? `من ${formatDate(startDate)} إلى ${formatDate(endDate)}`
-              : `${formatDate(startDate)} – ${formatDate(endDate)}`}
-          </span>
-        </div>
-
-        {/* Discount badge */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="inline-block">
-            <div className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-primary via-secondary to-accent overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-              <span className="relative text-4xl md:text-5xl font-black text-white drop-shadow-lg">
-                {discountPercentage}%
+          
+          {offerDescription && (
+            <p className="text-white/90 text-base md:text-lg mb-3 leading-relaxed drop-shadow-md">
+              {offerDescription}
+            </p>
+          )}
+          
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-white/80">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+              <Calendar className="w-4 h-4" />
+              <span>
+                {language === "ar" 
+                  ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+                  : `${formatDate(startDate)} – ${formatDate(endDate)}`}
               </span>
-              <span className="relative text-xl md:text-2xl font-bold text-white/90 ml-2">
-                {language === "ar" ? "خصم" : "OFF"}
-              </span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium">
+              ⏰ {getRemainingTime()}
             </div>
           </div>
         </div>
 
-        {/* Countdown timer */}
-        <div className="mb-6 p-3 rounded-xl bg-muted/50 backdrop-blur-sm">
-          <p className="text-sm font-medium text-center text-foreground/80">
-            ⏰ {getRemainingTime()}
-          </p>
+        {/* Right section - CTA Button */}
+        <div className="flex-shrink-0">
+          <Button 
+            onClick={() => navigate("/student/signup")}
+            size="lg"
+            className="bg-white text-primary hover:bg-white/90 font-bold px-8 py-6 rounded-2xl text-lg shadow-xl hover:shadow-2xl transition-all duration-300 group"
+          >
+            <span className="mr-2">
+              {language === "ar" ? "احصلي على العرض" : "Claim Offer"}
+            </span>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Button>
         </div>
-
-        {/* CTA Button */}
-        <Button 
-          onClick={() => navigate("/student/signup")}
-          className="w-full bg-gradient-to-r from-primary via-secondary to-accent hover:opacity-90 text-white font-bold py-6 rounded-2xl text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-        >
-          {language === "ar" ? "احصلي على العرض" : "Claim Offer"}
-        </Button>
       </div>
 
-      {/* Decorative corner accent */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/30 to-transparent rounded-bl-full blur-2xl" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-primary/30 to-transparent rounded-tr-full blur-2xl" />
-    </Card>
+      {/* Bottom shine effect */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+    </div>
   );
 };

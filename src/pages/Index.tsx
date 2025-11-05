@@ -115,22 +115,13 @@ const Index = () => {
 
       {/* Active Offers Section */}
       {!loading && activeOffers.length > 0 && (
-        <div className="container mx-auto px-4 py-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 animate-fade-in">
-            {language === "ar" ? "✨ عروضنا الحالية" : "✨ Current Offers"}
-          </h2>
-          <p className="text-center text-muted-foreground mb-8">
-            {language === "ar" 
-              ? "لا تفوتي هذه العروض الخاصة!" 
-              : "Don't miss these special offers!"}
-          </p>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-6 max-w-6xl mx-auto">
             {activeOffers.map((offer, index) => (
               <div
                 key={offer.id}
                 className="animate-scale-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+                style={{ animationDelay: `${index * 150}ms` }}
               >
                 <OfferCard
                   offerName={offer.offer_name}
