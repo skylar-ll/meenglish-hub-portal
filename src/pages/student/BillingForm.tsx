@@ -354,27 +354,12 @@ const BillingForm = () => {
         console.error('PDF generation/upload failed:', pdfErr);
       }
 
-      // Create or update student record (avoid duplicates)
-      // Prefer matching existing student by auth user id, then fallback to email
-      let existingStudent: { id: string } | null = null;
-      const { data: byId } = await supabase
+      // Create or update student record using auth user id
+      const { data: existingStudent } = await supabase
         .from("students")
         .select("id")
-        .eq("id", user.id)
+        .eq("email", billData.email)
         .maybeSingle();
-
-      if (byId) {
-        existingStudent = byId;
-      } else {
-        const { data: byEmail } = await supabase
-          .from("students")
-          .select("id")
-          .eq("email", billData.email)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        existingStudent = byEmail || null;
-      }
 
       let studentData: any = null;
       let studentError: any = null;

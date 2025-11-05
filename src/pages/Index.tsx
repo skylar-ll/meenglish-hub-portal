@@ -9,11 +9,50 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { OfferCard } from "@/components/shared/OfferCard";
+import { useEffect, useState } from "react";
 import logo from "@/assets/logo.jpeg";
+
+interface Offer {
+  id: string;
+  offer_name: string;
+  offer_description: string | null;
+  discount_percentage: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
+  const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchActiveOffers();
+  }, []);
+
+  const fetchActiveOffers = async () => {
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("offers")
+        .select("*")
+        .eq("status", "active")
+        .lte("start_date", now)
+        .gte("end_date", now)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setActiveOffers(data || []);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const portals = [
     {
@@ -73,6 +112,49 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Active Offers Section */}
+      {!loading && activeOffers.length > 0 && (
+        <div className="container mx-auto px-4 py-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 animate-fade-in">
+            {language === "ar" ? "✨ عروضنا الحالية" : "✨ Current Offers"}
+          </h2>
+          <p className="text-center text-muted-foreground mb-8">
+            {language === "ar" 
+              ? "لا تفوتي هذه العروض الخاصة!" 
+              : "Don't miss these special offers!"}
+          </p>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {activeOffers.map((offer, index) => (
+              <div
+                key={offer.id}
+                className="animate-scale-in"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <OfferCard
+                  offerName={offer.offer_name}
+                  offerDescription={offer.offer_description}
+                  discountPercentage={offer.discount_percentage}
+                  startDate={offer.start_date}
+                  endDate={offer.end_date}
+                  language={language}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && activeOffers.length === 0 && (
+        <div className="container mx-auto px-4 py-8 text-center">
+          <p className="text-muted-foreground text-lg">
+            {language === "ar" 
+              ? "✨ لا توجد عروض حالياً — ترقبي عروضنا القادمة!" 
+              : "✨ No offers right now — check back soon for something special!"}
+          </p>
+        </div>
+      )}
 
       {/* Student Section */}
       <div className="container mx-auto px-4 py-12">
