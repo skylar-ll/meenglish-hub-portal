@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
 import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2 } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { EditFormConfigModal } from "./EditFormConfigModal";
 import { InlineEditableField } from "./InlineEditableField";
 import { AddNewFieldButton } from "./AddNewFieldButton";
@@ -24,6 +25,7 @@ import { toZonedTime } from "date-fns-tz";
 import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
 import { PartialPaymentStep } from "@/components/billing/PartialPaymentStep";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -40,9 +42,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [signature, setSignature] = useState<string | null>(null);
   const [partialPaymentAmount, setPartialPaymentAmount] = useState<number>(0);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
+  const { filteredOptions } = useBranchFiltering(selectedBranchId);
   
-  // Fetch auto-translation setting
+  // Fetch auto-translation setting and levels
   useEffect(() => {
     const fetchAutoTranslationSetting = async () => {
       const { data } = await supabase
@@ -54,8 +59,24 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       setAutoTranslationEnabled(data?.config_value === 'true');
     };
     
+    const fetchLevels = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('form_configurations')
+          .select('*')
+          .eq('config_type', 'level')
+          .eq('is_active', true)
+          .order('display_order');
+        if (error) throw error;
+        setLevelOptions(data || []);
+      } catch (e) {
+        console.error('Failed to load levels', e);
+      }
+    };
+    
     if (open) {
       fetchAutoTranslationSetting();
+      fetchLevels();
     }
   }, [open]);
   const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
@@ -129,6 +150,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // If branch changes, update selectedBranchId for filtering
+    if (field === 'branch') {
+      const branch = branches.find(b => b.value === value);
+      setSelectedBranchId(branch?.id || null);
+    }
   };
 
   // Auto-translate Arabic name to English with debouncing
@@ -189,6 +216,15 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       courses: prev.courses.includes(courseValue)
         ? prev.courses.filter(c => c !== courseValue)
         : [...prev.courses, courseValue]
+    }));
+  };
+
+  const toggleLevel = (levelValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedLevels: prev.selectedLevels.includes(levelValue)
+        ? prev.selectedLevels.filter(l => l !== levelValue)
+        : [...prev.selectedLevels, levelValue]
     }));
   };
 
@@ -577,14 +613,43 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     }
   };
 
+  // Filter levels like CourseSelection does
+  const levelLike = (val: string) => /^level[\s\-_]?\d+/i.test(val);
+  const visibleCourses = courses.filter((c) => !levelLike(c.value));
+  
   // Group courses by category
-  const coursesByCategory = courses.reduce((acc, course) => {
+  const coursesByCategory = visibleCourses.reduce((acc, course) => {
     if (!acc[course.category]) {
       acc[course.category] = [];
     }
     acc[course.category].push(course);
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
+
+  // English levels: prefer configured list, fallback to classes-derived allowed levels
+  const englishLevelOptions = levelOptions.length
+    ? levelOptions
+    : (filteredOptions.allowedLevels || []).map((v, i) => ({
+        id: `fallback-${i}`,
+        config_key: v,
+        config_value: v,
+        display_order: i,
+      }));
+
+  // Helper functions for level/course matching
+  const extractLevelKey = (val: string): string | null => {
+    if (!val) return null;
+    const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+    return m ? `level-${m[1]}` : null;
+  };
+
+  const normalize = (str: string) =>
+    (str || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s\-_]/g, "")
+      .replace(/[أإآا]/g, "ا")
+      .replace(/[ىي]/g, "ي");
 
   // Helper to get field label
   const getFieldLabel = (key: string) => {
