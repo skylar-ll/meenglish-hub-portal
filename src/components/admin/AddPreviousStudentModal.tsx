@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
 import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { InlineEditableField } from "./InlineEditableField";
 import { AddNewFieldButton } from "./AddNewFieldButton";
 import { BillingFormStep } from "./shared/BillingFormStep";
@@ -22,6 +23,7 @@ import { toZonedTime } from "date-fns-tz";
 import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
 import { PartialPaymentStep } from "@/components/billing/PartialPaymentStep";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -37,7 +39,10 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [signature, setSignature] = useState<string | null>(null);
   const [partialPaymentAmount, setPartialPaymentAmount] = useState<number>(0);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
+  const { filteredOptions } = useBranchFiltering(selectedBranchId);
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -53,8 +58,24 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       setAutoTranslationEnabled(data?.config_value === 'true');
     };
     
+    const fetchLevels = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('form_configurations')
+          .select('*')
+          .eq('config_type', 'level')
+          .eq('is_active', true)
+          .order('display_order');
+        if (error) throw error;
+        setLevelOptions(data || []);
+      } catch (e) {
+        console.error('Failed to load levels', e);
+      }
+    };
+    
     if (open) {
       fetchAutoTranslationSetting();
+      fetchLevels();
     }
   }, [open]);
 
@@ -95,6 +116,12 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    if (field === 'branch') {
+      const branch = branches.find(b => b.value === value);
+      setSelectedBranchId(branch?.id || null);
+      setFormData(prev => ({ ...prev, timing: "" }));
+    }
   };
 
   useEffect(() => {
@@ -157,6 +184,15 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     }));
   };
 
+  const toggleLevel = (levelValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedLevels: prev.selectedLevels.includes(levelValue)
+        ? prev.selectedLevels.filter(l => l !== levelValue)
+        : [...prev.selectedLevels, levelValue]
+    }));
+  };
+
   const handleNext = () => {
     if (step < 8) {
       setStep(step + 1);
@@ -173,8 +209,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       return;
     }
     
-    if (formData.courses.length === 0) {
-      toast.error("Please select at least one course");
+    if (formData.courses.length === 0 && formData.selectedLevels.length === 0) {
+      toast.error("Please select at least one course or level");
       return;
     }
     
@@ -203,7 +239,6 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       return;
     }
 
-    // Validate next payment date if there's remaining balance
     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
     const durationMonths = formData.customDuration 
       ? parseInt(formData.customDuration) 
@@ -232,7 +267,6 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         password: formData.password,
       });
 
-      // Check if email already exists
       const { data: existingUsers } = await supabase
         .from('students')
         .select('email')
@@ -285,15 +319,6 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
       if (signatureError) throw signatureError;
 
-      const durationMonths = formData.customDuration 
-        ? parseInt(formData.customDuration) 
-        : parseInt(formData.courseDuration);
-
-      const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-      const totalFee = pricing?.price || (durationMonths * 500);
-      const discountPercent = 10;
-      const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
-
       const assignedTeacherIds = new Set<string>();
       
       const { data: teachersData } = await supabase.from('teachers').select('id, full_name');
@@ -313,7 +338,6 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('speaking')) && ayshaId) assignedTeacherIds.add(ayshaId);
       });
 
-      // Get branch_id and start_date
       let actualBranchId = null;
       let actualStartDate = format(addDays(ksaDate, 1), "yyyy-MM-dd");
       
@@ -357,8 +381,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           national_id: validatedData.id,
           branch_id: actualBranchId,
           branch: formData.branch,
-          program: formData.courses.join(', '),
-          class_type: formData.courses.join(', '),
+          program: [...formData.courses, ...formData.selectedLevels].join(', '),
+          class_type: [...formData.courses, ...formData.selectedLevels].join(', '),
           course_level: formData.selectedLevels.join(', ') || null,
           timing: formData.timing,
           payment_method: formData.paymentMethod,
@@ -384,21 +408,18 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Auto-enroll using utility
       try {
         const result = await autoEnrollStudent({
           id: studentData.id,
           branch_id: actualBranchId || undefined,
           program: formData.courses[0] || undefined,
-          courses: formData.courses,
+          courses: [...formData.courses, ...formData.selectedLevels],
           course_level: formData.selectedLevels.join(', '),
           timing: formData.timing,
         });
         
         if (result?.count) {
           console.log(`✅ Auto-enrolled in ${result.count} class(es)`);
-        } else {
-          console.warn("⚠️ No matching classes for auto-enrollment");
         }
       } catch (enrollErr) {
         console.error('❌ Auto-enrollment failed:', enrollErr);
@@ -409,7 +430,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         student_name_en: validatedData.fullNameEn,
         student_name_ar: validatedData.fullNameAr,
         phone: validatedData.phone1,
-        course_package: formData.courses.join(', '),
+        course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
         registration_date: format(ksaDate, "yyyy-MM-dd"),
         course_start_date: actualStartDate,
         time_slot: formData.timing,
@@ -440,7 +461,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           student_name_en: validatedData.fullNameEn,
           student_name_ar: validatedData.fullNameAr,
           phone: validatedData.phone1,
-          course_package: formData.courses.join(', '),
+          course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
           time_slot: formData.timing,
           registration_date: billingRecord.registration_date,
           course_start_date: billingRecord.course_start_date,
@@ -477,8 +498,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           phone2: validatedData.phone2 || null,
           national_id: validatedData.id,
           branch: formData.branch,
-          program: formData.courses.join(', '),
-          class_type: formData.courses.join(', '),
+          program: [...formData.courses, ...formData.selectedLevels].join(', '),
+          class_type: [...formData.courses, ...formData.selectedLevels].join(', '),
           payment_method: formData.paymentMethod,
         })
         .eq("id", authData.user.id);
@@ -508,6 +529,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       setStep(1);
       setSignature(null);
       setPartialPaymentAmount(0);
+      setSelectedBranchId(null);
       
       onStudentAdded();
       onOpenChange(false);
@@ -519,11 +541,36 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     }
   };
 
-  const coursesByCategory = courses.reduce((acc, course) => {
+  const levelLike = (val: string) => /^level[\s\-_]?\d+/i.test(val);
+  const visibleCourses = courses.filter((c) => !levelLike(c.value));
+  const coursesByCategory = visibleCourses.reduce((acc, course) => {
     if (!acc[course.category]) acc[course.category] = [];
     acc[course.category].push(course);
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
+
+  const englishLevelOptions = levelOptions.length
+    ? levelOptions
+    : (filteredOptions.allowedLevels || []).map((v, i) => ({
+        id: `fallback-${i}`,
+        config_key: v,
+        config_value: v,
+        display_order: i,
+      }));
+
+  const extractLevelKey = (val: string): string | null => {
+    if (!val) return null;
+    const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+    return m ? `level-${m[1]}` : null;
+  };
+
+  const normalize = (str: string) =>
+    (str || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s\-_]/g, "")
+      .replace(/[أإآا]/g, "ا")
+      .replace(/[ىي]/g, "ي");
 
   const getFieldLabel = (key: string) => fieldLabels.find(f => f.value === key) || { id: '', label: key, value: key };
 
@@ -540,7 +587,9 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         </DialogHeader>
 
         {configLoading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         ) : (
           <div className="space-y-4 py-4">
             {isEditMode && (
@@ -563,24 +612,24 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
               </Card>
             )}
 
-            {/* Steps 1-6 remain similar to AddStudentModal but shorter for brevity */}
+            {/* Step 1: Personal Information - Same as AddStudentModal */}
             {step === 1 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label><InlineEditableField id={getFieldLabel("full_name_ar").id} value={getFieldLabel("full_name_ar").label} configType="field_label" configKey="full_name_ar" isEditMode={isEditMode} onUpdate={refetch} onDelete={refetch} /></Label>
+                    <Label><InlineEditableField id={getFieldLabel("full_name_ar").id} value={getFieldLabel("full_name_ar").label} configType="field_label" configKey="full_name_ar" isEditMode={isEditMode} onUpdate={refetch} isLabel={true} /> *</Label>
                     <Input value={formData.fullNameAr} onChange={(e) => handleInputChange("fullNameAr", e.target.value)} placeholder="الاسم" dir="rtl" />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
-                      <InlineEditableField id={getFieldLabel("full_name_en").id} value={getFieldLabel("full_name_en").label} configType="field_label" configKey="full_name_en" isEditMode={isEditMode} onUpdate={refetch} onDelete={refetch} />
-                      {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+                      <InlineEditableField id={getFieldLabel("full_name_en").id} value={getFieldLabel("full_name_en").label} configType="field_label" configKey="full_name_en" isEditMode={isEditMode} onUpdate={refetch} isLabel={true} />
+                      {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />} *
                     </Label>
                     <Input value={formData.fullNameEn} onChange={(e) => handleInputChange("fullNameEn", e.target.value)} placeholder="Name" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Gender</Label>
+                  <Label>Gender *</Label>
                   <RadioGroup value={formData.gender} onValueChange={(v) => handleInputChange("gender", v)}>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
@@ -600,7 +649,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Phone 1</Label>
+                    <Label>Phone 1 *</Label>
                     <div className="flex gap-2">
                       <Select value={formData.countryCode1} onValueChange={(v) => handleInputChange("countryCode1", v)}>
                         <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
@@ -621,37 +670,30 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label>Email *</Label>
                   <Input type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>National ID</Label>
+                  <Label>National ID *</Label>
                   <Input value={formData.id} onChange={(e) => handleInputChange("id", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Password</Label>
+                  <Label>Password *</Label>
                   <Input type="password" value={formData.password} onChange={(e) => handleInputChange("password", e.target.value)} />
                 </div>
                 <Button onClick={handleNext} className="w-full">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
               </div>
             )}
 
+            {/* Remaining steps 2-8 are identical to AddStudentModal - Using condensed version for brevity */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label>Select Courses</Label>
-                {Object.entries(coursesByCategory).map(([category, cats]) => (
-                  <div key={category}>
-                    <h3 className="font-semibold text-sm mb-2">{category}</h3>
-                    {cats.map((c) => (
-                      <Card key={c.value} className={`p-3 mb-2 cursor-pointer ${formData.courses.includes(c.value) ? "border-primary bg-primary/5" : ""}`} onClick={() => toggleCourse(c.value)}>
-                        <div className="flex items-center gap-2">
-                          <Checkbox checked={formData.courses.includes(c.value)} />
-                          <span>{c.label}</span>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ))}
+                <Label className="text-lg font-semibold">Select Branch *</Label>
+                <div className="grid gap-3">
+                  {branches.map((b) => (
+                    <Card key={b.value} className={`p-4 cursor-pointer ${formData.branch === b.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("branch", b.value)}><p>{b.label}</p></Card>
+                  ))}
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
@@ -661,10 +703,37 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
             {step === 3 && (
               <div className="space-y-4">
-                <Label>Timing</Label>
-                {timings.map((t) => (
-                  <Card key={t.value} className={`p-4 cursor-pointer ${formData.timing === t.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("timing", t.value)}><p>{t.label}</p></Card>
-                ))}
+                {selectedBranchId && (<div className="p-3 bg-muted/50 rounded-lg"><p className="text-sm">✓ Classes filtered for: <strong>{formData.branch}</strong></p></div>)}
+                <div className="space-y-3">
+                  <Label className="text-lg font-semibold">English Program</Label>
+                  {englishLevelOptions.map((level) => {
+                    const key = extractLevelKey(level.config_key) || extractLevelKey(level.config_value);
+                    const isAvailable = selectedBranchId ? (key ? filteredOptions.allowedLevelKeys.includes(key) : filteredOptions.allowedLevels.some((al) => normalize(al).includes(normalize(level.config_value)))) : true;
+                    return (
+                      <div key={level.id} className={`flex items-center space-x-3 p-3 rounded-lg ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`} onClick={() => isAvailable && toggleLevel(level.config_value)}>
+                        <Checkbox checked={formData.selectedLevels.includes(level.config_value)} disabled={!isAvailable} />
+                        <label className="text-sm flex-1">{level.config_value}</label>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-lg font-semibold">Other Courses</Label>
+                  {Object.entries(coursesByCategory).map(([category, cats]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-sm mb-2">{category}</h3>
+                      {cats.map((c) => {
+                        const isAvailable = selectedBranchId ? filteredOptions.allowedCourses.some(ac => normalize(ac).includes(normalize(c.value)) || normalize(c.value).includes(normalize(ac))) : true;
+                        return (
+                          <div key={c.value} className={`flex items-center space-x-3 p-3 rounded-lg ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`} onClick={() => isAvailable && toggleCourse(c.value)}>
+                            <Checkbox checked={formData.courses.includes(c.value)} disabled={!isAvailable} />
+                            <label className="text-sm flex-1">{c.label}</label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
@@ -674,10 +743,13 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
             {step === 4 && (
               <div className="space-y-4">
-                <Label>Branch</Label>
-                {branches.map((b) => (
-                  <Card key={b.value} className={`p-4 cursor-pointer ${formData.branch === b.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("branch", b.value)}><p>{b.label}</p></Card>
-                ))}
+                <Label>Timing *</Label>
+                {timings.map((t) => {
+                  const isAvailable = selectedBranchId ? filteredOptions.allowedTimings.includes(t.value) : true;
+                  return (
+                    <Card key={t.value} className={`p-4 ${isAvailable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'} ${formData.timing === t.value ? "border-primary bg-primary/5" : ""}`} onClick={() => isAvailable && handleInputChange("timing", t.value)}><p>{t.label}</p></Card>
+                  );
+                })}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(3)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
@@ -687,15 +759,15 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
             {step === 5 && (
               <div className="space-y-4">
-                <Label>Duration</Label>
+                <Label>Duration *</Label>
                 {courseDurations.map((d) => (
-                  <Card key={d.value} className={`p-4 cursor-pointer ${formData.courseDuration === d.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("courseDuration", d.value)}>
+                  <Card key={d.value} className={`p-4 cursor-pointer ${formData.courseDuration === d.value ? "border-primary bg-primary/5" : ""}`} onClick={() => {handleInputChange("courseDuration", d.value); handleInputChange("customDuration", "");}}>
                     <div className="flex justify-between"><p>{d.label}</p><p>{d.price} SAR</p></div>
                   </Card>
                 ))}
                 <div className="space-y-2">
                   <Label>Custom Duration</Label>
-                  <Input type="number" value={formData.customDuration} onChange={(e) => handleInputChange("customDuration", e.target.value)} placeholder="Months" />
+                  <Input type="number" value={formData.customDuration} onChange={(e) => {handleInputChange("customDuration", e.target.value); handleInputChange("courseDuration", "");}} placeholder="Months" />
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
@@ -706,7 +778,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
             {step === 6 && (
               <div className="space-y-4">
-                <Label>Payment Method</Label>
+                <Label>Payment Method *</Label>
                 {paymentMethods.map((m) => (
                   <Card key={m.value} className={`p-4 cursor-pointer ${formData.paymentMethod === m.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("paymentMethod", m.value)}><p>{m.label}</p></Card>
                 ))}
@@ -722,16 +794,12 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 <Label className="text-lg font-semibold">Partial Payment</Label>
                 <PartialPaymentStep
                   totalFee={(() => {
-                    const durationMonths = formData.customDuration 
-                      ? parseInt(formData.customDuration) 
-                      : parseInt(formData.courseDuration || "1");
+                    const durationMonths = formData.customDuration ? parseInt(formData.customDuration) : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
                     return pricing?.price || (durationMonths * 500);
                   })()}
                   feeAfterDiscount={(() => {
-                    const durationMonths = formData.customDuration 
-                      ? parseInt(formData.customDuration) 
-                      : parseInt(formData.courseDuration || "1");
+                    const durationMonths = formData.customDuration ? parseInt(formData.customDuration) : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
                     const totalFee = pricing?.price || (durationMonths * 500);
                     return totalFee * 0.9;
@@ -746,26 +814,18 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(6)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>
-                    Next <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
 
             {step === 8 && (
               <div className="space-y-4">
-                <BillingFormStep 
-                  formData={formData} 
-                  onSignatureSave={handleSignatureSave} 
-                  signature={signature} 
-                  courseDurations={courseDurations}
-                  partialPaymentAmount={partialPaymentAmount}
-                />
+                <BillingFormStep formData={formData} onSignatureSave={handleSignatureSave} signature={signature} courseDurations={courseDurations} partialPaymentAmount={partialPaymentAmount} />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(7)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
-                    {loading ? "Creating..." : "Create Student"}
+                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading || !signature}>
+                    {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : "Create Student"}
                   </Button>
                 </div>
               </div>
@@ -774,7 +834,6 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         )}
       </DialogContent>
       
-      {/* Floating Navigation Button */}
       {open && !configLoading && (
         <FloatingNavigationButton
           onNext={step === 8 ? handleSubmit : handleNext}
@@ -782,7 +841,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={step === 7 && partialPaymentAmount === 0}
+          disabled={(step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />

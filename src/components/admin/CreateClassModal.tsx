@@ -41,32 +41,7 @@ const TIMING_OPTIONS = [
   "6:00 PM – 7:30 PM",
 ];
 
-// Course options with bilingual labels
-const COURSE_OPTIONS = [
-  { label: "Speaking class", value: "Speaking class", category: "Speaking program" },
-  { label: "1:1 class - private class كلاس فردي", value: "1:1 class - private class كلاس فردي", category: "Private class" },
-  { label: "French language لغة فرنسية", value: "French language لغة فرنسية", category: "Other languages" },
-  { label: "Chinese Language لغة صينية", value: "Chinese Language لغة صينية", category: "Other languages" },
-  { label: "Spanish language لغة اسبانية", value: "Spanish language لغة اسبانية", category: "Other languages" },
-  { label: "Italian Language لغة ايطالية", value: "Italian Language لغة ايطالية", category: "Other languages" },
-  { label: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", value: "Arabic for Non-Arabic Speakers عربي لغير الناطقين بها", category: "Other languages" },
-];
-
-// Level options (1-12) with bilingual labels
-const LEVEL_OPTIONS: MultiSelectOption[] = [
-  { label: "level-1 (pre1) مستوى اول", value: "level-1 (pre1) مستوى اول" },
-  { label: "level-2 (pre2) مستوى ثاني", value: "level-2 (pre2) مستوى ثاني" },
-  { label: "level-3 (intro A) مستوى ثالث", value: "level-3 (intro A) مستوى ثالث" },
-  { label: "level-4 (intro B) مستوى رابع", value: "level-4 (intro B) مستوى رابع" },
-  { label: "level-5 (1A) مستوى خامس", value: "level-5 (1A) مستوى خامس" },
-  { label: "level-6 (1B) مستوى سادس", value: "level-6 (1B) مستوى سادس" },
-  { label: "level-7 (2A) مستوى سابع", value: "level-7 (2A) مستوى سابع" },
-  { label: "level-8 (2B) مستوى ثامن", value: "level-8 (2B) مستوى ثامن" },
-  { label: "level-9 (3A) مستوى تاسع", value: "level-9 (3A) مستوى تاسع" },
-  { label: "level-10 (3B) مستوى عاشر", value: "level-10 (3B) مستوى عاشر" },
-  { label: "level-11 (IELTS 1 - STEP 1) مستوى-11", value: "level-11 (IELTS 1 - STEP 1) مستوى-11" },
-  { label: "level-12 (IELTS 2 - STEP 2) مستوى -12", value: "level-12 (IELTS 2 - STEP 2) مستوى -12" },
-];
+// Dynamic course and level options - fetched from form_configurations
 
 export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -79,6 +54,12 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
   const [fetchingData, setFetchingData] = useState(true);
   const [existingClasses, setExistingClasses] = useState<ExistingClass[]>([]);
   const [editingClass, setEditingClass] = useState<string | null>(null);
+  const [courseOptions, setCourseOptions] = useState<Array<{ id: string; label: string; value: string }>>([]);
+  const [levelOptions, setLevelOptions] = useState<MultiSelectOption[]>([]);
+  const [timingOptions, setTimingOptions] = useState<string[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; label: string; value: string }>>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
 
   useEffect(() => {
     if (open) {
@@ -97,11 +78,60 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
         .order("full_name");
 
       if (teachersError) throw teachersError;
-
       setTeachers(teachersData || []);
+
+      // Fetch courses from form_configurations
+      const { data: coursesData } = await supabase
+        .from("form_configurations")
+        .select("*")
+        .eq("config_type", "course")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      setCourseOptions((coursesData || []).map(c => ({
+        id: c.id,
+        label: c.config_value,
+        value: c.config_value
+      })));
+
+      // Fetch levels from form_configurations
+      const { data: levelsData } = await supabase
+        .from("form_configurations")
+        .select("*")
+        .eq("config_type", "level")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      setLevelOptions((levelsData || []).map(l => ({
+        label: l.config_value,
+        value: l.config_value
+      })));
+
+      // Fetch timings from form_configurations
+      const { data: timingsData } = await supabase
+        .from("form_configurations")
+        .select("*")
+        .eq("config_type", "timing")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      setTimingOptions((timingsData || []).map(t => t.config_value));
+
+      // Fetch branches
+      const { data: branchesData } = await supabase
+        .from("branches")
+        .select("id, name_en, name_ar")
+        .order("name_en");
+      
+      setBranches((branchesData || []).map(b => ({
+        id: b.id,
+        label: `${b.name_en} - ${b.name_ar}`,
+        value: b.name_en
+      })));
+
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast.error("Failed to load teachers");
+      toast.error("Failed to load form data");
     } finally {
       setFetchingData(false);
     }
@@ -171,9 +201,17 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       toast.error("Please select a teacher");
       return;
     }
+    if (!selectedBranch) {
+      toast.error("Please select a branch");
+      return;
+    }
 
     setLoading(true);
     try {
+      // Get branch ID
+      const branch = branches.find(b => b.value === selectedBranch);
+      const branchId = branch?.id;
+
       // Create the class
       const { data: classData, error: classError } = await supabase
         .from("classes")
@@ -183,6 +221,9 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
           timing: timing,
           courses: selectedCourses,
           levels: selectedLevels,
+          branch_id: branchId,
+          start_date: startDate || null,
+          status: 'active'
         })
         .select()
         .single();
@@ -268,6 +309,8 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
     setTiming("");
     setSelectedCourses([]);
     setSelectedLevels([]);
+    setSelectedBranch("");
+    setStartDate("");
     setEditingClass(null);
   };
 
@@ -373,11 +416,39 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                 />
               </div>
 
+              {/* Branch */}
+              <div>
+                <Label htmlFor="branch">Branch</Label>
+                <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.value}>
+                        {branch.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <Label htmlFor="startDate">Start Date (Optional)</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+
               {/* Course (Multi-select) */}
               <div>
-                <Label>Course</Label>
+                <Label>Courses</Label>
                 <MultiSelect
-                  options={COURSE_OPTIONS.map(c => ({ label: c.label, value: c.value }))}
+                  options={courseOptions}
                   selected={selectedCourses}
                   onChange={setSelectedCourses}
                   placeholder="Select courses..."
@@ -389,9 +460,9 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
 
               {/* Level (Multi-select) */}
               <div>
-                <Label>Level</Label>
+                <Label>Levels</Label>
                 <MultiSelect
-                  options={LEVEL_OPTIONS}
+                  options={levelOptions}
                   selected={selectedLevels}
                   onChange={setSelectedLevels}
                   placeholder="Select levels..."
@@ -409,7 +480,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
                     <SelectValue placeholder="Select timing" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TIMING_OPTIONS.map((time) => (
+                    {timingOptions.map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
                       </SelectItem>

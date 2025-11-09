@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,6 @@ interface AddStudentModalProps {
 }
 
 export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStudentModalProps) => {
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -79,6 +77,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       fetchLevels();
     }
   }, [open]);
+  
   const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
   const [priceValues, setPriceValues] = useState<Record<string, string>>({});
   const [isTranslating, setIsTranslating] = useState(false);
@@ -155,6 +154,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     if (field === 'branch') {
       const branch = branches.find(b => b.value === value);
       setSelectedBranchId(branch?.id || null);
+      // Reset timing selection when branch changes
+      setFormData(prev => ({ ...prev, timing: "" }));
     }
   };
 
@@ -229,7 +230,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   };
 
   const handleNext = () => {
-    // Allow free navigation between steps without validation
     if (step < 8) {
       setStep(step + 1);
     }
@@ -240,14 +240,14 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   };
 
   const handleSubmit = async () => {
-    // Validate all required fields before submission
+    // Validation
     if (!formData.fullNameAr || !formData.fullNameEn || !formData.gender || !formData.phone1 || !formData.email || !formData.id || !formData.password) {
       toast.error("Please fill in all required fields in Personal Information");
       return;
     }
     
-    if (formData.courses.length === 0) {
-      toast.error("Please select at least one course");
+    if (formData.courses.length === 0 && formData.selectedLevels.length === 0) {
+      toast.error("Please select at least one course or level");
       return;
     }
     
@@ -276,7 +276,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       return;
     }
 
-    // Validate next payment date if there's remaining balance
     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
     const durationMonths = formData.customDuration 
       ? parseInt(formData.customDuration) 
@@ -294,7 +293,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     try {
       setLoading(true);
 
-      // Validate form data
       const validatedData = studentSignupSchema.parse({
         fullNameAr: formData.fullNameAr,
         fullNameEn: formData.fullNameEn,
@@ -306,7 +304,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         password: formData.password,
       });
 
-      // Check if email already exists
       const { data: existingUsers } = await supabase
         .from('students')
         .select('email')
@@ -317,7 +314,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         return;
       }
 
-      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
@@ -335,7 +331,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         return;
       }
 
-      // Assign student role
       const { error: roleError } = await supabase
         .from("user_roles")
         .insert({
@@ -352,7 +347,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
 
-      // Upload signature to storage
       const signatureBlob = await fetch(signature).then(r => r.blob());
       const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
       
@@ -362,18 +356,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
       if (signatureError) throw signatureError;
 
-      // Create student record
-      const durationMonths = formData.customDuration 
-        ? parseInt(formData.customDuration) 
-        : parseInt(formData.courseDuration);
-
-      // Calculate billing details
-      const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-      const totalFee = pricing?.price || (durationMonths * 500);
-      const discountPercent = 10;
-      const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
-
-      // Determine which teachers to assign based on courses
       const assignedTeacherIds = new Set<string>();
       
       const { data: teachersData } = await supabase.from('teachers').select('id, full_name');
@@ -393,7 +375,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         if (((courseNum >= 10 && courseNum <= 12) || lowerCourse.includes('speaking')) && ayshaId) assignedTeacherIds.add(ayshaId);
       });
 
-      // Get branch_id from branch name for accurate start_date lookup
       let actualBranchId = null;
       let actualStartDate = format(addDays(ksaDate, 1), "yyyy-MM-dd");
       
@@ -407,7 +388,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         if (branchData) {
           actualBranchId = branchData.id;
           
-          // Find earliest start_date from matching classes
           const { data: matchingClasses } = await supabase
             .from('classes')
             .select('start_date, courses, timing')
@@ -438,8 +418,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           national_id: validatedData.id,
           branch_id: actualBranchId,
           branch: formData.branch,
-          program: formData.courses.join(', '),
-          class_type: formData.courses.join(', '),
+          program: [...formData.courses, ...formData.selectedLevels].join(', '),
+          class_type: [...formData.courses, ...formData.selectedLevels].join(', '),
           course_level: formData.selectedLevels.join(', ') || null,
           timing: formData.timing,
           payment_method: formData.paymentMethod,
@@ -456,7 +436,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         return;
       }
 
-      // Insert teacher assignments
       if (assignedTeacherIds.size > 0) {
         const teacherAssignments = Array.from(assignedTeacherIds).map(teacherId => ({
           student_id: studentData.id,
@@ -466,33 +445,29 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         await supabase.from("student_teachers").insert(teacherAssignments);
       }
 
-      // Auto-enroll using utility
       try {
         const result = await autoEnrollStudent({
           id: studentData.id,
           branch_id: actualBranchId || undefined,
           program: formData.courses[0] || undefined,
-          courses: formData.courses,
+          courses: [...formData.courses, ...formData.selectedLevels],
           course_level: formData.selectedLevels.join(', '),
           timing: formData.timing,
         });
         
         if (result?.count) {
           console.log(`✅ Auto-enrolled in ${result.count} class(es)`);
-        } else {
-          console.warn("⚠️ No matching classes for auto-enrollment");
         }
       } catch (enrollErr) {
         console.error('❌ Auto-enrollment failed:', enrollErr);
       }
 
-      // Create billing record
       const billingRecord = {
         student_id: authData.user.id,
         student_name_en: validatedData.fullNameEn,
         student_name_ar: validatedData.fullNameAr,
         phone: validatedData.phone1,
-        course_package: formData.courses.join(', '),
+        course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
         registration_date: format(ksaDate, "yyyy-MM-dd"),
         course_start_date: actualStartDate,
         time_slot: formData.timing,
@@ -517,14 +492,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
 
       if (billingError) throw billingError;
 
-      // Generate and upload signed PDF
       try {
         const pdfBlob = await generateBillingPDF({
           student_id: authData.user.id,
           student_name_en: validatedData.fullNameEn,
           student_name_ar: validatedData.fullNameAr,
           phone: validatedData.phone1,
-          course_package: formData.courses.join(', '),
+          course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
           time_slot: formData.timing,
           registration_date: billingRecord.registration_date,
           course_start_date: billingRecord.course_start_date,
@@ -540,22 +514,18 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         });
 
         const pdfPath = `${authData.user.id}/billing_${billing.id}.pdf`;
-        const { error: pdfUploadError } = await supabase.storage
+        await supabase.storage
           .from('billing-pdfs')
           .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-        
-        if (pdfUploadError) throw pdfUploadError;
 
-        // Save PDF path to billing record
         await supabase
           .from('billing')
           .update({ signed_pdf_url: pdfPath })
           .eq('id', billing.id);
       } catch (pdfErr) {
-        console.error('PDF generation/upload failed:', pdfErr);
+        console.error('PDF error:', pdfErr);
       }
 
-      // Update profile
       await supabase
         .from("profiles")
         .update({
@@ -565,16 +535,14 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           phone2: validatedData.phone2 || null,
           national_id: validatedData.id,
           branch: formData.branch,
-          program: formData.courses.join(', '),
-          class_type: formData.courses.join(', '),
-          course_level: formData.selectedLevels.join(', ') || null,
+          program: [...formData.courses, ...formData.selectedLevels].join(', '),
+          class_type: [...formData.courses, ...formData.selectedLevels].join(', '),
           payment_method: formData.paymentMethod,
         })
         .eq("id", authData.user.id);
 
-      toast.success("Student account created successfully!");
+      toast.success("Student created successfully!");
       
-      // Reset form
       setFormData({
         fullNameAr: "",
         fullNameEn: "",
@@ -598,16 +566,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       setStep(1);
       setSignature(null);
       setPartialPaymentAmount(0);
+      setSelectedBranchId(null);
       
       onStudentAdded();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error creating student:", error);
-      if (error.errors) {
-        toast.error(error.errors[0].message);
-      } else {
-        toast.error("Failed to create student account");
-      }
+      console.error("Error:", error);
+      toast.error(error.errors?.[0]?.message || "Failed to create student");
     } finally {
       setLoading(false);
     }
@@ -652,129 +617,98 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       .replace(/[ىي]/g, "ي");
 
   // Helper to get field label
-  const getFieldLabel = (key: string) => {
-    const field = fieldLabels.find(f => f.value === key);
-    return field || { id: '', label: key, value: key };
-  };
+  const getFieldLabel = (key: string) => fieldLabels.find(f => f.value === key) || { id: '', label: key, value: key };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Add New Student - Step {step} of 8</DialogTitle>
-              <Button
-                variant={isEditMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? "Done Editing" : "Edit Form"}
-              </Button>
-            </div>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Add New Student - Step {step} of 8</DialogTitle>
+            <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
+              {isEditMode ? "Done Editing" : "Edit Form"}
+            </Button>
+          </div>
+        </DialogHeader>
 
         {configLoading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         ) : (
           <div className="space-y-4 py-4">
-            {/* Auto-Translation Toggle - Only shown in edit mode */}
             {isEditMode && (
               <Card className="p-4 bg-muted/50">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3">
                   <div className="space-y-1">
-                    <Label htmlFor="auto-translate-toggle" className="text-base font-semibold">
-                      Auto-Translation
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically translate Arabic names to English in Add New Student and Add Previous Student forms
-                    </p>
+                    <Label htmlFor="auto-translate">Auto-Translation</Label>
+                    <p className="text-sm text-muted-foreground">Automatically translate Arabic names to English</p>
                   </div>
                   <Switch
-                    id="auto-translate-toggle"
+                    id="auto-translate"
                     checked={autoTranslationEnabled}
                     onCheckedChange={async (enabled) => {
-                      try {
-                        const { error } = await supabase
-                          .from('form_configurations')
-                          .update({ config_value: enabled ? 'true' : 'false' })
-                          .eq('config_key', 'auto_translation_enabled');
-                        
-                        if (error) throw error;
-                        
-                        setAutoTranslationEnabled(enabled);
-                        toast.success(`Auto-translation ${enabled ? 'enabled' : 'disabled'}`);
-                      } catch (error: any) {
-                        toast.error(`Failed to update: ${error.message}`);
-                      }
+                      await supabase.from('form_configurations').update({ config_value: enabled ? 'true' : 'false' }).eq('config_key', 'auto_translation_enabled');
+                      setAutoTranslationEnabled(enabled);
+                      toast.success(`Auto-translation ${enabled ? 'enabled' : 'disabled'}`);
                     }}
                   />
                 </div>
               </Card>
             )}
 
-            {/* Step 1: Basic Information */}
+            {/* Step 1: Personal Information */}
             {step === 1 && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullNameAr">
-                    <InlineEditableField
-                      id={getFieldLabel('full_name_ar').id}
-                      value={getFieldLabel('full_name_ar').label}
-                      configType="field_label"
-                      configKey="full_name_ar"
-                      isEditMode={isEditMode}
-                      onUpdate={refetch}
-                      isLabel={true}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullNameAr">
+                      <InlineEditableField
+                        id={getFieldLabel('full_name_ar').id}
+                        value={getFieldLabel('full_name_ar').label}
+                        configType="field_label"
+                        configKey="full_name_ar"
+                        isEditMode={isEditMode}
+                        onUpdate={refetch}
+                        isLabel={true}
+                      />
+                      {" *"}
+                    </Label>
+                    <Input
+                      id="fullNameAr"
+                      placeholder="الاسم الكامل"
+                      value={formData.fullNameAr}
+                      onChange={(e) => handleInputChange("fullNameAr", e.target.value)}
+                      dir="rtl"
                     />
-                    {" *"}
-                  </Label>
-                  <Input
-                    id="fullNameAr"
-                    dir="rtl"
-                    placeholder="الاسم الكامل"
-                    value={formData.fullNameAr}
-                    onChange={(e) => handleInputChange("fullNameAr", e.target.value)}
-                  />
-                </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="fullNameEn">
-                    <InlineEditableField
-                      id={getFieldLabel('full_name_en').id}
-                      value={getFieldLabel('full_name_en').label}
-                      configType="field_label"
-                      configKey="full_name_en"
-                      isEditMode={isEditMode}
-                      onUpdate={refetch}
-                      isLabel={true}
-                    />
-                    {" *"}
-                  </Label>
-                  <div className="relative">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullNameEn" className="flex items-center gap-2">
+                      <InlineEditableField
+                        id={getFieldLabel('full_name_en').id}
+                        value={getFieldLabel('full_name_en').label}
+                        configType="field_label"
+                        configKey="full_name_en"
+                        isEditMode={isEditMode}
+                        onUpdate={refetch}
+                        isLabel={true}
+                      />
+                      {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {" *"}
+                    </Label>
                     <Input
                       id="fullNameEn"
                       placeholder="Full Name"
                       value={formData.fullNameEn}
                       onChange={(e) => handleInputChange("fullNameEn", e.target.value)}
                     />
-                    {isTranslating && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Translating from Arabic...</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>
-                    Gender *
-                  </Label>
-                  <RadioGroup
-                    value={formData.gender}
-                    onValueChange={(value) => handleInputChange("gender", value)}
-                  >
+                  <Label>Gender *</Label>
+                  <RadioGroup value={formData.gender} onValueChange={(value) => handleInputChange("gender", value)}>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="male" id="male" />
@@ -792,7 +726,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   </RadioGroup>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="phone1">
                       <InlineEditableField
@@ -821,8 +755,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       </Select>
                       <Input
                         id="phone1"
-                        type="tel"
-                        placeholder="XXX XXX XXX"
+                        placeholder="Phone number"
                         value={formData.phone1}
                         onChange={(e) => handleInputChange("phone1", e.target.value)}
                         className="flex-1"
@@ -857,8 +790,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       </Select>
                       <Input
                         id="phone2"
-                        type="tel"
-                        placeholder="XXX XXX XXX"
+                        placeholder="Phone number (optional)"
                         value={formData.phone2}
                         onChange={(e) => handleInputChange("phone2", e.target.value)}
                         className="flex-1"
@@ -883,7 +815,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   <Input
                     id="email"
                     type="email"
-                    placeholder="email@example.com"
+                    placeholder="Email address"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                   />
@@ -892,10 +824,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <div className="space-y-2">
                   <Label htmlFor="id">
                     <InlineEditableField
-                      id={getFieldLabel('national_id').id}
-                      value={getFieldLabel('national_id').label}
+                      id={getFieldLabel('id').id}
+                      value={getFieldLabel('id').label}
                       configType="field_label"
-                      configKey="national_id"
+                      configKey="id"
                       isEditMode={isEditMode}
                       onUpdate={refetch}
                       isLabel={true}
@@ -939,124 +871,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 2: Course Selection */}
+            {/* Step 2: Branch Selection (moved early for filtering) */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Courses (Multiple selection allowed)</Label>
-
-                {Object.keys(coursesByCategory).map((category) => {
-                  const categoryCourses = coursesByCategory[category];
-                  return (
-                  <div key={category} className="space-y-3">
-                    <h3 className="font-semibold text-primary">{category}</h3>
-                    <div className="space-y-2">
-                      {categoryCourses.map((course) => (
-                        <div key={course.value} className="flex items-center p-2 rounded hover:bg-muted/50">
-                          <div className="flex items-center space-x-2 flex-1">
-                            <Checkbox
-                              id={`course-${course.value}`}
-                              checked={formData.courses.includes(course.value)}
-                              onCheckedChange={() => toggleCourse(course.value)}
-                            />
-                            <div className="flex-1">
-                              <InlineEditableField
-                                id={course.id}
-                                value={course.label}
-                                configType="course"
-                                configKey={course.value}
-                                isEditMode={isEditMode}
-                                onUpdate={refetch}
-                                onDelete={refetch}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {isEditMode && (
-                      <AddNewFieldButton
-                        configType="course"
-                        categoryName={category}
-                        onAdd={refetch}
-                      />
-                    )}
-                  </div>
-                  );
-                })}
-
-                {formData.courses.length > 0 && (
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">Selected: {formData.courses.length} courses</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back
-                    </Button>
-                    <Button onClick={handleNext} className="flex-1">
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-              </div>
-            )}
-
-            {/* Step 3: Timing Selection */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Timing</Label>
-                <div className="grid gap-3">
-                  {timings.map((timing) => (
-                    <Card
-                      key={timing.value}
-                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
-                        formData.timing === timing.value
-                          ? "border-primary bg-primary/5"
-                          : ""
-                      }`}
-                      onClick={() => handleInputChange("timing", timing.value)}
-                    >
-                      <p className="font-medium">
-                        <InlineEditableField
-                          id={timing.id}
-                          value={timing.label}
-                          configType="timing"
-                          configKey={timing.value}
-                          isEditMode={isEditMode}
-                          onUpdate={refetch}
-                          onDelete={refetch}
-                        />
-                      </p>
-                    </Card>
-                  ))}
-                </div>
-                
-                {isEditMode && (
-                  <AddNewFieldButton
-                    configType="timing"
-                    onAdd={refetch}
-                  />
-                )}
-
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back
-                    </Button>
-                    <Button onClick={handleNext} className="flex-1">
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-              </div>
-            )}
-
-            {/* Step 4: Branch Selection */}
-            {step === 4 && (
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Branch</Label>
+                <Label className="text-lg font-semibold">Select Branch *</Label>
                 <div className="grid gap-3">
                   {branches.map((branch) => (
                     <Card
@@ -1091,22 +909,259 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back
-                    </Button>
-                    <Button onClick={handleNext} className="flex-1">
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Course & Level Selection */}
+            {step === 3 && (
+              <div className="space-y-4">
+                {selectedBranchId && (
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      ✓ Classes filtered for: <strong>{formData.branch}</strong>
+                    </p>
                   </div>
+                )}
+
+                {/* English Levels */}
+                <div className="space-y-3">
+                  <Label className="text-lg font-semibold">English Program (Select your starting level)</Label>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    {englishLevelOptions.map((level) => {
+                      const key = extractLevelKey(level.config_key) || extractLevelKey(level.config_value);
+                      const isAvailable = selectedBranchId
+                        ? (key
+                            ? filteredOptions.allowedLevelKeys.includes(key)
+                            : filteredOptions.allowedLevels.some((al) => {
+                                const a = normalize(al);
+                                const b = normalize(level.config_value);
+                                return a.includes(b) || b.includes(a);
+                              }))
+                        : true;
+
+                      const item = (
+                        <div
+                          key={level.id}
+                          className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                            isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          onClick={() => isAvailable && toggleLevel(level.config_value)}
+                        >
+                          <Checkbox
+                            id={`lvl-${level.id}`}
+                            checked={formData.selectedLevels.includes(level.config_value)}
+                            onCheckedChange={() => isAvailable && toggleLevel(level.config_value)}
+                            disabled={!isAvailable}
+                          />
+                          <label htmlFor={`lvl-${level.id}`} className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                            {level.config_value}
+                          </label>
+                        </div>
+                      );
+
+                      if (!isAvailable) {
+                        return (
+                          <TooltipProvider key={level.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>{item}</TooltipTrigger>
+                              <TooltipContent>
+                                <p>This level is not available for your selected branch.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      }
+
+                      return item;
+                    })}
+                  </div>
+                </div>
+
+                {/* Courses */}
+                <div className="space-y-3">
+                  <Label className="text-lg font-semibold">Other Courses</Label>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                    {Object.keys(coursesByCategory).map(category => {
+                      const coursesInCategory = coursesByCategory[category];
+                      return (
+                        <div key={category} className="space-y-2">
+                          <h3 className="font-semibold text-sm text-muted-foreground">{category}</h3>
+                          {coursesInCategory.map((course) => {
+                            const isAvailable = selectedBranchId 
+                              ? filteredOptions.allowedCourses.some(allowedCourse => {
+                                  const normalizedAllowed = normalize(allowedCourse);
+                                  const normalizedCourse = normalize(course.value);
+                                  return normalizedAllowed.includes(normalizedCourse) || normalizedCourse.includes(normalizedAllowed);
+                                })
+                              : true;
+                            
+                            const courseItem = (
+                              <div 
+                                key={course.value} 
+                                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                                  isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                                }`}
+                                onClick={() => isAvailable && toggleCourse(course.value)}
+                              >
+                                <Checkbox
+                                  id={course.value}
+                                  checked={formData.courses.includes(course.value)}
+                                  onCheckedChange={() => isAvailable && toggleCourse(course.value)}
+                                  disabled={!isAvailable}
+                                />
+                                <label
+                                  htmlFor={course.value}
+                                  className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                >
+                                  <InlineEditableField
+                                    id={course.id}
+                                    value={course.label}
+                                    configType="course"
+                                    configKey={course.value}
+                                    isEditMode={isEditMode}
+                                    onUpdate={refetch}
+                                    onDelete={refetch}
+                                  />
+                                </label>
+                              </div>
+                            );
+
+                            if (!isAvailable) {
+                              return (
+                                <TooltipProvider key={course.value}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>{courseItem}</TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>This option is not available for your selected branch.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            }
+
+                            return courseItem;
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {(formData.courses.length > 0 || formData.selectedLevels.length > 0) && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected: {formData.courses.length + formData.selectedLevels.length} option(s)</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Timing Selection */}
+            {step === 4 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Timing *</Label>
+                {selectedBranchId && (
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Available timings for {formData.branch}: {filteredOptions.allowedTimings.join(', ') || 'None'}
+                    </p>
+                  </div>
+                )}
+                <div className="grid gap-3">
+                  {timings.map((timing) => {
+                    const isAvailable = selectedBranchId ? filteredOptions.allowedTimings.includes(timing.value) : true;
+                    const timingCard = (
+                      <Card
+                        key={timing.value}
+                        className={`p-4 transition-all ${
+                          formData.timing === timing.value
+                            ? "border-primary bg-primary/5"
+                            : isAvailable
+                              ? "hover:bg-muted/50 cursor-pointer"
+                              : "opacity-50 cursor-not-allowed"
+                        }`}
+                        onClick={() => {
+                          if (isAvailable) {
+                            handleInputChange("timing", timing.value);
+                          } else {
+                            toast.error("❌ This timing isn't available for your selected branch.");
+                          }
+                        }}
+                      >
+                        <p className="font-medium">
+                          <InlineEditableField
+                            id={timing.id}
+                            value={timing.label}
+                            configType="timing"
+                            configKey={timing.value}
+                            isEditMode={isEditMode}
+                            onUpdate={refetch}
+                            onDelete={refetch}
+                          />
+                        </p>
+                      </Card>
+                    );
+
+                    if (!isAvailable) {
+                      return (
+                        <TooltipProvider key={timing.value}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
+                            <TooltipContent>
+                              <p>This timing is not available for your selected branch.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    }
+
+                    return timingCard;
+                  })}
+                </div>
+                
+                {isEditMode && (
+                  <AddNewFieldButton
+                    configType="timing"
+                    onAdd={refetch}
+                  />
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* Step 5: Course Duration */}
             {step === 5 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Course Duration</Label>
+                <Label className="text-lg font-semibold">Select Course Duration *</Label>
                 <div className="grid gap-3">
                   {courseDurations.map((duration) => (
                     <Card
@@ -1203,7 +1258,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   </div>
                 </div>
 
-
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1220,7 +1274,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
             {/* Step 6: Payment Method */}
             {step === 6 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Payment Method</Label>
+                <Label className="text-lg font-semibold">Select Payment Method *</Label>
                 <div className="grid gap-3">
                   {paymentMethods.map((method) => (
                     <Card
@@ -1255,15 +1309,15 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 )}
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back
-                    </Button>
-                    <Button onClick={handleNext} className="flex-1">
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
+                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1308,24 +1362,34 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 8: Billing Form with Signature */}
+            {/* Step 8: Billing & Signature */}
             {step === 8 && (
               <div className="space-y-4">
-                <BillingFormStep
-                  formData={formData}
-                  onSignatureSave={handleSignatureSave}
-                  signature={signature}
+                <BillingFormStep 
+                  formData={formData} 
+                  onSignatureSave={handleSignatureSave} 
+                  signature={signature} 
                   courseDurations={courseDurations}
                   partialPaymentAmount={partialPaymentAmount}
                 />
-
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(7)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading}>
-                    {loading ? "Creating..." : "Create Student"}
+                  <Button 
+                    onClick={handleSubmit} 
+                    className="flex-1 bg-gradient-to-r from-primary to-secondary" 
+                    disabled={loading || !signature}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Student"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1342,12 +1406,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={step === 7 && partialPaymentAmount === 0}
+          disabled={(step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
       )}
     </Dialog>
-    </>
   );
 };
+
+export default AddStudentModal;
