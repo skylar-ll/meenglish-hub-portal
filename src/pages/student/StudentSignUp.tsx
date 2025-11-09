@@ -291,6 +291,10 @@ const StudentSignUp = () => {
                   <RadioGroupItem value="female" id="female" />
                   <Label htmlFor="female" className="font-normal cursor-pointer">Female</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="kids" id="kids" />
+                  <Label htmlFor="kids" className="font-normal cursor-pointer">Kids</Label>
+                </div>
               </RadioGroup>
             </div>
 

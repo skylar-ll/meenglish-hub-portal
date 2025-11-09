@@ -591,6 +591,10 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                         <RadioGroupItem value="female" id="female-prev" />
                         <Label htmlFor="female-prev" className="cursor-pointer font-normal">Female</Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="kids" id="kids-prev" />
+                        <Label htmlFor="kids-prev" className="cursor-pointer font-normal">Kids</Label>
+                      </div>
                     </div>
                   </RadioGroup>
                 </div>
