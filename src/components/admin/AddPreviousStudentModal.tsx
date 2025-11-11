@@ -49,6 +49,9 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [termsEn, setTermsEn] = useState<string>("");
   const [termsAr, setTermsAr] = useState<string>("");
   const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
+  const [branchClasses, setBranchClasses] = useState<any[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedClassName, setSelectedClassName] = useState<string>("");
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,10 +63,9 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         .select('config_value')
         .eq('config_key', 'auto_translation_enabled')
         .single();
-      
       setAutoTranslationEnabled(data?.config_value === 'true');
     };
-    
+
     const fetchLevels = async () => {
       try {
         const { data, error } = await supabase
@@ -78,27 +80,58 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         console.error('Failed to load levels', e);
       }
     };
+
+    const fetchTerms = async () => {
+      try {
+        const { data } = await supabase
+          .from('terms_and_conditions')
+          .select('content_en, content_ar')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+        setTermsEn(data?.content_en || "");
+        setTermsAr(data?.content_ar || "");
+      } catch (e) {
+        console.error('Failed to load terms', e);
+      }
+    };
     
     if (open) {
       fetchAutoTranslationSetting();
       fetchLevels();
-      // Load Terms
-      (async () => {
-        try {
-          const { data } = await supabase
-            .from('terms_and_conditions')
-            .select('content_en, content_ar')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .single();
-          setTermsEn(data?.content_en || "");
-          setTermsAr(data?.content_ar || "");
-        } catch (e) {
-          console.error('Failed to load terms', e);
-        }
-      })();
+      fetchTerms();
     }
   }, [open]);
+
+  // Load classes for selected branch
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!selectedBranchId) { setBranchClasses([]); setSelectedClassId(null); return; }
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('id, class_name, timing, levels, courses, program, start_date')
+          .eq('branch_id', selectedBranchId)
+          .eq('status', 'active');
+        if (error) throw error;
+        setBranchClasses(data || []);
+      } catch (e) {
+        console.error('Failed to load classes for branch', e);
+        setBranchClasses([]);
+      }
+    };
+    loadClasses();
+  }, [selectedBranchId, open]);
+
+  // When class changes, prefill courses and levels from class
+  useEffect(() => {
+    const cls = branchClasses.find((c: any) => c.id === selectedClassId);
+    if (cls) {
+      const courses = Array.isArray(cls.courses) ? cls.courses.map((c: string) => c.trim()) : [];
+      const levels = Array.isArray(cls.levels) ? cls.levels : [];
+      setFormData(prev => ({ ...prev, courses, selectedLevels: levels }));
+    }
+  }, [selectedClassId, branchClasses]);
 
   const [formData, setFormData] = useState({
     fullNameAr: "",
@@ -226,7 +259,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   };
 
   const handleNext = () => {
-    if (step < 8) {
+    if (step < 7) {
       setStep(step + 1);
     }
   };
@@ -624,7 +657,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Add Previous Student - Step {step} of 8</DialogTitle>
+            <DialogTitle>Add Previous Student - Step {step} of 7</DialogTitle>
             <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
               {isEditMode ? "Done Editing" : "Edit Form"}
             </Button>
@@ -726,184 +759,216 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   <Label>Password *</Label>
                   <Input type="password" value={formData.password} onChange={(e) => handleInputChange("password", e.target.value)} />
                 </div>
-                {/* Branch selection moved into Step 1 */}
-                <div className="space-y-4">
+                {/* Branch selection - dropdown */}
+                <div className="space-y-2">
                   <Label className="text-lg font-semibold">Select Branch *</Label>
-                  <div className="grid gap-3">
-                    {branches.map((b) => (
-                      <Card key={b.value} className={`p-4 cursor-pointer ${formData.branch === b.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("branch", b.value)}>
-                        <p>{b.label}</p>
-                      </Card>
-                    ))}
-                  </div>
+                  <Select value={formData.branch} onValueChange={(v) => handleInputChange("branch", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Branch" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {branches.map((b) => (
+                        <SelectItem key={b.value} value={b.value}>
+                          {b.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isEditMode && (
+                    <div className="pt-2">
+                      <AddNewFieldButton configType="branch" onAdd={refetch} />
+                    </div>
+                  )}
                 </div>
                 <Button onClick={handleNext} className="w-full">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
               </div>
             )}
 
-            {/* Step 2: Terms & Conditions */}
+            {/* Step 2: Class Selection */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Terms and Conditions</Label>
-                <Card className="p-0">
-                  <ScrollArea className="h-64 p-4">
-                    <div className="prose max-w-none whitespace-pre-wrap">
-                      {language === 'ar' ? termsAr : termsEn}
-                    </div>
-                  </ScrollArea>
-                </Card>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="agree-terms-prev" checked={termsAgreed} onCheckedChange={(v) => setTermsAgreed(Boolean(v))} />
-                  <Label htmlFor="agree-terms-prev" className="text-sm">I agree to the Terms and Conditions</Label>
-                </div>
+                <Label className="text-lg font-semibold">Select Class *</Label>
+                {!selectedBranchId ? (
+                  <Card className="p-4 text-sm text-muted-foreground">Please select a branch first.</Card>
+                ) : branchClasses.length === 0 ? (
+                  <Card className="p-4 text-sm text-muted-foreground">No active classes found for this branch.</Card>
+                ) : (
+                  <div className="space-y-2">
+                    {branchClasses.map((cls: any) => (
+                      <Card
+                        key={cls.id}
+                        className={`p-4 cursor-pointer transition-all ${cls.id === selectedClassId ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                        onClick={() => {
+                          setSelectedClassId(cls.id);
+                          setSelectedClassName(cls.class_name);
+                          const courses = Array.isArray(cls.courses) ? cls.courses : [];
+                          const levels = Array.isArray(cls.levels) ? cls.levels : [];
+                          setFormData(prev => ({
+                            ...prev,
+                            courses,
+                            selectedLevels: levels,
+                            timing: cls.timing || ''
+                          }));
+                        }}
+                      >
+                        <div className="space-y-1">
+                          <p className="font-semibold">{cls.class_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Timing:</span> {cls.timing}
+                          </p>
+                          {(cls.courses?.length > 0 || cls.levels?.length > 0) && (
+                            <p className="text-sm text-muted-foreground">
+                              <span className="font-medium">Includes:</span> {[...(cls.courses || []), ...(cls.levels || [])].join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!selectedClassId}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
 
+            {/* Step 3: Payment Method */}
             {step === 3 && (
               <div className="space-y-4">
-                {selectedBranchId && (<div className="p-3 bg-muted/50 rounded-lg"><p className="text-sm">✓ Classes filtered for: <strong>{formData.branch}</strong></p></div>)}
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">English Program</Label>
-                  {englishLevelOptions.map((level) => {
-                    const key = extractLevelKey(level.config_key) || extractLevelKey(level.config_value);
-                    const isAvailable = selectedBranchId ? (key ? filteredOptions.allowedLevelKeys.includes(key) : filteredOptions.allowedLevels.some((al) => normalize(al).includes(normalize(level.config_value)))) : true;
-                    return (
-                      <div key={level.id} className={`flex items-center space-x-3 p-3 rounded-lg ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`} onClick={() => isAvailable && toggleLevel(level.config_value)}>
-                        <Checkbox checked={formData.selectedLevels.includes(level.config_value)} disabled={!isAvailable} />
-                        <label className="text-sm flex-1">{level.config_value}</label>
-                      </div>
-                    );
-                  })}
+                <Label className="text-lg font-semibold">Select Payment Method *</Label>
+                <div className="p-3 bg-muted/50 rounded-lg mb-4">
+                  <p className="text-sm"><strong>Class:</strong> {selectedClassName}</p>
+                  <p className="text-sm"><strong>Timing:</strong> {formData.timing}</p>
+                  <p className="text-sm"><strong>Courses/Levels:</strong> {[...formData.courses, ...formData.selectedLevels].join(', ')}</p>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Other Courses</Label>
-                  {Object.entries(coursesByCategory).map(([category, cats]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-sm mb-2">{category}</h3>
-                      {cats.map((c) => {
-                        const isAvailable = selectedBranchId ? filteredOptions.allowedCourses.some(ac => normalize(ac).includes(normalize(c.value)) || normalize(c.value).includes(normalize(ac))) : true;
-                        return (
-                          <div key={c.value} className={`flex items-center space-x-3 p-3 rounded-lg ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`} onClick={() => isAvailable && toggleCourse(c.value)}>
-                            <Checkbox checked={formData.courses.includes(c.value)} disabled={!isAvailable} />
-                            <label className="text-sm flex-1">{c.label}</label>
-                          </div>
-                        );
-                      })}
-                    </div>
+                <div className="grid gap-3">
+                  {paymentMethods.map((m) => (
+                    <Card key={m.value} className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${formData.paymentMethod === m.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("paymentMethod", m.value)}>
+                      <p>{m.label}</p>
+                    </Card>
                   ))}
                 </div>
+                {isEditMode && (<AddNewFieldButton configType="payment_method" onAdd={refetch} />)}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!formData.paymentMethod}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
 
+            {/* Step 4: Course Duration */}
             {step === 4 && (
               <div className="space-y-4">
-                <Label>Timing *</Label>
-                {timings.map((t) => {
-                  const isAvailable = selectedBranchId ? filteredOptions.allowedTimings.includes(t.value) : true;
-                  return (
-                    <Card key={t.value} className={`p-4 ${isAvailable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'} ${formData.timing === t.value ? "border-primary bg-primary/5" : ""}`} onClick={() => isAvailable && handleInputChange("timing", t.value)}><p>{t.label}</p></Card>
-                  );
-                })}
+                <Label className="text-lg font-semibold">Select Course Duration *</Label>
+                <div className="grid gap-3">
+                  {courseDurations.map((d) => (
+                    <Card key={d.value} className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${formData.courseDuration === d.value && !formData.customDuration ? "border-primary bg-primary/5" : ""}`} onClick={() => {handleInputChange("courseDuration", d.value); handleInputChange("customDuration", "");}}>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{d.label}</p>
+                        <span className="text-sm font-semibold text-primary">${(d.price ?? 0).toFixed(2)}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                {isEditMode && (<AddNewFieldButton configType="course_duration" onAdd={refetch} />)}
+                <div className="space-y-2">
+                  <Label>Or Enter Custom Duration</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" min="1" placeholder="Enter number" className="flex-1" value={formData.customDuration} onChange={(e) => {handleInputChange("customDuration", e.target.value); handleInputChange("courseDuration", "");}} />
+                    <Select value={formData.customDurationUnit} onValueChange={(v) => handleInputChange("customDurationUnit", v)}>
+                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="months">Months</SelectItem><SelectItem value="weeks">Weeks</SelectItem><SelectItem value="days">Days</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(3)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!formData.courseDuration && !formData.customDuration}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
 
+            {/* Step 5: Partial Payment */}
             {step === 5 && (
-              <div className="space-y-4">
-                <Label>Duration *</Label>
-                {courseDurations.map((d) => (
-                  <Card key={d.value} className={`p-4 cursor-pointer ${formData.courseDuration === d.value ? "border-primary bg-primary/5" : ""}`} onClick={() => {handleInputChange("courseDuration", d.value); handleInputChange("customDuration", "");}}>
-                    <div className="flex justify-between"><p>{d.label}</p><p>{d.price} SAR</p></div>
-                  </Card>
-                ))}
-                <div className="space-y-2">
-                  <Label>Custom Duration</Label>
-                  <Input type="number" value={formData.customDuration} onChange={(e) => {handleInputChange("customDuration", e.target.value); handleInputChange("courseDuration", "");}} placeholder="Months" />
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
-                </div>
-              </div>
-            )}
-
-            {step === 6 && (
-              <div className="space-y-4">
-                <Label>Payment Method *</Label>
-                {paymentMethods.map((m) => (
-                  <Card key={m.value} className={`p-4 cursor-pointer ${formData.paymentMethod === m.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("paymentMethod", m.value)}><p>{m.label}</p></Card>
-                ))}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
-                </div>
-              </div>
-            )}
-
-            {step === 7 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Partial Payment</Label>
                 <PartialPaymentStep
                   totalFee={(() => {
-                    const durationMonths = formData.customDuration ? parseInt(formData.customDuration) : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-                    return pricing?.price || (durationMonths * 500);
+                    return pricing?.price || 0;
                   })()}
                   feeAfterDiscount={(() => {
-                    const durationMonths = formData.customDuration ? parseInt(formData.customDuration) : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-                    const totalFee = pricing?.price || (durationMonths * 500);
-                    return totalFee * 0.9;
+                    return pricing?.price || 0;
                   })()}
-                  discountPercentage={10}
+                  discountPercentage={0}
                   courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
-                  paymentDeadline={format(addDays(addDays(new Date(), 1), 30), "yyyy-MM-dd")}
+                  paymentDeadline={format(addDays(new Date(), 30), "yyyy-MM-dd")}
                   onAmountChange={setPartialPaymentAmount}
-                  onNextPaymentDateChange={setNextPaymentDate}
+                  onNextPaymentDateChange={() => {}}
                   initialPayment={partialPaymentAmount}
-                  initialNextPaymentDate={nextPaymentDate}
                 />
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
 
-            {step === 8 && (
+            {/* Step 6: Terms and Conditions */}
+            {step === 6 && (
               <div className="space-y-4">
-                <BillingFormStep formData={formData} onSignatureSave={handleSignatureSave} signature={signature} courseDurations={courseDurations} partialPaymentAmount={partialPaymentAmount} />
+                <Label className="text-lg font-semibold">Terms and Conditions</Label>
+                <Card className="p-4">
+                  <ScrollArea className="h-[300px] w-full">
+                    <div className="prose prose-sm max-w-none text-foreground">
+                      <div dangerouslySetInnerHTML={{ __html: language === 'ar' ? termsAr : termsEn }} />
+                    </div>
+                  </ScrollArea>
+                </Card>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="terms-agree-prev" checked={termsAgreed} onCheckedChange={(checked) => setTermsAgreed(checked === true)} />
+                  <Label htmlFor="terms-agree-prev" className="text-sm cursor-pointer">I agree to the terms and conditions</Label>
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(7)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Billing & Signature */}
+            {step === 7 && (
+              <div className="space-y-4">
+                <BillingFormStep 
+                  formData={formData} 
+                  onSignatureSave={handleSignatureSave} 
+                  signature={signature} 
+                  courseDurations={courseDurations}
+                  partialPaymentAmount={partialPaymentAmount}
+                />
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                   <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading || !signature}>
-                    {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : "Create Student"}
+                    {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</>) : ("Create Student")}
                   </Button>
                 </div>
               </div>
             )}
+
           </div>
         )}
       </DialogContent>
       
       {open && !configLoading && (
         <FloatingNavigationButton
-          onNext={step === 8 ? handleSubmit : handleNext}
+          onNext={step === 7 ? handleSubmit : handleNext}
           onBack={step > 1 ? () => setStep(step - 1) : undefined}
-          nextLabel={step === 8 ? "Create Student" : "Next"}
+          nextLabel={step === 7 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 2 && !termsAgreed) || (step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
+          disabled={(step === 2 && !selectedClassId) || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed) || (step === 7 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
