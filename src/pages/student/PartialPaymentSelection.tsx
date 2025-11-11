@@ -58,8 +58,8 @@ const PartialPaymentSelection = () => {
         .eq('duration_months', durationMonths)
         .single();
 
-      const totalFee = pricing?.price || (durationMonths * 500);
-      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0; // Only use offer discount
+      const totalFee = pricing?.price || 0;
+      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
 
       const nowDate = new Date();
@@ -97,12 +97,6 @@ const PartialPaymentSelection = () => {
       return;
     }
 
-    const remainingBalance = billingData ? billingData.feeAfterDiscount - partialPaymentAmount : 0;
-    if (remainingBalance > 0 && !nextPaymentDate) {
-      toast.error("Please select when you plan to pay the remaining balance");
-      return;
-    }
-
     const storedData = sessionStorage.getItem("studentRegistration");
     if (!storedData) {
       toast.error("Registration data not found");
@@ -112,12 +106,12 @@ const PartialPaymentSelection = () => {
 
     const registrationData = JSON.parse(storedData);
     registrationData.partialPaymentAmount = partialPaymentAmount;
-    if (nextPaymentDate) {
-      registrationData.nextPaymentDate = format(nextPaymentDate, "yyyy-MM-dd");
-    }
-    if (paymentDate) {
-      registrationData.paymentDate = format(paymentDate, "yyyy-MM-dd");
-    }
+    
+    // Auto-generate payment deadline: registration date + 1 month
+    const ksaDate = toZonedTime(new Date(), "Asia/Riyadh");
+    const autoDeadline = addDays(ksaDate, 30);
+    registrationData.nextPaymentDate = format(autoDeadline, "yyyy-MM-dd");
+    
     sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
     navigate("/student/terms");

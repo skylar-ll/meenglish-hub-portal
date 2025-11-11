@@ -78,8 +78,9 @@ const CourseDurationSelection = () => {
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-medium">{duration.label}</p>
-                        <p className="text-lg font-bold text-primary">{(duration.price ?? 0).toLocaleString()} SAR</p>
+                        <p className="text-lg font-bold text-primary">{(duration.price ?? 0).toFixed(2)} SAR</p>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">Total course price</p>
                     </Card>
                   ))}
                 </div>

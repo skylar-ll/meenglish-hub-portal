@@ -186,51 +186,7 @@ export const PartialPaymentStep = ({
         </div>
       </Card>
 
-      {/* Next Payment Date Selection */}
-      {remainingBalance > 0 && (
-        <div className="space-y-4">
-          <Label htmlFor="next-payment-date" className="text-base font-semibold">
-            When do you plan to pay the remaining balance?
-          </Label>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !nextPaymentDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {nextPaymentDate ? format(nextPaymentDate, "MMMM dd, yyyy") : <span>Select date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={nextPaymentDate}
-                onSelect={handleNextPaymentDateChange}
-                initialFocus
-                disabled={(date) => date < new Date()}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <p className="font-semibold">Important Notice</p>
-              <p className="text-sm mt-1">
-                Your child will not be moved to the next course level unless the remaining balance is paid in full by the selected date.
-              </p>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-
-      {/* Payment Deadline Info */}
+      {/* Payment Deadline Info - Auto-generated */}
       {remainingBalance > 0 && (
         <Alert>
           <CalendarIcon className="h-4 w-4" />
@@ -243,8 +199,8 @@ export const PartialPaymentStep = ({
                   {format(new Date(paymentDeadline), "MMMM dd, yyyy")}
                 </span>
               </p>
-              <p className="text-sm text-muted-foreground">
-                Course starts on {format(new Date(courseStartDate), "MMMM dd, yyyy")}
+              <p className="text-xs text-muted-foreground mt-2">
+                This deadline is automatically set to 1 month from registration date.
               </p>
             </div>
           </AlertDescription>

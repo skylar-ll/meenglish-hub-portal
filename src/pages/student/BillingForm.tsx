@@ -121,9 +121,9 @@ const BillingForm = () => {
         ? format(new Date(actualStartDate), "dd MMMM yyyy")
         : format(addDays(ksaDate, 1), "dd MMMM yyyy");
 
-      // Calculate fees with offer discount if available
-      const totalFee = pricing?.price || (durationMonths * 500); // Default 500 per month
-      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0; // Only use offer discount, no default discount
+      // Calculate fees - use exact pricing from course_pricing table
+      const totalFee = pricing?.price || 0;
+      const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
       
       // Get partial payment amount from registration data
@@ -339,27 +339,53 @@ const BillingForm = () => {
 
       // Generate and upload signed PDF of the billing form
       try {
-        const pdfBlob = await generateBillingPDF({
-          student_id: user.id,
-          student_name_en: billData.clientName,
-          student_name_ar: billData.clientNameAr,
-          phone: billData.contactNumber,
-          course_package: billData.courseName,
-          time_slot: billData.timeSlot,
-          registration_date: billingRecord.registration_date,
-          course_start_date: billingRecord.course_start_date,
-          level_count: billData.levelCount,
-          total_fee: billData.totalFee,
-          discount_percentage: billData.discountPercent,
-          fee_after_discount: billData.feeAfterDiscount,
-          amount_paid: billData.amountPaid,
-          amount_remaining: billData.amountRemaining,
-          first_payment: billData.firstPayment,
-          second_payment: billData.secondPayment,
-          signature_url: signatureStoragePath,
-        });
+        const language = registration.language || 'en';
+        let pdfBlob: Blob;
+        
+        if (language === 'ar') {
+          const { generateBillingPDFArabic } = await import('@/components/billing/BillingPDFGeneratorArabic');
+          pdfBlob = await generateBillingPDFArabic({
+            student_id: user.id,
+            student_name_en: billData.clientName,
+            student_name_ar: billData.clientNameAr,
+            phone: billData.contactNumber,
+            course_package: billData.courseName,
+            time_slot: billData.timeSlot,
+            registration_date: billingRecord.registration_date,
+            course_start_date: billingRecord.course_start_date,
+            level_count: billData.levelCount,
+            total_fee: billData.totalFee,
+            discount_percentage: billData.discountPercent,
+            fee_after_discount: billData.feeAfterDiscount,
+            amount_paid: billData.amountPaid,
+            amount_remaining: billData.amountRemaining,
+            first_payment: billData.firstPayment,
+            second_payment: billData.secondPayment,
+            signature_url: signatureStoragePath,
+          });
+        } else {
+          pdfBlob = await generateBillingPDF({
+            student_id: user.id,
+            student_name_en: billData.clientName,
+            student_name_ar: billData.clientNameAr,
+            phone: billData.contactNumber,
+            course_package: billData.courseName,
+            time_slot: billData.timeSlot,
+            registration_date: billingRecord.registration_date,
+            course_start_date: billingRecord.course_start_date,
+            level_count: billData.levelCount,
+            total_fee: billData.totalFee,
+            discount_percentage: billData.discountPercent,
+            fee_after_discount: billData.feeAfterDiscount,
+            amount_paid: billData.amountPaid,
+            amount_remaining: billData.amountRemaining,
+            first_payment: billData.firstPayment,
+            second_payment: billData.secondPayment,
+            signature_url: signatureStoragePath,
+          });
+        }
 
-        const pdfPath = `${user.id}/billing_${billing.id}.pdf`;
+        const pdfPath = `${user.id}/billing_${billing.id}_${language}.pdf`;
         const { error: pdfUploadError } = await supabase.storage
           .from('billing-pdfs')
           .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
@@ -368,7 +394,7 @@ const BillingForm = () => {
         // Save storage path to the billing record
         await supabase
           .from('billing')
-          .update({ signed_pdf_url: pdfPath })
+          .update({ signed_pdf_url: pdfPath, language: language })
           .eq('id', billing.id);
       } catch (pdfErr) {
         console.error('PDF generation/upload failed:', pdfErr);
