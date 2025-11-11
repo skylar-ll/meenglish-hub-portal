@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, X } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { InlineEditableField } from "./InlineEditableField";
@@ -52,6 +52,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [branchClasses, setBranchClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedClassName, setSelectedClassName] = useState<string>("");
+  const [classSearchTerm, setClassSearchTerm] = useState<string>("");
+  const [classTimingFilter, setClassTimingFilter] = useState<string>("all");
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -793,38 +795,97 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 ) : branchClasses.length === 0 ? (
                   <Card className="p-4 text-sm text-muted-foreground">No active classes found for this branch.</Card>
                 ) : (
-                  <div className="space-y-2">
-                    {branchClasses.map((cls: any) => (
-                      <Card
-                        key={cls.id}
-                        className={`p-4 cursor-pointer transition-all ${cls.id === selectedClassId ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                        onClick={() => {
-                          setSelectedClassId(cls.id);
-                          setSelectedClassName(cls.class_name);
-                          const courses = Array.isArray(cls.courses) ? cls.courses : [];
-                          const levels = Array.isArray(cls.levels) ? cls.levels : [];
-                          setFormData(prev => ({
-                            ...prev,
-                            courses,
-                            selectedLevels: levels,
-                            timing: cls.timing || ''
-                          }));
-                        }}
-                      >
-                        <div className="space-y-1">
-                          <p className="font-semibold">{cls.class_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Timing:</span> {cls.timing}
-                          </p>
-                          {(cls.courses?.length > 0 || cls.levels?.length > 0) && (
-                            <p className="text-sm text-muted-foreground">
-                              <span className="font-medium">Includes:</span> {[...(cls.courses || []), ...(cls.levels || [])].join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                  <>
+                    {/* Search and Filter */}
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Input
+                          placeholder="Search classes by name..."
+                          value={classSearchTerm}
+                          onChange={(e) => setClassSearchTerm(e.target.value)}
+                          className="pr-10"
+                        />
+                        {classSearchTerm && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                            onClick={() => setClassSearchTerm("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">Filter by timing:</Label>
+                        <Select value={classTimingFilter} onValueChange={setClassTimingFilter}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="all">All Timings</SelectItem>
+                            {Array.from(new Set(branchClasses.map(c => c.timing).filter(Boolean))).map(timing => (
+                              <SelectItem key={timing} value={timing}>{timing}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Filtered Classes List */}
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-2">
+                        {branchClasses
+                          .filter((cls: any) => {
+                            const matchesSearch = !classSearchTerm || 
+                              cls.class_name?.toLowerCase().includes(classSearchTerm.toLowerCase());
+                            const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
+                            return matchesSearch && matchesTiming;
+                          })
+                          .map((cls: any) => (
+                            <Card
+                              key={cls.id}
+                              className={`p-4 cursor-pointer transition-all ${cls.id === selectedClassId ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                              onClick={() => {
+                                setSelectedClassId(cls.id);
+                                setSelectedClassName(cls.class_name);
+                                const courses = Array.isArray(cls.courses) ? cls.courses : [];
+                                const levels = Array.isArray(cls.levels) ? cls.levels : [];
+                                setFormData(prev => ({
+                                  ...prev,
+                                  courses,
+                                  selectedLevels: levels,
+                                  timing: cls.timing || ''
+                                }));
+                              }}
+                            >
+                              <div className="space-y-1">
+                                <p className="font-semibold">{cls.class_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium">Timing:</span> {cls.timing}
+                                </p>
+                                {(cls.courses?.length > 0 || cls.levels?.length > 0) && (
+                                  <p className="text-sm text-muted-foreground">
+                                    <span className="font-medium">Includes:</span> {[...(cls.courses || []), ...(cls.levels || [])].join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </Card>
+                          ))}
+                        {branchClasses.filter((cls: any) => {
+                          const matchesSearch = !classSearchTerm || 
+                            cls.class_name?.toLowerCase().includes(classSearchTerm.toLowerCase());
+                          const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
+                          return matchesSearch && matchesTiming;
+                        }).length === 0 && (
+                          <Card className="p-4 text-center text-sm text-muted-foreground">
+                            No classes match your search criteria.
+                          </Card>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </>
                 )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
