@@ -58,7 +58,10 @@ const PartialPaymentSelection = () => {
         .eq('duration_months', durationMonths)
         .single();
 
-      const totalFee = pricing?.price || 0;
+      const selectedDurationPrice = typeof registrationData.selectedDurationPrice === 'number' && registrationData.selectedDurationPrice > 0
+        ? registrationData.selectedDurationPrice
+        : undefined;
+      const totalFee = selectedDurationPrice ?? (pricing?.price || 0);
       const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
 

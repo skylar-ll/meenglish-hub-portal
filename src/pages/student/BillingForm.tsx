@@ -121,8 +121,10 @@ const BillingForm = () => {
         ? format(new Date(actualStartDate), "dd MMMM yyyy")
         : format(addDays(ksaDate, 1), "dd MMMM yyyy");
 
-      // Calculate fees - use exact pricing from course_pricing table
-      const totalFee = pricing?.price || 0;
+      // Calculate fees - use the exact selected price when available
+      const totalFee = (typeof registrationData.selectedDurationPrice === 'number' && registrationData.selectedDurationPrice > 0)
+        ? registrationData.selectedDurationPrice
+        : (pricing?.price || 0);
       const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
       const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
       

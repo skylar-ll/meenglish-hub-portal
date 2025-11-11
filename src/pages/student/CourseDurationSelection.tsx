@@ -25,9 +25,14 @@ const CourseDurationSelection = () => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
     const durationMonths = customDuration ? parseInt(customDuration) : parseInt(selectedDuration);
     
+    // Determine the exact price chosen from the visible list (if any)
+    const selectedConfig = courseDurations.find((d) => d.value === selectedDuration);
+    const selectedDurationPrice = selectedConfig?.price ?? null;
+    
     const durationData = {
       ...registration,
       courseDurationMonths: durationMonths,
+      selectedDurationPrice, // Persist the exact price user saw and selected
     };
     sessionStorage.setItem("studentRegistration", JSON.stringify(durationData));
     navigate("/student/payment-selection");
