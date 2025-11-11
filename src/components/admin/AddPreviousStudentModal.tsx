@@ -106,9 +106,15 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   }, [open]);
 
   // Load classes for selected branch
+  const [loadingClasses, setLoadingClasses] = useState(false);
   useEffect(() => {
     const loadClasses = async () => {
-      if (!selectedBranchId) { setBranchClasses([]); setSelectedClassId(null); return; }
+      if (!selectedBranchId) { 
+        setBranchClasses([]);
+        setSelectedClassId(null);
+        return;
+      }
+      setLoadingClasses(true);
       try {
         const { data, error } = await supabase
           .from('classes')
@@ -116,10 +122,13 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           .eq('branch_id', selectedBranchId)
           .eq('status', 'active');
         if (error) throw error;
+        console.log('Loaded classes for branch:', selectedBranchId, data);
         setBranchClasses(data || []);
       } catch (e) {
         console.error('Failed to load classes for branch', e);
         setBranchClasses([]);
+      } finally {
+        setLoadingClasses(false);
       }
     };
     loadClasses();
@@ -181,13 +190,14 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
             .select('id')
             .eq('name_en', value)
             .single();
-          setSelectedBranchId(branchRow?.id || null);
+          if (branchRow?.id) {
+            setSelectedBranchId(branchRow.id);
+          }
         } catch (e) {
           console.error('Failed to resolve branch id', e);
           setSelectedBranchId(null);
         }
       })();
-      setFormData(prev => ({ ...prev, timing: "" }));
     }
   };
 
@@ -790,10 +800,27 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
             {step === 2 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Class *</Label>
+                
+                {/* Show selected branch info */}
+                {formData.branch && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected Branch: {formData.branch}</p>
+                  </div>
+                )}
+
                 {!selectedBranchId ? (
-                  <Card className="p-4 text-sm text-muted-foreground">Please select a branch first.</Card>
+                  <Card className="p-4 text-sm text-muted-foreground">
+                    Loading branch information...
+                  </Card>
+                ) : loadingClasses ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
+                  </div>
                 ) : branchClasses.length === 0 ? (
-                  <Card className="p-4 text-sm text-muted-foreground">No active classes found for this branch.</Card>
+                  <Card className="p-4 text-sm text-muted-foreground">
+                    No active classes found for this branch.
+                  </Card>
                 ) : (
                   <>
                     {/* Search and Filter */}
