@@ -49,9 +49,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const { language } = useLanguage();
   const [termsEn, setTermsEn] = useState<string>("");
   const [termsAr, setTermsAr] = useState<string>("");
-const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
-const [branchClasses, setBranchClasses] = useState<any[]>([]);
-const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
+  const [branchClasses, setBranchClasses] = useState<any[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedClassName, setSelectedClassName] = useState<string>("");
   
   // Fetch auto-translation setting, levels, and terms
   useEffect(() => {
@@ -942,34 +943,25 @@ const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
                   />
                 </div>
 
-                {/* Branch selection moved to Step 1 */}
-                <div className="space-y-4">
+                {/* Branch selection moved to Step 1 - dropdown */}
+                <div className="space-y-2">
                   <Label className="text-lg font-semibold">Select Branch *</Label>
-                  <div className="grid gap-3">
-                    {branches.map((branch) => (
-                      <Card
-                        key={branch.value}
-                        className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
-                          formData.branch === branch.value ? "border-primary bg-primary/5" : ""
-                        }`}
-                        onClick={() => handleInputChange("branch", branch.value)}
-                      >
-                        <p className="font-medium">
-                          <InlineEditableField
-                            id={branch.id}
-                            value={branch.label}
-                            configType="branch"
-                            configKey={branch.value}
-                            isEditMode={isEditMode}
-                            onUpdate={refetch}
-                            onDelete={refetch}
-                          />
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
+                  <Select value={formData.branch} onValueChange={(v) => handleInputChange("branch", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.value} value={b.value}>
+                          {b.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {isEditMode && (
-                    <AddNewFieldButton configType="branch" onAdd={refetch} />
+                    <div className="pt-2">
+                      <AddNewFieldButton configType="branch" onAdd={refetch} />
+                    </div>
                   )}
                 </div>
 
@@ -980,27 +972,36 @@ const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
               </div>
             )}
 
-            {/* Step 2: Terms & Conditions */}
+            {/* Step 2: Class Selection */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Terms and Conditions</Label>
-                <Card className="p-0">
-                  <ScrollArea className="h-64 p-4">
-                    <div className="prose max-w-none whitespace-pre-wrap">
-                      {language === 'ar' ? termsAr : termsEn}
-                    </div>
-                  </ScrollArea>
-                </Card>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="agree-terms" checked={termsAgreed} onCheckedChange={(v) => setTermsAgreed(Boolean(v))} />
-                  <Label htmlFor="agree-terms" className="text-sm">I agree to the Terms and Conditions</Label>
-                </div>
+                <Label className="text-lg font-semibold">Select Class *</Label>
+                {!selectedBranchId ? (
+                  <Card className="p-4 text-sm text-muted-foreground">Please select a branch first.</Card>
+                ) : (
+                  <div className="space-y-2">
+                    {Array.from(new Set((branchClasses || []).map((c: any) => c.class_name))).filter(Boolean).map((name) => (
+                      <Card
+                        key={name}
+                        className={`p-3 cursor-pointer ${name === selectedClassName ? 'border-primary bg-primary/5' : ''}`}
+                        onClick={() => { setSelectedClassName(name as string); setFormData(prev => ({ ...prev, timing: '' })); setSelectedClassId(null); }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">{name}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {Array.from(new Set(branchClasses.filter((c: any) => c.class_name === name).map((c: any) => c.timing))).join(', ')}
+                          </span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!selectedClassName}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
