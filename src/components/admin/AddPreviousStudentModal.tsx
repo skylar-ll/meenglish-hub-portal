@@ -24,6 +24,8 @@ import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
 import { PartialPaymentStep } from "@/components/billing/PartialPaymentStep";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddPreviousStudentModalProps {
   open: boolean;
@@ -43,6 +45,10 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const { filteredOptions } = useBranchFiltering(selectedBranchId);
+  const { language } = useLanguage();
+  const [termsEn, setTermsEn] = useState<string>("");
+  const [termsAr, setTermsAr] = useState<string>("");
+  const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -76,6 +82,21 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     if (open) {
       fetchAutoTranslationSetting();
       fetchLevels();
+      // Load Terms
+      (async () => {
+        try {
+          const { data } = await supabase
+            .from('terms_and_conditions')
+            .select('content_en, content_ar')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+          setTermsEn(data?.content_en || "");
+          setTermsAr(data?.content_ar || "");
+        } catch (e) {
+          console.error('Failed to load terms', e);
+        }
+      })();
     }
   }, [open]);
 
@@ -118,8 +139,19 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     setFormData((prev) => ({ ...prev, [field]: value }));
     
     if (field === 'branch') {
-      const branch = branches.find(b => b.value === value);
-      setSelectedBranchId(branch?.id || null);
+      (async () => {
+        try {
+          const { data: branchRow } = await supabase
+            .from('branches')
+            .select('id')
+            .eq('name_en', value)
+            .single();
+          setSelectedBranchId(branchRow?.id || null);
+        } catch (e) {
+          console.error('Failed to resolve branch id', e);
+          setSelectedBranchId(null);
+        }
+      })();
       setFormData(prev => ({ ...prev, timing: "" }));
     }
   };
@@ -694,22 +726,39 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   <Label>Password *</Label>
                   <Input type="password" value={formData.password} onChange={(e) => handleInputChange("password", e.target.value)} />
                 </div>
+                {/* Branch selection moved into Step 1 */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">Select Branch *</Label>
+                  <div className="grid gap-3">
+                    {branches.map((b) => (
+                      <Card key={b.value} className={`p-4 cursor-pointer ${formData.branch === b.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("branch", b.value)}>
+                        <p>{b.label}</p>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
                 <Button onClick={handleNext} className="w-full">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
               </div>
             )}
 
-            {/* Remaining steps 2-8 are identical to AddStudentModal - Using condensed version for brevity */}
+            {/* Step 2: Terms & Conditions */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Branch *</Label>
-                <div className="grid gap-3">
-                  {branches.map((b) => (
-                    <Card key={b.value} className={`p-4 cursor-pointer ${formData.branch === b.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("branch", b.value)}><p>{b.label}</p></Card>
-                  ))}
+                <Label className="text-lg font-semibold">Terms and Conditions</Label>
+                <Card className="p-0">
+                  <ScrollArea className="h-64 p-4">
+                    <div className="prose max-w-none whitespace-pre-wrap">
+                      {language === 'ar' ? termsAr : termsEn}
+                    </div>
+                  </ScrollArea>
+                </Card>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="agree-terms-prev" checked={termsAgreed} onCheckedChange={(v) => setTermsAgreed(Boolean(v))} />
+                  <Label htmlFor="agree-terms-prev" className="text-sm">I agree to the Terms and Conditions</Label>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1">Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -854,7 +903,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
+          disabled={(step === 2 && !termsAgreed) || (step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />

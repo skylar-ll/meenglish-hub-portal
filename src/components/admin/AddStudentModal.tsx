@@ -25,6 +25,8 @@ import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
 import { PartialPaymentStep } from "@/components/billing/PartialPaymentStep";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -44,6 +46,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
   const { filteredOptions } = useBranchFiltering(selectedBranchId);
+  const { language } = useLanguage();
+  const [termsEn, setTermsEn] = useState<string>("");
+  const [termsAr, setTermsAr] = useState<string>("");
+  const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
   
   // Fetch auto-translation setting and levels
   useEffect(() => {
@@ -53,10 +59,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         .select('config_value')
         .eq('config_key', 'auto_translation_enabled')
         .single();
-      
       setAutoTranslationEnabled(data?.config_value === 'true');
     };
-    
+
     const fetchLevels = async () => {
       try {
         const { data, error } = await supabase
@@ -71,10 +76,26 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         console.error('Failed to load levels', e);
       }
     };
+
+    const fetchTerms = async () => {
+      try {
+        const { data } = await supabase
+          .from('terms_and_conditions')
+          .select('content_en, content_ar')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+        setTermsEn(data?.content_en || "");
+        setTermsAr(data?.content_ar || "");
+      } catch (e) {
+        console.error('Failed to load terms', e);
+      }
+    };
     
     if (open) {
       fetchAutoTranslationSetting();
       fetchLevels();
+      fetchTerms();
     }
   }, [open]);
   
@@ -150,10 +171,21 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     
-    // If branch changes, update selectedBranchId for filtering
+    // If branch changes, update selectedBranchId for filtering using branches table UUID
     if (field === 'branch') {
-      const branch = branches.find(b => b.value === value);
-      setSelectedBranchId(branch?.id || null);
+      (async () => {
+        try {
+          const { data: branchRow } = await supabase
+            .from('branches')
+            .select('id')
+            .eq('name_en', value)
+            .single();
+          setSelectedBranchId(branchRow?.id || null);
+        } catch (e) {
+          console.error('Failed to resolve branch id', e);
+          setSelectedBranchId(null);
+        }
+      })();
       // Reset timing selection when branch changes
       setFormData(prev => ({ ...prev, timing: "" }));
     }
@@ -877,6 +909,37 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   />
                 </div>
 
+                {/* Branch selection moved to Step 1 */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">Select Branch *</Label>
+                  <div className="grid gap-3">
+                    {branches.map((branch) => (
+                      <Card
+                        key={branch.value}
+                        className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                          formData.branch === branch.value ? "border-primary bg-primary/5" : ""
+                        }`}
+                        onClick={() => handleInputChange("branch", branch.value)}
+                      >
+                        <p className="font-medium">
+                          <InlineEditableField
+                            id={branch.id}
+                            value={branch.label}
+                            configType="branch"
+                            configKey={branch.value}
+                            isEditMode={isEditMode}
+                            onUpdate={refetch}
+                            onDelete={refetch}
+                          />
+                        </p>
+                      </Card>
+                    ))}
+                  </div>
+                  {isEditMode && (
+                    <AddNewFieldButton configType="branch" onAdd={refetch} />
+                  )}
+                </div>
+
                 <Button onClick={handleNext} className="w-full">
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -884,49 +947,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 2: Branch Selection (moved early for filtering) */}
+            {/* Step 2: Terms & Conditions */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Branch *</Label>
-                <div className="grid gap-3">
-                  {branches.map((branch) => (
-                    <Card
-                      key={branch.value}
-                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
-                        formData.branch === branch.value
-                          ? "border-primary bg-primary/5"
-                          : ""
-                      }`}
-                      onClick={() => handleInputChange("branch", branch.value)}
-                    >
-                      <p className="font-medium">
-                        <InlineEditableField
-                          id={branch.id}
-                          value={branch.label}
-                          configType="branch"
-                          configKey={branch.value}
-                          isEditMode={isEditMode}
-                          onUpdate={refetch}
-                          onDelete={refetch}
-                        />
-                      </p>
-                    </Card>
-                  ))}
+                <Label className="text-lg font-semibold">Terms and Conditions</Label>
+                <Card className="p-0">
+                  <ScrollArea className="h-64 p-4">
+                    <div className="prose max-w-none whitespace-pre-wrap">
+                      {language === 'ar' ? termsAr : termsEn}
+                    </div>
+                  </ScrollArea>
+                </Card>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="agree-terms" checked={termsAgreed} onCheckedChange={(v) => setTermsAgreed(Boolean(v))} />
+                  <Label htmlFor="agree-terms" className="text-sm">I agree to the Terms and Conditions</Label>
                 </div>
-                
-                {isEditMode && (
-                  <AddNewFieldButton
-                    configType="branch"
-                    onAdd={refetch}
-                  />
-                )}
-
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1">
+                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1413,7 +1454,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
+          disabled={(step === 2 && !termsAgreed) || (step === 7 && partialPaymentAmount === 0) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
