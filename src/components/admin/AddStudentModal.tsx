@@ -49,9 +49,11 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const { language } = useLanguage();
   const [termsEn, setTermsEn] = useState<string>("");
   const [termsAr, setTermsAr] = useState<string>("");
-  const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
+const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
+const [branchClasses, setBranchClasses] = useState<any[]>([]);
+const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   
-  // Fetch auto-translation setting and levels
+  // Fetch auto-translation setting, levels, and terms
   useEffect(() => {
     const fetchAutoTranslationSetting = async () => {
       const { data } = await supabase
@@ -242,6 +244,37 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       }
     };
   }, [formData.fullNameAr]);
+
+  // Load classes for selected branch
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!selectedBranchId) { setBranchClasses([]); setSelectedClassId(null); return; }
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('id, class_name, timing, levels, courses, program, start_date')
+          .eq('branch_id', selectedBranchId)
+          .eq('status', 'active');
+        if (error) throw error;
+        setBranchClasses(data || []);
+      } catch (e) {
+        console.error('Failed to load classes for branch', e);
+        setBranchClasses([]);
+      }
+    };
+    loadClasses();
+  }, [selectedBranchId, open]);
+
+  // When class changes, prefill courses and levels from class
+  useEffect(() => {
+    const cls = branchClasses.find((c: any) => c.id === selectedClassId);
+    if (cls) {
+      const courses = Array.isArray(cls.courses) ? cls.courses.map((c: string) => c.trim()) : [];
+      const levels = Array.isArray(cls.levels) ? cls.levels : [];
+      setFormData(prev => ({ ...prev, courses, selectedLevels: levels }));
+    }
+  }, [selectedClassId, branchClasses]);
+
 
   const toggleCourse = (courseValue: string) => {
     setFormData(prev => ({
