@@ -243,15 +243,23 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     const durationMonths = formData.customDuration 
       ? parseInt(formData.customDuration) 
       : parseInt(formData.courseDuration);
-    const totalFee = pricing?.price || (durationMonths * 500);
-    const discountPercent = 10;
+    const totalFee = pricing?.price || 0; // Use exact pricing, no fallback
+    
+    // Check for active offers
+    const now = new Date();
+    const { data: activeOffers } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('status', 'active')
+      .lte('start_date', now.toISOString().split('T')[0])
+      .gte('end_date', now.toISOString().split('T')[0])
+      .order('discount_percentage', { ascending: false })
+      .limit(1);
+    
+    const activeOffer = activeOffers && activeOffers.length > 0 ? activeOffers[0] : null;
+    const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
     const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
     const remainingBalance = feeAfterDiscount - partialPaymentAmount;
-
-    if (remainingBalance > 0 && !nextPaymentDate) {
-      toast.error("Please select when you plan to pay the remaining balance");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -309,6 +317,11 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       const ksaTimezone = "Asia/Riyadh";
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
+      const registrationDate = format(ksaDate, "yyyy-MM-dd");
+      
+      // Auto-generate payment deadline: registration date + 1 month
+      const autoDeadline = addDays(ksaDate, 30);
+      const paymentDeadline = format(autoDeadline, "yyyy-MM-dd");
 
       const signatureBlob = await fetch(signature).then(r => r.blob());
       const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
@@ -388,8 +401,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           payment_method: formData.paymentMethod,
           subscription_status: "active",
           course_duration_months: durationMonths,
-          registration_date: format(ksaDate, "yyyy-MM-dd"),
-          next_payment_date: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
+          registration_date: registrationDate,
+          next_payment_date: paymentDeadline, // Auto-generated deadline
         })
         .select()
         .single();
@@ -431,7 +444,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         student_name_ar: validatedData.fullNameAr,
         phone: validatedData.phone1,
         course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
-        registration_date: format(ksaDate, "yyyy-MM-dd"),
+        registration_date: registrationDate,
         course_start_date: actualStartDate,
         time_slot: formData.timing,
         level_count: durationMonths,
@@ -444,7 +457,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         language: 'en',
         first_payment: partialPaymentAmount,
         second_payment: feeAfterDiscount - partialPaymentAmount,
-        payment_deadline: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
+        payment_deadline: paymentDeadline, // Auto-generated deadline
       };
 
       const { data: billing, error: billingError } = await supabase

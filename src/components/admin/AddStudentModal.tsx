@@ -280,15 +280,23 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     const durationMonths = formData.customDuration 
       ? parseInt(formData.customDuration) 
       : parseInt(formData.courseDuration);
-    const totalFee = pricing?.price || (durationMonths * 500);
-    const discountPercent = 10;
+    const totalFee = pricing?.price || 0; // Use exact pricing, no fallback
+    
+    // Check for active offers
+    const now = new Date();
+    const { data: activeOffers } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('status', 'active')
+      .lte('start_date', now.toISOString().split('T')[0])
+      .gte('end_date', now.toISOString().split('T')[0])
+      .order('discount_percentage', { ascending: false })
+      .limit(1);
+    
+    const activeOffer = activeOffers && activeOffers.length > 0 ? activeOffers[0] : null;
+    const discountPercent = activeOffer ? Number(activeOffer.discount_percentage) : 0;
     const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
     const remainingBalance = feeAfterDiscount - partialPaymentAmount;
-
-    if (remainingBalance > 0 && !nextPaymentDate) {
-      toast.error("Please select when you plan to pay the remaining balance");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -346,6 +354,11 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       const ksaTimezone = "Asia/Riyadh";
       const now = new Date();
       const ksaDate = toZonedTime(now, ksaTimezone);
+      const registrationDate = format(ksaDate, "yyyy-MM-dd");
+      
+      // Auto-generate payment deadline: registration date + 1 month
+      const autoDeadline = addDays(ksaDate, 30);
+      const paymentDeadline = format(autoDeadline, "yyyy-MM-dd");
 
       const signatureBlob = await fetch(signature).then(r => r.blob());
       const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
@@ -425,8 +438,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           payment_method: formData.paymentMethod,
           subscription_status: "active",
           course_duration_months: durationMonths,
-          registration_date: format(ksaDate, "yyyy-MM-dd"),
-          next_payment_date: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
+          registration_date: registrationDate,
+          next_payment_date: paymentDeadline, // Auto-generated deadline
         })
         .select()
         .single();
@@ -468,7 +481,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         student_name_ar: validatedData.fullNameAr,
         phone: validatedData.phone1,
         course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
-        registration_date: format(ksaDate, "yyyy-MM-dd"),
+        registration_date: registrationDate,
         course_start_date: actualStartDate,
         time_slot: formData.timing,
         level_count: durationMonths,
@@ -481,7 +494,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         language: 'en',
         first_payment: partialPaymentAmount,
         second_payment: feeAfterDiscount - partialPaymentAmount,
-        payment_deadline: nextPaymentDate ? format(nextPaymentDate, "yyyy-MM-dd") : null,
+        payment_deadline: paymentDeadline, // Auto-generated deadline
       };
 
       const { data: billing, error: billingError } = await supabase
@@ -1327,27 +1340,21 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <Label className="text-lg font-semibold">Partial Payment</Label>
                 <PartialPaymentStep
                   totalFee={(() => {
-                    const durationMonths = formData.customDuration 
-                      ? parseInt(formData.customDuration) 
-                      : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-                    return pricing?.price || (durationMonths * 500);
+                    return pricing?.price || 0; // Use exact pricing
                   })()}
                   feeAfterDiscount={(() => {
-                    const durationMonths = formData.customDuration 
-                      ? parseInt(formData.customDuration) 
-                      : parseInt(formData.courseDuration || "1");
                     const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-                    const totalFee = pricing?.price || (durationMonths * 500);
-                    return totalFee * 0.9;
+                    const totalFee = pricing?.price || 0;
+                    // Apply only active offer discount, no default discount
+                    return totalFee; // Discount will be calculated in real-time by PartialPaymentStep
                   })()}
-                  discountPercentage={10}
+                  discountPercentage={0} // No default discount, offers handled separately
                   courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
-                  paymentDeadline={format(addDays(addDays(new Date(), 1), 30), "yyyy-MM-dd")}
+                  paymentDeadline={format(addDays(new Date(), 30), "yyyy-MM-dd")} // Auto-generated
                   onAmountChange={setPartialPaymentAmount}
-                  onNextPaymentDateChange={setNextPaymentDate}
+                  onNextPaymentDateChange={() => {}} // No longer used, auto-generated
                   initialPayment={partialPaymentAmount}
-                  initialNextPaymentDate={nextPaymentDate}
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
