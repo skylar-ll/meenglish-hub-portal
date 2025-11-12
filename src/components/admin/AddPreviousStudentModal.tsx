@@ -187,23 +187,53 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       (async () => {
         try {
           let branchId: string | null = null;
-          const { data: enRows } = await supabase
-            .from('branches')
-            .select('id')
-            .ilike('name_en', value)
-            .limit(1);
-          if (enRows && enRows.length > 0) {
-            branchId = enRows[0].id;
-          } else {
+
+          if (value === 'online') {
+            const { data: onlineRows } = await supabase
+              .from('branches')
+              .select('id')
+              .eq('is_online', true)
+              .limit(1);
+            if (onlineRows && onlineRows.length > 0) {
+              branchId = onlineRows[0].id;
+            }
+          }
+
+          if (!branchId) {
+            const likeVal = `%${value}%`;
+            const { data: enRows } = await supabase
+              .from('branches')
+              .select('id')
+              .ilike('name_en', likeVal)
+              .limit(1);
+            if (enRows && enRows.length > 0) {
+              branchId = enRows[0].id;
+            }
+          }
+
+          if (!branchId) {
+            const likeVal2 = `%${value}%`;
             const { data: arRows } = await supabase
               .from('branches')
               .select('id')
-              .ilike('name_ar', value)
+              .ilike('name_ar', likeVal2)
               .limit(1);
             if (arRows && arRows.length > 0) {
               branchId = arRows[0].id;
             }
           }
+
+          if (!branchId && value === 'dhahran') {
+            const { data: altRows } = await supabase
+              .from('branches')
+              .select('id')
+              .ilike('name_en', '%dahran%')
+              .limit(1);
+            if (altRows && altRows.length > 0) {
+              branchId = altRows[0].id;
+            }
+          }
+
           setSelectedBranchId(branchId);
         } catch (e) {
           console.error('Failed to resolve branch id', e);
