@@ -55,6 +55,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [selectedClassName, setSelectedClassName] = useState<string>("");
   const [classSearchTerm, setClassSearchTerm] = useState<string>("");
   const [classTimingFilter, setClassTimingFilter] = useState<string>("all");
+  const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
   
   // Fetch auto-translation setting, levels, and terms
   useEffect(() => {
@@ -180,19 +181,32 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     if (field === 'branch') {
       (async () => {
         try {
-          const { data: branchRow } = await supabase
-            .from('branches')
-            .select('id')
-            .eq('name_en', value)
-            .single();
-          if (branchRow?.id) {
-            setSelectedBranchId(branchRow.id);
+          try {
+            let branchId: string | null = null;
+            // Case-insensitive match on English or Arabic names
+            const { data: enRows } = await supabase
+              .from('branches')
+              .select('id')
+              .ilike('name_en', value)
+              .limit(1);
+            if (enRows && enRows.length > 0) {
+              branchId = enRows[0].id;
+            } else {
+              const { data: arRows } = await supabase
+                .from('branches')
+                .select('id')
+                .ilike('name_ar', value)
+                .limit(1);
+              if (arRows && arRows.length > 0) {
+                branchId = arRows[0].id;
+              }
+            }
+            setSelectedBranchId(branchId);
+          } catch (e) {
+            console.error('Failed to resolve branch id', e);
+            setSelectedBranchId(null);
           }
-        } catch (e) {
-          console.error('Failed to resolve branch id', e);
-          setSelectedBranchId(null);
-        }
-      })();
+        })();
     }
   };
 
@@ -1031,16 +1045,34 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Label className="text-sm font-medium">Filter by timing:</Label>
                         <Select value={classTimingFilter} onValueChange={setClassTimingFilter}>
                           <SelectTrigger className="w-[200px]">
-                            <SelectValue />
+                            <SelectValue placeholder="All Timings" />
                           </SelectTrigger>
                           <SelectContent className="bg-background z-50">
                             <SelectItem value="all">All Timings</SelectItem>
                             {Array.from(new Set(branchClasses.map(c => c.timing).filter(Boolean))).map(timing => (
                               <SelectItem key={timing} value={timing}>{timing}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Label className="text-sm font-medium">Filter by course:</Label>
+                        <Select value={classCourseFilter} onValueChange={setClassCourseFilter}>
+                          <SelectTrigger className="w-[240px]">
+                            <SelectValue placeholder="All Courses" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="all">All Courses</SelectItem>
+                            {Array.from(
+                              new Set(
+                                branchClasses.flatMap((c:any) => Array.isArray(c.courses) ? c.courses : [])
+                                  .filter(Boolean)
+                              )
+                            ).map((course:any) => (
+                              <SelectItem key={String(course)} value={String(course)}>{String(course)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -1052,10 +1084,16 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       <div className="space-y-2">
                         {branchClasses
                           .filter((cls: any) => {
-                            const matchesSearch = !classSearchTerm || 
-                              cls.class_name?.toLowerCase().includes(classSearchTerm.toLowerCase());
+                            const term = classSearchTerm.trim().toLowerCase();
+                            const matchesSearch =
+                              !term ||
+                              cls.class_name?.toLowerCase().includes(term) ||
+                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
+                              (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
                             const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                            return matchesSearch && matchesTiming;
+                            const matchesCourse = classCourseFilter === "all" ||
+                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
+                            return matchesSearch && matchesTiming && matchesCourse;
                           })
                           .map((cls: any) => (
                             <Card
@@ -1088,10 +1126,15 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                             </Card>
                           ))}
                         {branchClasses.filter((cls: any) => {
-                          const matchesSearch = !classSearchTerm || 
-                            cls.class_name?.toLowerCase().includes(classSearchTerm.toLowerCase());
+                          const term = classSearchTerm.trim().toLowerCase();
+                          const matchesSearch = !term ||
+                            cls.class_name?.toLowerCase().includes(term) ||
+                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
+                            (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
                           const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                          return matchesSearch && matchesTiming;
+                          const matchesCourse = classCourseFilter === "all" ||
+                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
+                          return matchesSearch && matchesTiming && matchesCourse;
                         }).length === 0 && (
                           <Card className="p-4 text-center text-sm text-muted-foreground">
                             No classes match your search criteria.
