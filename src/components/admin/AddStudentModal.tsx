@@ -181,32 +181,31 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     if (field === 'branch') {
       (async () => {
         try {
-          try {
-            let branchId: string | null = null;
-            // Case-insensitive match on English or Arabic names
-            const { data: enRows } = await supabase
+          let branchId: string | null = null;
+          // Case-insensitive match on English or Arabic names
+          const { data: enRows } = await supabase
+            .from('branches')
+            .select('id')
+            .ilike('name_en', value)
+            .limit(1);
+          if (enRows && enRows.length > 0) {
+            branchId = enRows[0].id;
+          } else {
+            const { data: arRows } = await supabase
               .from('branches')
               .select('id')
-              .ilike('name_en', value)
+              .ilike('name_ar', value)
               .limit(1);
-            if (enRows && enRows.length > 0) {
-              branchId = enRows[0].id;
-            } else {
-              const { data: arRows } = await supabase
-                .from('branches')
-                .select('id')
-                .ilike('name_ar', value)
-                .limit(1);
-              if (arRows && arRows.length > 0) {
-                branchId = arRows[0].id;
-              }
+            if (arRows && arRows.length > 0) {
+              branchId = arRows[0].id;
             }
-            setSelectedBranchId(branchId);
-          } catch (e) {
-            console.error('Failed to resolve branch id', e);
-            setSelectedBranchId(null);
           }
-        })();
+          setSelectedBranchId(branchId);
+        } catch (e) {
+          console.error('Failed to resolve branch id', e);
+          setSelectedBranchId(null);
+        }
+      })();
     }
   };
 
