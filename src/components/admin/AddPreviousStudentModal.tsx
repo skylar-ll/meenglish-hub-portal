@@ -841,7 +841,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
             {/* Step 2: Class Selection */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Class *</Label>
+                <Label className="text-lg font-semibold">Select Timing *</Label>
                 
                 {/* Show selected branch info */}
                 {formData.branch && (
@@ -865,27 +865,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   </Card>
                 ) : (
                   <>
-                    {/* Search and Filter */}
+                    {/* Timing Selection */}
                     <div className="space-y-3">
-                      <div className="relative">
-                        <Input
-                          placeholder="Search classes by name..."
-                          value={classSearchTerm}
-                          onChange={(e) => setClassSearchTerm(e.target.value)}
-                          className="pr-10"
-                        />
-                        {classSearchTerm && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                            onClick={() => setClassSearchTerm("")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold flex items-center gap-2">
                           <Clock className="w-5 h-5" />
@@ -924,7 +905,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                                   <Tooltip>
                                     <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
                                     <TooltipContent>
-                                      This timing isn’t available for the selected branch.
+                                      This timing isn't available for the selected branch.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -934,74 +915,11 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                         </div>
                       </div>
                     </div>
-
-                    {/* Filtered Classes List */}
-                    <ScrollArea className="h-[400px] pr-4">
-                      <div className="space-y-2">
-                        {branchClasses
-                          .filter((cls: any) => {
-                            const term = classSearchTerm.trim().toLowerCase();
-                            const matchesSearch = !term ||
-                              cls.class_name?.toLowerCase().includes(term) ||
-                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
-                              (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
-                            const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                            const matchesCourse = classCourseFilter === "all" ||
-                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
-                            return matchesSearch && matchesTiming && matchesCourse;
-                          })
-                          .map((cls: any) => (
-                            <Card
-                              key={cls.id}
-                              className={`p-4 cursor-pointer transition-all ${cls.id === selectedClassId ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                              onClick={() => {
-                                setSelectedClassId(cls.id);
-                                setSelectedClassName(cls.class_name);
-                                const courses = Array.isArray(cls.courses) ? cls.courses : [];
-                                const levels = Array.isArray(cls.levels) ? cls.levels : [];
-                                setFormData(prev => ({
-                                  ...prev,
-                                  courses,
-                                  selectedLevels: levels,
-                                  timing: cls.timing || ''
-                                }));
-                              }}
-                            >
-                              <div className="space-y-1">
-                                <p className="font-semibold">{cls.class_name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  <span className="font-medium">Timing:</span> {cls.timing}
-                                </p>
-                                {(cls.courses?.length > 0 || cls.levels?.length > 0) && (
-                                  <p className="text-sm text-muted-foreground">
-                                    <span className="font-medium">Includes:</span> {[...(cls.courses || []), ...(cls.levels || [])].join(', ')}
-                                  </p>
-                                )}
-                              </div>
-                            </Card>
-                          ))}
-                        {branchClasses.filter((cls: any) => {
-                          const term = classSearchTerm.trim().toLowerCase();
-                          const matchesSearch = !term ||
-                            cls.class_name?.toLowerCase().includes(term) ||
-                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
-                            (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
-                          const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                          const matchesCourse = classCourseFilter === "all" ||
-                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
-                          return matchesSearch && matchesTiming && matchesCourse;
-                        }).length === 0 && (
-                          <Card className="p-4 text-center text-sm text-muted-foreground">
-                            No classes match your search criteria.
-                          </Card>
-                        )}
-                      </div>
-                    </ScrollArea>
                   </>
                 )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!selectedClassId}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={classTimingFilter === "all"}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -1136,7 +1054,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           nextLabel={step === 7 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 2 && !selectedClassId) || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed) || (step === 7 && !signature)}
+          disabled={(step === 2 && classTimingFilter === "all") || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed) || (step === 7 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
