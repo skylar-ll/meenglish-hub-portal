@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2, Clock } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { EditFormConfigModal } from "./EditFormConfigModal";
@@ -1109,9 +1109,13 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                         )}
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Available Time Slots</Label>
-                        <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-3">
+                        <Label className="text-lg font-semibold flex items-center gap-2">
+                          <Clock className="w-5 h-5" />
+                          Available Time Slots
+                        </Label>
+                        
+                        <div className="space-y-2">
                           {Array.from(new Set(filteredOptions.allowedTimings || [])).length === 0 ? (
                             <p className="text-sm text-muted-foreground">No timings configured for this branch.</p>
                           ) : (
@@ -1120,7 +1124,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                                 key={timing}
                                 type="button"
                                 variant={classTimingFilter === timing ? "default" : "outline"}
-                                className="justify-start"
+                                className="w-full justify-center text-base h-12"
                                 onClick={() => setClassTimingFilter(classTimingFilter === timing ? "all" : timing)}
                               >
                                 {timing}
