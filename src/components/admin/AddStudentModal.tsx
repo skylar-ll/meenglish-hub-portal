@@ -1122,24 +1122,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                             ))}
                           </SelectContent>
                         </Select>
-
-                        <Label className="text-sm font-medium">Filter by course:</Label>
-                        <Select value={classCourseFilter} onValueChange={setClassCourseFilter}>
-                          <SelectTrigger className="w-[240px]">
-                            <SelectValue placeholder="All Courses" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background z-50">
-                            <SelectItem value="all">All Courses</SelectItem>
-                            {Array.from(
-                              new Set(
-                                branchClasses.flatMap((c:any) => Array.isArray(c.courses) ? c.courses : [])
-                                  .filter(Boolean)
-                              )
-                            ).map((course:any) => (
-                              <SelectItem key={String(course)} value={String(course)}>{String(course)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
 

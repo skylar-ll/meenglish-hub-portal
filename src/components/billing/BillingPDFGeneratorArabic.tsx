@@ -68,42 +68,42 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     }
   };
 
-  // Header - Institute Name (Arabic)
+  // Header - Institute Name (English for better compatibility)
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('معهد التعليم الحديث للغات', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Modern Education Institute of Language', pageWidth / 2, yPos, { align: 'center' });
   yPos += 25;
 
-  // License and Registration Numbers (Arabic)
+  // License and Registration Numbers
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('رقم الرخصة التدريبية: 5300751', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Training License No.: 5300751', pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
-  doc.text('رقم السجل التجاري: 2050122590', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Commercial Registration No.: 2050122590', pageWidth / 2, yPos, { align: 'center' });
   yPos += 40;
 
   doc.setTextColor(0, 0, 0);
 
-  // Student Information - Two Columns (RTL)
+  // Student Information - Two Columns (Arabic/English mix for compatibility)
   const leftCol = margin;
   const rightCol = pageWidth / 2 + 10;
   const lineHeight = 45;
 
-  // Right Column (appears first for RTL)
+  // Arabic Name (Right)
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text('اسم الطالب (عربي)', rightCol, yPos);
+  doc.text('Student Name (Arabic)', rightCol, yPos);
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.text(billingData.student_name_ar, rightCol, yPos + 18);
 
-  // Left Column
+  // English Name (Left)
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('اسم الطالب (انجليزي)', leftCol, yPos);
+  doc.text('Student Name (English)', leftCol, yPos);
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
@@ -200,7 +200,7 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    if (row.right === 'الخصم') {
+    if (row.right === 'Discount') {
       doc.setTextColor(34, 197, 94); // Green color
     }
     doc.text(row.rightValue, rightCol + 130, yPos);
@@ -212,7 +212,7 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    if (row.left === 'المبلغ المتبقي') {
+    if (row.left === 'Amount Remaining') {
       doc.setTextColor(239, 68, 68); // Red color
     }
     doc.text(row.leftValue, leftCol + 100, yPos);
@@ -222,40 +222,40 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
 
   yPos += 30;
 
-  // Payment Schedule Section (Arabic)
+  // Payment Schedule Section
   doc.setFillColor(240, 249, 255);
   doc.rect(margin - 10, yPos - 10, pageWidth - 2 * margin + 20, 90, 'F');
   
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('جدول الدفع', rightCol, yPos + 10);
+  doc.text('Payment Schedule', rightCol, yPos + 10);
   yPos += 35;
 
-  // First Payment (Arabic - RTL)
+  // First Payment
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('الدفعة الأولى (50%)', rightCol + 10, yPos);
+  doc.text('First Payment (50%)', rightCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(59, 130, 246);
-  doc.text(`${billingData.first_payment.toLocaleString()} ريال`, leftCol + 50, yPos);
+  doc.text(`${billingData.first_payment.toLocaleString()} SR`, leftCol + 50, yPos);
   
   yPos += 20;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('مستحق عند التسجيل', rightCol + 10, yPos);
+  doc.text('Due at enrollment', rightCol + 10, yPos);
 
   yPos += 30;
 
-  // Second Payment (Arabic - RTL)
+  // Second Payment
   doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('الدفعة الثانية (50%)', rightCol + 10, yPos);
+  doc.text('Second Payment (50%)', rightCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(239, 68, 68);
-  doc.text(`${billingData.second_payment.toLocaleString()} ريال`, leftCol + 50, yPos);
+  doc.text(`${billingData.second_payment.toLocaleString()} SR`, leftCol + 50, yPos);
   
   yPos += 20;
   doc.setFontSize(9);
@@ -263,21 +263,21 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   doc.setFont('helvetica', 'normal');
   const secondPaymentDate = new Date(billingData.course_start_date);
   secondPaymentDate.setMonth(secondPaymentDate.getMonth() + 1);
-  doc.text(`الموعد النهائي: ${format(secondPaymentDate, 'dd/MM/yyyy')}`, rightCol + 10, yPos);
+  doc.text(`Deadline: ${format(secondPaymentDate, 'dd/MM/yyyy')}`, rightCol + 10, yPos);
 
   yPos += 40;
 
-  // Student Signature Section (Arabic)
+  // Student Signature Section
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('توقيع الطالب', rightCol, yPos);
+  doc.text('Student Signature', rightCol, yPos);
   yPos += 5;
 
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('يرجى التوقيع أدناه للموافقة على الشروط والأحكام', rightCol, yPos);
+  doc.text('Please sign below to agree to the terms and conditions', rightCol, yPos);
   yPos += 20;
 
   // Signature box with dashed border
