@@ -180,7 +180,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     { value: "+44", label: "+44 (UK)" },
   ];
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     
     if (field === 'branch') {

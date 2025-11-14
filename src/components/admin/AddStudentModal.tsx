@@ -175,7 +175,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     { value: "+44", label: "+44 (UK)" },
   ];
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     
     // If branch changes, update selectedBranchId for filtering using branches table UUID
@@ -1057,7 +1057,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 />
 
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleBack} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
