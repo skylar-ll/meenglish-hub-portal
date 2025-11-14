@@ -1,0 +1,162 @@
+            {/* Step 2: Course & Level Selection (Matches CourseSelection.tsx) */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Courses and Levels *</Label>
+                
+                {/* Show selected branch info */}
+                {formData.branch && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm font-medium">Selected Branch: {formData.branch}</p>
+                    {filteredOptions.allowedTimings.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Available timings for your branch: {filteredOptions.allowedTimings.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {!selectedBranchId ? (
+                  <Card className="p-4 text-sm text-muted-foreground">
+                    Loading branch information...
+                  </Card>
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-6">
+                      {/* English Program Levels */}
+                      {filteredOptions.allLevels.length > 0 && (
+                        <div className="space-y-3">
+                          <h3 className="text-lg font-semibold">English Program (Select your starting level)</h3>
+                          <div className="space-y-2">
+                            {filteredOptions.allLevels.map((level) => {
+                              const isAvailable = filteredOptions.allowedLevels.includes(level);
+                              return (
+                                <TooltipProvider key={level}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`level-${level}`}
+                                          checked={formData.selectedLevels?.includes(level) || false}
+                                          onCheckedChange={() => {
+                                            const current = formData.selectedLevels || [];
+                                            const updated = current.includes(level)
+                                              ? current.filter((l) => l !== level)
+                                              : [...current, level];
+                                            handleInputChange("selectedLevels", updated);
+                                          }}
+                                          disabled={!isAvailable}
+                                        />
+                                        <Label
+                                          htmlFor={`level-${level}`}
+                                          className={!isAvailable ? "text-muted-foreground" : ""}
+                                        >
+                                          {level}
+                                        </Label>
+                                      </div>
+                                    </TooltipTrigger>
+                                    {!isAvailable && (
+                                      <TooltipContent>
+                                        <p>This option is not available for your selected branch.</p>
+                                        <p className="text-xs">هذا الخيار غير متاح في هذا الفرع.</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Courses by Category */}
+                      {Object.entries(
+                        filteredOptions.allCourses.reduce((acc, course) => {
+                          const category = courses.find((c) => c.value === course)?.category || "Other";
+                          if (!acc[category]) acc[category] = [];
+                          acc[category].push(course);
+                          return acc;
+                        }, {} as Record<string, string[]>)
+                      ).map(([category, coursesInCategory]) => (
+                        <div key={category} className="space-y-3">
+                          <h3 className="text-lg font-semibold">{category}</h3>
+                          <div className="space-y-2">
+                            {coursesInCategory.map((course) => {
+                              const isAvailable = filteredOptions.allowedCourses.includes(course);
+                              const courseLabel = courses.find((c) => c.value === course)?.label || course;
+                              return (
+                                <TooltipProvider key={course}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`course-${course}`}
+                                          checked={formData.courses?.includes(course) || false}
+                                          onCheckedChange={() => {
+                                            const current = formData.courses || [];
+                                            const updated = current.includes(course)
+                                              ? current.filter((c) => c !== course)
+                                              : [...current, course];
+                                            handleInputChange("courses", updated);
+                                          }}
+                                          disabled={!isAvailable}
+                                        />
+                                        <Label
+                                          htmlFor={`course-${course}`}
+                                          className={!isAvailable ? "text-muted-foreground" : ""}
+                                        >
+                                          {courseLabel}
+                                        </Label>
+                                      </div>
+                                    </TooltipTrigger>
+                                    {!isAvailable && (
+                                      <TooltipContent>
+                                        <p>This option is not available for your selected branch.</p>
+                                        <p className="text-xs">هذا الخيار غير متاح في هذا الفرع.</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={handleNext} 
+                    className="flex-1"
+                    disabled={(!formData.courses || formData.courses.length === 0) && (!formData.selectedLevels || formData.selectedLevels.length === 0)}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Timing & Class Selection */}
+            {step === 3 && loadingClasses && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
+              </div>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length === 0 && (
+              <Card className="p-4 text-sm text-muted-foreground">
+                No active classes found for this branch.
+              </Card>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length > 0 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Class *</Label>
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-3">
+                    {branchClasses.map((cls) => (
