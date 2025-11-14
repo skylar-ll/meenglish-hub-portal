@@ -893,22 +893,43 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                         </Label>
                         
                         <div className="grid gap-4">
-                          {Array.from(new Set(filteredOptions.allowedTimings || [])).length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No timings configured for this branch.</p>
+                          {timings.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No timings configured.</p>
                           ) : (
-                            Array.from(new Set(filteredOptions.allowedTimings || [])).map((timing) => (
-                              <Card
-                                key={timing}
-                                className={`p-6 transition-all ${
-                                  classTimingFilter === timing
-                                    ? "border-primary border-2 bg-primary/5 shadow-lg cursor-pointer"
-                                    : "hover:bg-muted/50 hover:shadow-md cursor-pointer"
-                                }`}
-                                onClick={() => setClassTimingFilter(classTimingFilter === timing ? "all" : timing)}
-                              >
-                                <p className="font-medium text-lg text-center">{timing}</p>
-                              </Card>
-                            ))
+                            timings.map((t: any) => {
+                              const value = t.config_value;
+                              const isAvailable = (filteredOptions.allowedTimings || []).includes(value);
+                              const timingCard = (
+                                <Card
+                                  key={t.id || value}
+                                  className={`p-6 transition-all ${
+                                    classTimingFilter === value
+                                      ? "border-primary border-2 bg-primary/5 shadow-lg"
+                                      : isAvailable
+                                        ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
+                                        : "opacity-50 cursor-not-allowed"
+                                  }`}
+                                  onClick={() => {
+                                    if (!isAvailable) return;
+                                    setClassTimingFilter(classTimingFilter === value ? "all" : value);
+                                  }}
+                                >
+                                  <p className="font-medium text-lg text-center">{value}</p>
+                                </Card>
+                              );
+                              return isAvailable ? (
+                                timingCard
+                              ) : (
+                                <TooltipProvider key={t.id || value}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
+                                    <TooltipContent>
+                                      This timing isn’t available for the selected branch.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })
                           )}
                         </div>
                       </div>
