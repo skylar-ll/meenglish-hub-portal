@@ -1090,24 +1090,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <Label className="text-lg font-semibold">Select Class *</Label>
                     {/* Search and Filter */}
                     <div className="space-y-3">
-                      <div className="relative">
-                        <Input
-                          placeholder="Search classes by name..."
-                          value={classSearchTerm}
-                          onChange={(e) => setClassSearchTerm(e.target.value)}
-                          className="pr-10"
-                        />
-                        {classSearchTerm && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                            onClick={() => setClassSearchTerm("")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
                       
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold flex items-center gap-2">
