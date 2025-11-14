@@ -1101,13 +1101,16 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                             <p className="text-sm text-muted-foreground">No timings configured.</p>
                           ) : (
                             timings.map((t: any) => {
-                              const value = t.config_value;
-                              const isAvailable = (filteredOptions.allowedTimings || []).includes(value);
+                              const value = t.label ?? t.config_value ?? t.value;
+                              const isAvailable = (filteredOptions.allowedTimings || []).some(
+                                (opt) => String(opt).trim().toLowerCase() === String(value).trim().toLowerCase(),
+                              );
+                              const selected = classTimingFilter === value;
                               const timingCard = (
                                 <Card
                                   key={t.id || value}
                                   className={`p-6 transition-all ${
-                                    classTimingFilter === value
+                                    selected
                                       ? "border-primary border-2 bg-primary/5 shadow-lg"
                                       : isAvailable
                                         ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
@@ -1115,10 +1118,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                                   }`}
                                   onClick={() => {
                                     if (!isAvailable) return;
-                                    setClassTimingFilter(classTimingFilter === value ? "all" : value);
+                                    const newValue = selected ? "all" : String(value);
+                                    setClassTimingFilter(newValue);
+                                    setFormData((prev) => ({ ...prev, timing: newValue === "all" ? "" : String(value) }));
                                   }}
                                 >
-                                  <p className="font-medium text-lg text-center">{value}</p>
+                                  <p className="font-medium text-lg text-center">{String(value)}</p>
                                 </Card>
                               );
                               return isAvailable ? (
