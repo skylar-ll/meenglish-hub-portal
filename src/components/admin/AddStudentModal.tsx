@@ -1220,15 +1220,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 3: Payment Method */}
-            {step === 3 && (
+            {/* Step 4: Payment Method */}
+            {step === 4 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Payment Method *</Label>
-                <div className="p-3 bg-muted/50 rounded-lg mb-4">
-                  <p className="text-sm"><strong>Class:</strong> {selectedClassName}</p>
-                  <p className="text-sm"><strong>Timing:</strong> {formData.timing}</p>
-                  <p className="text-sm"><strong>Courses/Levels:</strong> {[...formData.courses, ...formData.selectedLevels].join(', ')}</p>
-                </div>
                 <div className="grid gap-3">
                   {paymentMethods.map((method) => (
                     <Card
@@ -1256,7 +1251,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   <AddNewFieldButton configType="payment_method" onAdd={refetch} />
                 )}
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
