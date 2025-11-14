@@ -1087,10 +1087,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
             )}
             {step === 3 && !loadingClasses && branchClasses.length > 0 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Class *</Label>
-                    {/* Search and Filter */}
+                <Label className="text-lg font-semibold">Select Timing *</Label>
+                    {/* Timing Selection */}
                     <div className="space-y-3">
-                      
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold flex items-center gap-2">
                           <Clock className="w-5 h-5" />
@@ -1129,7 +1128,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                                   <Tooltip>
                                     <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
                                     <TooltipContent>
-                                      This timing isn’t available for the selected branch.
+                                      This timing isn't available for the selected branch.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -1140,76 +1139,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                       </div>
                     </div>
 
-                    {/* Filtered Classes List */}
-                    <ScrollArea className="h-[400px] pr-4">
-                      <div className="space-y-2">
-                        {branchClasses
-                          .filter((cls: any) => {
-                            const term = classSearchTerm.trim().toLowerCase();
-                            const matchesSearch =
-                              !term ||
-                              cls.class_name?.toLowerCase().includes(term) ||
-                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
-                              (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
-                            const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                            const matchesCourse = classCourseFilter === "all" ||
-                              (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
-                            return matchesSearch && matchesTiming && matchesCourse;
-                          })
-                          .map((cls: any) => (
-                            <Card
-                              key={cls.id}
-                              className={`p-4 cursor-pointer transition-all ${cls.id === selectedClassId ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                              onClick={() => {
-                                setSelectedClassId(cls.id);
-                                setSelectedClassName(cls.class_name);
-                                const courses = Array.isArray(cls.courses) ? cls.courses : [];
-                                const levels = Array.isArray(cls.levels) ? cls.levels : [];
-                                setFormData(prev => ({
-                                  ...prev,
-                                  courses,
-                                  selectedLevels: levels,
-                                  timing: cls.timing || ''
-                                }));
-                              }}
-                            >
-                              <div className="space-y-1">
-                                <p className="font-semibold">{cls.class_name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  <span className="font-medium">Timing:</span> {cls.timing}
-                                </p>
-                                {(cls.courses?.length > 0 || cls.levels?.length > 0) && (
-                                  <p className="text-sm text-muted-foreground">
-                                    <span className="font-medium">Includes:</span> {[...(cls.courses || []), ...(cls.levels || [])].join(', ')}
-                                  </p>
-                                )}
-                              </div>
-                            </Card>
-                          ))}
-                        {branchClasses.filter((cls: any) => {
-                          const term = classSearchTerm.trim().toLowerCase();
-                          const matchesSearch = !term ||
-                            cls.class_name?.toLowerCase().includes(term) ||
-                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase().includes(term))) ||
-                            (Array.isArray(cls.levels) && cls.levels.some((l:string) => String(l).toLowerCase().includes(term)));
-                          const matchesTiming = classTimingFilter === "all" || cls.timing === classTimingFilter;
-                          const matchesCourse = classCourseFilter === "all" ||
-                            (Array.isArray(cls.courses) && cls.courses.some((c:string) => String(c).toLowerCase() === classCourseFilter.toLowerCase()));
-                          return matchesSearch && matchesTiming && matchesCourse;
-                        }).length === 0 && (
-                          <Card className="p-4 text-center text-sm text-muted-foreground">
-                            No classes match your search criteria.
-                          </Card>
-                        )}
-                      </div>
-                    </ScrollArea>
-
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!selectedClassId}>
+                  <Button onClick={handleNext} className="flex-1" disabled={classTimingFilter === "all"}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1447,7 +1382,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 3 && !selectedClassId) || (step === 6 && partialPaymentAmount === 0) || (step === 7 && !termsAgreed) || (step === 8 && !signature)}
+          disabled={(step === 3 && classTimingFilter === "all") || (step === 6 && partialPaymentAmount === 0) || (step === 7 && !termsAgreed) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
