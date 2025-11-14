@@ -886,19 +886,25 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                         )}
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Label className="text-sm font-medium">Filter by timing:</Label>
-                        <Select value={classTimingFilter} onValueChange={setClassTimingFilter}>
-                          <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="All Timings" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background z-50">
-                            <SelectItem value="all">All Timings</SelectItem>
-                            {Array.from(new Set(branchClasses.map(c => c.timing).filter(Boolean))).map(timing => (
-                              <SelectItem key={timing} value={timing}>{timing}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Available Time Slots</Label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {Array.from(new Set(filteredOptions.allowedTimings || [])).length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No timings configured for this branch.</p>
+                          ) : (
+                            Array.from(new Set(filteredOptions.allowedTimings || [])).map((timing) => (
+                              <Button
+                                key={timing}
+                                type="button"
+                                variant={classTimingFilter === timing ? "default" : "outline"}
+                                className="justify-start"
+                                onClick={() => setClassTimingFilter(classTimingFilter === timing ? "all" : timing)}
+                              >
+                                {timing}
+                              </Button>
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
 
