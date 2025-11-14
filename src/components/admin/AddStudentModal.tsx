@@ -27,6 +27,7 @@ import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CourseAndLevelSelector } from "./CourseAndLevelSelector";
 
 interface AddStudentModalProps {
   open: boolean;
@@ -350,7 +351,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   };
 
   const handleNext = () => {
-    if (step < 7) {
+    if (step < 8) {
       setStep(step + 1);
     }
   };
@@ -757,7 +758,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Add New Student - Step {step} of 7</DialogTitle>
+            <DialogTitle>Add New Student - Step {step} of 8</DialogTitle>
             <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
               {isEditMode ? "Done Editing" : "Edit Form"}
             </Button>
@@ -1026,33 +1027,67 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 2: Class Selection */}
+            {/* Step 2: Course & Level Selection */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Class *</Label>
+                <Label className="text-lg font-semibold">Select Courses and Levels *</Label>
                 
-                {/* Show selected branch info */}
-                {formData.branch && (
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">Selected Branch: {formData.branch}</p>
-                  </div>
-                )}
+                <CourseAndLevelSelector
+                  selectedBranchId={selectedBranchId}
+                  formData={formData}
+                  englishLevelOptions={englishLevelOptions}
+                  coursesByCategory={coursesByCategory}
+                  filteredOptions={filteredOptions}
+                  onCourseToggle={(courseValue) => {
+                    const current = formData.courses || [];
+                    const updated = current.includes(courseValue)
+                      ? current.filter((c) => c !== courseValue)
+                      : [...current, courseValue];
+                    handleInputChange("courses", updated);
+                  }}
+                  onLevelToggle={(levelValue) => {
+                    const current = formData.selectedLevels || [];
+                    const updated = current.includes(levelValue)
+                      ? current.filter((l) => l !== levelValue)
+                      : [...current, levelValue];
+                    handleInputChange("selectedLevels", updated);
+                  }}
+                  extractLevelKey={extractLevelKey}
+                  normalize={normalize}
+                />
 
-                {!selectedBranchId ? (
-                  <Card className="p-4 text-sm text-muted-foreground">
-                    Loading branch information...
-                  </Card>
-                ) : loadingClasses ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
-                  </div>
-                ) : branchClasses.length === 0 ? (
-                  <Card className="p-4 text-sm text-muted-foreground">
-                    No active classes found for this branch.
-                  </Card>
-                ) : (
-                  <>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={handleNext} 
+                    className="flex-1"
+                    disabled={(!formData.courses || formData.courses.length === 0) && (!formData.selectedLevels || formData.selectedLevels.length === 0)}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Class Selection */}
+            {step === 3 && loadingClasses && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
+              </div>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length === 0 && (
+              <Card className="p-4 text-sm text-muted-foreground">
+                No active classes found for this branch.
+              </Card>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length > 0 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Class *</Label>
                     {/* Search and Filter */}
                     <div className="space-y-3">
                       <div className="relative">
@@ -1171,8 +1206,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                         )}
                       </div>
                     </ScrollArea>
-                  </>
-                )}
+
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1234,8 +1268,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 4: Course Duration */}
-            {step === 4 && (
+            {/* Step 5: Course Duration */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Course Duration *</Label>
                 <div className="grid gap-3">
@@ -1309,8 +1343,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 5: Partial Payment */}
-            {step === 5 && (
+            {/* Step 6: Partial Payment */}
+            {step === 6 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Partial Payment</Label>
                 <PartialPaymentStep
@@ -1342,8 +1376,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 6: Terms and Conditions */}
-            {step === 6 && (
+            {/* Step 7: Terms and Conditions */}
+            {step === 7 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Terms and Conditions</Label>
                 <Card className="p-4">
@@ -1376,8 +1410,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               </div>
             )}
 
-            {/* Step 7: Billing & Signature */}
-            {step === 7 && (
+            {/* Step 8: Billing & Signature */}
+            {step === 8 && (
               <div className="space-y-4">
                 <BillingFormStep 
                   formData={formData} 
@@ -1416,12 +1450,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       {/* Floating Navigation Button */}
       {open && !configLoading && (
         <FloatingNavigationButton
-          onNext={step === 7 ? handleSubmit : handleNext}
+          onNext={step === 8 ? handleSubmit : handleNext}
           onBack={step > 1 ? () => setStep(step - 1) : undefined}
-          nextLabel={step === 7 ? "Create Student" : "Next"}
+          nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 2 && !selectedClassId) || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed) || (step === 7 && !signature)}
+          disabled={(step === 3 && !selectedClassId) || (step === 6 && partialPaymentAmount === 0) || (step === 7 && !termsAgreed) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
