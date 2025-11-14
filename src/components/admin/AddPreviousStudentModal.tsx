@@ -892,20 +892,22 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                           Available Time Slots
                         </Label>
                         
-                        <div className="space-y-2">
+                        <div className="grid gap-4">
                           {Array.from(new Set(filteredOptions.allowedTimings || [])).length === 0 ? (
                             <p className="text-sm text-muted-foreground">No timings configured for this branch.</p>
                           ) : (
                             Array.from(new Set(filteredOptions.allowedTimings || [])).map((timing) => (
-                              <Button
+                              <Card
                                 key={timing}
-                                type="button"
-                                variant={classTimingFilter === timing ? "default" : "outline"}
-                                className="w-full justify-center text-base h-12"
+                                className={`p-6 transition-all ${
+                                  classTimingFilter === timing
+                                    ? "border-primary border-2 bg-primary/5 shadow-lg cursor-pointer"
+                                    : "hover:bg-muted/50 hover:shadow-md cursor-pointer"
+                                }`}
                                 onClick={() => setClassTimingFilter(classTimingFilter === timing ? "all" : timing)}
                               >
-                                {timing}
-                              </Button>
+                                <p className="font-medium text-lg text-center">{timing}</p>
+                              </Card>
                             ))
                           )}
                         </div>
