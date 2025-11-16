@@ -33,7 +33,13 @@ const CourseSelection = () => {
   const [levelOptions, setLevelOptions] = useState<LevelOption[]>([]);
   const [branchId, setBranchId] = useState<string | null>(null);
   const { courses, loading } = useFormConfigurations();
-  const { filteredOptions } = useBranchFiltering(branchId);
+  const { filteredOptions, loading: branchLoading } = useBranchFiltering(branchId);
+  
+  console.log("🔍 CourseSelection - Branch filtering results:", {
+    branchId,
+    allowedCourses: filteredOptions.allowedCourses,
+    allowedLevels: filteredOptions.allowedLevels,
+  });
 
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
@@ -95,7 +101,15 @@ const CourseSelection = () => {
   // Group courses by category, excluding any entries that look like levels (e.g., level-1)
   const levelLike = (val: string) => /^level[\s\-_]?\d+/i.test(val);
   const visibleCourses = courses.filter((c) => !levelLike(c.value));
-  const coursesByCategory = visibleCourses.reduce((acc, course) => {
+  
+  // Filter courses based on branch selection
+  const filteredCourses = branchId && filteredOptions.allowedCourses.length > 0
+    ? visibleCourses.filter((c) => filteredOptions.allowedCourses.includes(c.value))
+    : visibleCourses;
+  
+  console.log("📋 Filtered courses for display:", filteredCourses.map(c => c.value));
+  
+  const coursesByCategory = filteredCourses.reduce((acc, course) => {
     if (!acc[course.category]) {
       acc[course.category] = [];
     }
@@ -103,9 +117,13 @@ const CourseSelection = () => {
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
 
-  // English levels: prefer configured list, fallback to classes-derived allowed levels
-  const englishLevelOptions: LevelOption[] = levelOptions.length
-    ? levelOptions
+  // English levels: filter based on branch selection
+  const branchFilteredLevelOptions = branchId && filteredOptions.allowedLevels.length > 0
+    ? levelOptions.filter((l) => filteredOptions.allowedLevels.includes(l.config_value))
+    : levelOptions;
+  
+  const englishLevelOptions: LevelOption[] = branchFilteredLevelOptions.length
+    ? branchFilteredLevelOptions
     : (filteredOptions.allowedLevels || []).map((v, i) => ({
         id: `fallback-${i}`,
         config_key: v,
@@ -133,14 +151,52 @@ const CourseSelection = () => {
 
         {/* Course Selection Form */}
         <Card className="p-8 animate-slide-up">
-          {loading ? (
+          {loading || branchLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-muted-foreground">Scanning available classes for your branch...</p>
-              <p className="text-sm text-muted-foreground mt-2">جاري فحص الفصول المتاحة لفرعك...</p>
+              <p className="text-muted-foreground">
+                {branchLoading ? "Loading available courses for your branch..." : "Scanning available classes for your branch..."}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {branchLoading ? "جاري تحميل الدورات المتاحة لفرعك..." : "جاري فحص الفصول المتاحة لفرعك..."}
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Branch Information Banner */}
+              {branchId && filteredOptions.allowedCourses.length > 0 && (
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span>📍</span>
+                    Available courses & programs in your selected branch:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {filteredOptions.allowedCourses.map((course, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-primary/20 text-primary text-xs font-medium rounded-full"
+                      >
+                        {course}
+                      </span>
+                    ))}
+                  </div>
+                  {filteredOptions.allowedTimings.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Available timings: {filteredOptions.allowedTimings.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+              {branchId && filteredOptions.allowedCourses.length === 0 && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-destructive font-medium">
+                    ⚠️ No active classes found for your selected branch. Please contact the administration.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    لا توجد فصول نشطة في الفرع المختار. يرجى الاتصال بالإدارة.
+                  </p>
+                </div>
+              )}
               {/* English Program - Levels (from classes and form_configurations) */}
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">English Program (Select your starting level)</Label>
