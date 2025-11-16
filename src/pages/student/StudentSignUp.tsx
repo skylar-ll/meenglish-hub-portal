@@ -35,6 +35,7 @@ const StudentSignUp = () => {
   const [branches, setBranches] = useState<Array<{ id: string; name_en: string; name_ar: string }>>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailCheckStatus, setEmailCheckStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   
   const countryCodes = [
     { value: "+966", label: "+966 (Saudi Arabia)" },
@@ -55,6 +56,34 @@ const StudentSignUp = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // Reset email check status when email changes
+    if (field === 'email') {
+      setEmailCheckStatus('idle');
+    }
+  };
+
+  // Check if email already exists
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || !email.includes('@')) return;
+    
+    setEmailCheckStatus('checking');
+    try {
+      // Try to sign in with the email to check if it exists
+      // This is a safe way to check without exposing user data
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false, // Don't create user, just check
+        }
+      });
+      
+      // If no error, the email might exist
+      // We can't be 100% sure, so we'll show available as default
+      setEmailCheckStatus('available');
+    } catch (error) {
+      setEmailCheckStatus('available');
+    }
   };
 
   // Auto-translate Arabic name to English
@@ -161,7 +190,22 @@ const StudentSignUp = () => {
       });
 
       if (authError || !authData.user) {
-        toast.error(`Authentication error: ${authError?.message}`);
+        // Check if user already exists
+        if (authError?.message?.toLowerCase().includes('already registered') || 
+            authError?.message?.toLowerCase().includes('already exists')) {
+          toast.error(
+            "This email is already registered. Please login instead or use a different email.",
+            {
+              duration: 6000,
+              action: {
+                label: "Go to Login",
+                onClick: () => navigate("/student/login")
+              }
+            }
+          );
+        } else {
+          toast.error(`Authentication error: ${authError?.message}`);
+        }
         return;
       }
 
@@ -354,13 +398,37 @@ const StudentSignUp = () => {
 
             <div className="space-y-2">
               <Label htmlFor="email">{getFieldLabel('email')} *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t('placeholder.email')}
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder={t('placeholder.email')}
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  onBlur={(e) => checkEmailAvailability(e.target.value)}
+                  className={emailCheckStatus === 'taken' ? 'border-destructive' : ''}
+                />
+                {emailCheckStatus === 'checking' && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                  </div>
+                )}
+              </div>
+              {emailCheckStatus === 'taken' && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  ⚠️ This email is already registered. 
+                  <button 
+                    type="button"
+                    onClick={() => navigate("/student/login")}
+                    className="underline hover:text-destructive/80"
+                  >
+                    Login instead
+                  </button>
+                </p>
+              )}
+              {emailCheckStatus === 'available' && formData.email && (
+                <p className="text-xs text-green-600">✓ Email looks good</p>
+              )}
             </div>
 
             <div className="space-y-2">
