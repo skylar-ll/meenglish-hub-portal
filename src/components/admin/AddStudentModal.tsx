@@ -1117,13 +1117,27 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                                         : "opacity-50 cursor-not-allowed"
                                   }`}
                                   onClick={() => {
-                                    if (!isAvailable) return;
+                                    if (!isAvailable || isEditMode) return;
                                     const newValue = selected ? "all" : String(value);
                                     setClassTimingFilter(newValue);
                                     setFormData((prev) => ({ ...prev, timing: newValue === "all" ? "" : String(value) }));
                                   }}
                                 >
-                                  <p className="font-medium text-lg text-center">{String(value)}</p>
+                                  <p className="font-medium text-lg text-center">
+                                    {isEditMode ? (
+                                      <InlineEditableField
+                                        id={t.id}
+                                        value={String(value)}
+                                        configType="timing"
+                                        configKey={t.value || t.config_key}
+                                        isEditMode={isEditMode}
+                                        onUpdate={refetch}
+                                        onDelete={refetch}
+                                      />
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </p>
                                 </Card>
                               );
                               return isAvailable ? (
@@ -1141,6 +1155,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                             })
                           )}
                         </div>
+                        {isEditMode && (
+                          <AddNewFieldButton configType="timing" onAdd={refetch} />
+                        )}
                       </div>
                     </div>
 
