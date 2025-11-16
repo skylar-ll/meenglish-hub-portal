@@ -74,7 +74,7 @@ const AdminDashboard = () => {
       if (teachersError) {
         console.error("Error fetching teachers:", teachersError);
       } else {
-        // Calculate student count for each teacher using junction table
+        // Calculate student count and assigned courses for each teacher
         const teachersWithCount = await Promise.all(
           (teachersData || []).map(async (teacher) => {
             const { data: studentLinks } = await supabase
@@ -82,9 +82,24 @@ const AdminDashboard = () => {
               .select("student_id")
               .eq("teacher_id", teacher.id);
             
+            // Get courses from classes assigned to this teacher
+            const { data: classes } = await supabase
+              .from("classes")
+              .select("courses")
+              .eq("teacher_id", teacher.id);
+            
+            // Extract unique courses from all classes
+            const coursesSet = new Set<string>();
+            classes?.forEach(cls => {
+              if (cls.courses && Array.isArray(cls.courses)) {
+                cls.courses.forEach(course => coursesSet.add(course));
+              }
+            });
+            
             return {
               ...teacher,
-              student_count: studentLinks?.length || 0
+              student_count: studentLinks?.length || 0,
+              courses_from_classes: Array.from(coursesSet)
             };
           })
         );
@@ -443,9 +458,8 @@ const AdminDashboard = () => {
                       s.teacherIds?.includes(teacher.id)
                     );
                     
-                    // Get courses from the courses_assigned field (or empty string if null)
-                    const coursesString = teacher.courses_assigned || '';
-                    const assignedCourses = coursesString ? coursesString.split(',').map(c => c.trim()).filter(c => c) : [];
+                    // Get courses from classes they're assigned to
+                    const assignedCourses = teacher.courses_from_classes || [];
                     
                     return (
                       <Card 
@@ -478,9 +492,33 @@ const AdminDashboard = () => {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                navigate(`/admin/teacher/${teacher.id}`);
+                                try {
+                                  const { supabase } = await import("@/integrations/supabase/client");
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  
+                                  if (!session) {
+                                    console.error('No admin session found');
+                                    return;
+                                  }
+
+                                  const { data, error } = await supabase.functions.invoke('admin-impersonate-teacher', {
+                                    body: { teacherId: teacher.id }
+                                  });
+
+                                  if (error) {
+                                    console.error('Impersonation error:', error);
+                                    return;
+                                  }
+
+                                  if (data?.redirectUrl) {
+                                    // Open the magic link in current window to authenticate as teacher
+                                    window.location.href = data.redirectUrl.replace('#access_token', '/teacher/dashboard#access_token');
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to access teacher account:', err);
+                                }
                               }}
                               className="text-xs"
                             >

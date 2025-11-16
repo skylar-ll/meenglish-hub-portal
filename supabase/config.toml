@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.translate-name]
 verify_jwt = false
+
+[functions.create-teacher]
+verify_jwt = true
+
+[functions.admin-impersonate-teacher]
+verify_jwt = true
