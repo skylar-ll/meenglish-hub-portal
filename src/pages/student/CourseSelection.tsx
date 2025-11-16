@@ -294,27 +294,19 @@ const CourseSelection = () => {
                               .replace(/[أإآا]/g, 'ا') // Normalize Arabic alef variants
                               .replace(/[ىي]/g, 'ي');  // Normalize Arabic ya variants
                           
-                          const isAvailable = branchId 
+                          // Only apply branch filtering if we have branch-specific data
+                          const shouldFilterByBranch = branchId && filteredOptions.allowedCourses.length > 0;
+                          
+                          const isAvailable = shouldFilterByBranch
                             ? filteredOptions.allowedCourses.some(allowedCourse => {
                                 const normalizedAllowed = normalizeForMatch(allowedCourse);
                                 const normalizedCourse = normalizeForMatch(course.value);
                                 
                                 // Check if either contains the other (flexible matching)
-                                const matches = normalizedAllowed.includes(normalizedCourse) || 
-                                               normalizedCourse.includes(normalizedAllowed);
-                                
-                                if (branchId && course.value) {
-                                  console.log(`🔍 Matching "${course.value}":`, {
-                                    allowedCourse,
-                                    normalizedCourse,
-                                    normalizedAllowed,
-                                    matches
-                                  });
-                                }
-                                
-                                return matches;
+                                return normalizedAllowed.includes(normalizedCourse) || 
+                                       normalizedCourse.includes(normalizedAllowed);
                               })
-                            : true;
+                            : true; // Show all courses if no branch filtering
                           
                           const courseItem = (
                             <div 
