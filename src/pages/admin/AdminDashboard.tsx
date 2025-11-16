@@ -23,6 +23,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -499,9 +500,18 @@ const AdminDashboard = () => {
                                   const { data: { session } } = await supabase.auth.getSession();
                                   
                                   if (!session) {
-                                    console.error('No admin session found');
+                                    toast.error("Not authenticated");
                                     return;
                                   }
+
+                                  // Store admin session before switching
+                                  localStorage.setItem('admin_session', JSON.stringify({
+                                    access_token: session.access_token,
+                                    refresh_token: session.refresh_token,
+                                    user: session.user
+                                  }));
+                                  localStorage.setItem('impersonating_teacher', 'true');
+                                  localStorage.setItem('teacher_name', teacher.full_name);
 
                                   const { data, error } = await supabase.functions.invoke('admin-impersonate-teacher', {
                                     body: { teacherId: teacher.id }
@@ -509,15 +519,40 @@ const AdminDashboard = () => {
 
                                   if (error) {
                                     console.error('Impersonation error:', error);
+                                    toast.error("Failed to access teacher account");
+                                    localStorage.removeItem('admin_session');
+                                    localStorage.removeItem('impersonating_teacher');
+                                    localStorage.removeItem('teacher_name');
                                     return;
                                   }
 
-                                  if (data?.redirectUrl) {
-                                    // Open the magic link in current window to authenticate as teacher
-                                    window.location.href = data.redirectUrl.replace('#access_token', '/teacher/dashboard#access_token');
+                                  if (data?.success && data?.token && data?.type) {
+                                    // Verify the OTP token to sign in as the teacher
+                                    const { error: authError } = await supabase.auth.verifyOtp({
+                                      token_hash: data.token,
+                                      type: data.type as any,
+                                    });
+
+                                    if (authError) {
+                                      console.error('Auth error:', authError);
+                                      toast.error("Failed to authenticate as teacher");
+                                      localStorage.removeItem('admin_session');
+                                      localStorage.removeItem('impersonating_teacher');
+                                      localStorage.removeItem('teacher_name');
+                                      return;
+                                    }
+
+                                    toast.success(`Accessing ${teacher.full_name}'s account`);
+                                    
+                                    // Redirect to teacher dashboard
+                                    window.location.href = '/teacher/dashboard';
                                   }
                                 } catch (err) {
                                   console.error('Failed to access teacher account:', err);
+                                  toast.error("An error occurred");
+                                  localStorage.removeItem('admin_session');
+                                  localStorage.removeItem('impersonating_teacher');
+                                  localStorage.removeItem('teacher_name');
                                 }
                               }}
                               className="text-xs"
