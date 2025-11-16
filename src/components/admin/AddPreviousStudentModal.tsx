@@ -924,7 +924,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={classTimingFilter === "all"}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && classTimingFilter === "all"}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -943,7 +943,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 {isEditMode && (<AddNewFieldButton configType="payment_method" onAdd={refetch} />)}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!formData.paymentMethod}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !formData.paymentMethod}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -975,7 +975,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(3)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!formData.courseDuration && !formData.customDuration}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && (!formData.courseDuration && !formData.customDuration)}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -1002,7 +1002,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && partialPaymentAmount === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -1024,7 +1024,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(5)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -1059,7 +1059,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           nextLabel={step === 7 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 2 && classTimingFilter === "all") || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed) || (step === 7 && !signature)}
+          disabled={(!isEditMode && ((step === 2 && classTimingFilter === "all") || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed))) || (step === 7 && !signature)}
           showBack={step > 1}
           showNext={true}
         />

@@ -1064,7 +1064,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   <Button 
                     onClick={handleNext} 
                     className="flex-1"
-                    disabled={(!formData.courses || formData.courses.length === 0) && (!formData.selectedLevels || formData.selectedLevels.length === 0)}
+                    disabled={!isEditMode && ((!formData.courses || formData.courses.length === 0) && (!formData.selectedLevels || formData.selectedLevels.length === 0))}
                   >
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -1149,7 +1149,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={classTimingFilter === "all"}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && classTimingFilter === "all"}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1192,7 +1192,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!formData.paymentMethod}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !formData.paymentMethod}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1267,7 +1267,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!formData.courseDuration && !formData.customDuration}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && (!formData.courseDuration && !formData.customDuration)}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1300,7 +1300,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={partialPaymentAmount === 0}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && partialPaymentAmount === 0}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1334,7 +1334,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!termsAgreed}>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !termsAgreed}>
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -1387,7 +1387,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(step === 3 && classTimingFilter === "all") || (step === 6 && partialPaymentAmount === 0) || (step === 7 && !termsAgreed) || (step === 8 && !signature)}
+          disabled={(!isEditMode && ((step === 3 && classTimingFilter === "all") || (step === 6 && partialPaymentAmount === 0) || (step === 7 && !termsAgreed))) || (step === 8 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
