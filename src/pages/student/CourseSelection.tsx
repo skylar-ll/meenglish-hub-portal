@@ -102,12 +102,21 @@ const CourseSelection = () => {
   const levelLike = (val: string) => /^level[\s\-_]?\d+/i.test(val);
   const visibleCourses = courses.filter((c) => !levelLike(c.value));
   
-  // Filter courses based on branch selection
-  const filteredCourses = branchId && filteredOptions.allowedCourses.length > 0
-    ? visibleCourses.filter((c) => filteredOptions.allowedCourses.includes(c.value))
-    : visibleCourses;
+  // Only filter by branch if branch filtering returned specific courses
+  // Otherwise show all courses (backward compatible behavior)
+  const shouldFilterByBranch = branchId && filteredOptions.allowedCourses.length > 0;
   
-  console.log("📋 Filtered courses for display:", filteredCourses.map(c => c.value));
+  const filteredCourses = shouldFilterByBranch
+    ? visibleCourses.filter((c) => filteredOptions.allowedCourses.includes(c.value))
+    : visibleCourses; // Show all if no branch filtering available
+  
+  console.log("📋 Course filtering:", {
+    branchId,
+    shouldFilterByBranch,
+    allowedCourses: filteredOptions.allowedCourses,
+    totalVisible: visibleCourses.length,
+    afterFilter: filteredCourses.length
+  });
   
   const coursesByCategory = filteredCourses.reduce((acc, course) => {
     if (!acc[course.category]) {
@@ -163,12 +172,12 @@ const CourseSelection = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Branch Information Banner */}
+              {/* Branch Information Banner - Only show if courses are being filtered */}
               {branchId && filteredOptions.allowedCourses.length > 0 && (
                 <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <span>📍</span>
-                    Available courses & programs in your selected branch:
+                    Courses available in your branch:
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {filteredOptions.allowedCourses.map((course, idx) => (
@@ -185,16 +194,6 @@ const CourseSelection = () => {
                       Available timings: {filteredOptions.allowedTimings.join(', ')}
                     </p>
                   )}
-                </div>
-              )}
-              {branchId && filteredOptions.allowedCourses.length === 0 && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-sm text-destructive font-medium">
-                    ⚠️ No active classes found for your selected branch. Please contact the administration.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    لا توجد فصول نشطة في الفرع المختار. يرجى الاتصال بالإدارة.
-                  </p>
                 </div>
               )}
               {/* English Program - Levels (from classes and form_configurations) */}
