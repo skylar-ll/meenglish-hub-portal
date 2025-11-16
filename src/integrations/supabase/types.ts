@@ -293,6 +293,60 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_form_fields: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          field_label_ar: string | null
+          field_label_en: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          form_type: string
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          placeholder_ar: string | null
+          placeholder_en: string | null
+          updated_at: string | null
+          validation_rules: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          field_label_ar?: string | null
+          field_label_en: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          form_type: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          field_label_ar?: string | null
+          field_label_en?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          form_type?: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Relationships: []
+      }
       enrollments: {
         Row: {
           class_id: string

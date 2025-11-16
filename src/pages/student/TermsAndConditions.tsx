@@ -29,12 +29,12 @@ const TermsAndConditions = () => {
         .select("content_en, content_ar")
         .order("updated_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
-        setTermsContent({ en: data.content_en, ar: data.content_ar });
+        setTermsContent({ en: data.content_en || "", ar: data.content_ar || "" });
       }
     } catch (error) {
       console.error("Error fetching terms:", error);
@@ -43,6 +43,8 @@ const TermsAndConditions = () => {
       setLoading(false);
     }
   };
+
+  const currentTerms = language === "ar" ? termsContent.ar : termsContent.en;
 
   const handleNext = () => {
     if (!agreed) {
