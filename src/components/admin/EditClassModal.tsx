@@ -72,29 +72,9 @@ export const EditClassModal = ({
   };
 
   const handleSave = async () => {
+    // Only validate class name as mandatory when editing
     if (!className.trim()) {
       toast.error("Please enter a class name");
-      return;
-    }
-    if (!selectedBranch) {
-      toast.error("Please select a branch");
-      return;
-    }
-    if (selectedCourses.length === 0) {
-      toast.error("Please select at least one course");
-      return;
-    }
-    if (selectedLevels.length === 0) {
-      toast.error("Please select at least one level");
-      return;
-    }
-    // Teacher is now optional
-    if (!selectedTiming) {
-      toast.error("Please select a timing");
-      return;
-    }
-    if (!startDate) {
-      toast.error("Please select a start date");
       return;
     }
 

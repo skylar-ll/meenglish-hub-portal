@@ -12,6 +12,7 @@ import AddPreviousStudentModal from "@/components/admin/AddPreviousStudentModal"
 import { AttendanceRecordsModal } from "@/components/admin/AttendanceRecordsModal";
 import { AddStudentModal } from "@/components/admin/AddStudentModal";
 import { CoursesManagement } from "@/components/admin/CoursesManagement";
+import { TimingsManagement } from "@/components/admin/TimingsManagement";
 import {
   Table,
   TableBody,
@@ -328,10 +329,11 @@ const AdminDashboard = () => {
         {/* Main Content Tabs */}
         <Card className="p-6">
           <Tabs defaultValue="students">
-            <TabsList className="grid w-full grid-cols-6 mb-6">
+            <TabsList className="grid w-full grid-cols-7 mb-6">
               <TabsTrigger value="students">{t('admin.studentsInfo')}</TabsTrigger>
               <TabsTrigger value="teachers">{t('admin.teachersInfo')}</TabsTrigger>
               <TabsTrigger value="courses">Courses</TabsTrigger>
+              <TabsTrigger value="timings">Timings</TabsTrigger>
               <TabsTrigger value="payments">{t('student.paymentMethod')}</TabsTrigger>
               <TabsTrigger value="analytics">{t('admin.analytics')}</TabsTrigger>
               <TabsTrigger value="reports">{t('admin.reports')}</TabsTrigger>
@@ -572,6 +574,11 @@ const AdminDashboard = () => {
             {/* Courses Tab */}
             <TabsContent value="courses" className="space-y-4">
               <CoursesManagement />
+            </TabsContent>
+
+            {/* Timings Tab */}
+            <TabsContent value="timings" className="space-y-4">
+              <TimingsManagement />
             </TabsContent>
 
             {/* Payments Tab */}
