@@ -220,7 +220,7 @@ export type Database = {
           program: string | null
           start_date: string | null
           status: string | null
-          teacher_id: string
+          teacher_id: string | null
           timing: string
           updated_at: string
         }
@@ -234,7 +234,7 @@ export type Database = {
           program?: string | null
           start_date?: string | null
           status?: string | null
-          teacher_id: string
+          teacher_id?: string | null
           timing: string
           updated_at?: string
         }
@@ -248,7 +248,7 @@ export type Database = {
           program?: string | null
           start_date?: string | null
           status?: string | null
-          teacher_id?: string
+          teacher_id?: string | null
           timing?: string
           updated_at?: string
         }

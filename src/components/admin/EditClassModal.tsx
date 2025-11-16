@@ -88,10 +88,7 @@ export const EditClassModal = ({
       toast.error("Please select at least one level");
       return;
     }
-    if (!selectedTeacher) {
-      toast.error("Please select a teacher");
-      return;
-    }
+    // Teacher is now optional
     if (!selectedTiming) {
       toast.error("Please select a timing");
       return;
@@ -110,7 +107,7 @@ export const EditClassModal = ({
           branch_id: selectedBranch,
           courses: selectedCourses,
           levels: selectedLevels,
-          teacher_id: selectedTeacher,
+          teacher_id: selectedTeacher || null,
           timing: selectedTiming,
           start_date: startDate,
         })
@@ -201,10 +198,10 @@ export const EditClassModal = ({
           </div>
 
           <div>
-            <Label htmlFor="edit-teacher">Teacher</Label>
+            <Label htmlFor="edit-teacher">Teacher (Optional)</Label>
             <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
               <SelectTrigger id="edit-teacher">
-                <SelectValue placeholder="Select Teacher" />
+                <SelectValue placeholder="Select Teacher (Optional)" />
               </SelectTrigger>
               <SelectContent>
                 {teachers.map((teacher) => (
