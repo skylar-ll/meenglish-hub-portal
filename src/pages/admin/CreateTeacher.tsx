@@ -59,58 +59,37 @@ export default function CreateTeacher() {
     setLoading(true);
 
     try {
-      // Create auth user for teacher
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.name,
+      // Call edge function to create teacher (preserves admin session)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-teacher`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
           },
-        },
-      });
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            classIds: formData.classIds,
+          }),
+        }
+      );
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Failed to create teacher account");
+      const result = await response.json();
 
-      // Insert teacher record
-      const { data: teacherData, error: teacherError } = await supabase
-        .from("teachers")
-        .insert({
-          id: authData.user.id,
-          full_name: formData.name,
-          email: formData.email,
-        })
-        .select()
-        .single();
-
-      if (teacherError) throw teacherError;
-
-      // Assign teacher role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: authData.user.id,
-          role: "teacher",
-        });
-
-      if (roleError) throw roleError;
-
-      // Update classes with teacher assignment
-      if (formData.classIds.length > 0) {
-        const { error: classError } = await supabase
-          .from("classes")
-          .update({ teacher_id: authData.user.id })
-          .in("id", formData.classIds);
-
-        if (classError) throw classError;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create teacher account');
       }
 
       // Show password modal
       setCreatedTeacher({
-        email: formData.email,
-        password: formData.password,
-        id: authData.user.id,
+        email: result.teacher.email,
+        password: result.teacher.password,
+        id: result.teacher.id,
       });
       setShowPasswordModal(true);
 
