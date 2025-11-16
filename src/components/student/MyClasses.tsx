@@ -22,6 +22,26 @@ export const MyClasses = () => {
 
   useEffect(() => {
     fetchMyClasses();
+    
+    // Set up realtime subscription for class updates
+    const channel = supabase
+      .channel('classes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          fetchMyClasses(); // Refetch when classes are updated
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchMyClasses = async () => {
