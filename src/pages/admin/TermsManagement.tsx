@@ -43,17 +43,38 @@ export default function TermsManagement() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase
+      // Get the existing record ID
+      const { data: existingRecord } = await supabase
         .from("terms_and_conditions")
-        .update({
-          content_en: contentEn,
-          content_ar: contentAr,
-          updated_at: new Date().toISOString(),
-          updated_by: user?.id,
-        })
-        .eq("id", (await supabase.from("terms_and_conditions").select("id").single()).data?.id);
+        .select("id")
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existingRecord) {
+        // Update existing record
+        const { error } = await supabase
+          .from("terms_and_conditions")
+          .update({
+            content_en: contentEn,
+            content_ar: contentAr,
+            updated_at: new Date().toISOString(),
+            updated_by: user?.id,
+          })
+          .eq("id", existingRecord.id);
+
+        if (error) throw error;
+      } else {
+        // Create new record if none exists
+        const { error } = await supabase
+          .from("terms_and_conditions")
+          .insert({
+            content_en: contentEn,
+            content_ar: contentAr,
+            updated_by: user?.id,
+          });
+
+        if (error) throw error;
+      }
 
       toast.success("Terms and conditions updated successfully!");
     } catch (error: any) {
