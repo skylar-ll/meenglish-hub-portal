@@ -28,7 +28,7 @@ interface ExistingClass {
   courses: string[];
   levels: string[];
   timing: string;
-  teacher_id: string;
+  teacher_id: string | null;
   teacher_name: string;
   student_count: number;
 }
@@ -167,7 +167,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
             levels: cls.levels || [],
             timing: cls.timing,
             teacher_id: cls.teacher_id,
-            teacher_name: (cls.teachers as any)?.full_name || "",
+            teacher_name: (cls.teachers as any)?.full_name || "No teacher assigned",
             student_count: count || 0,
           };
         })
@@ -197,10 +197,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       toast.error("Please select timing");
       return;
     }
-    if (!selectedTeacher) {
-      toast.error("Please select a teacher");
-      return;
-    }
+    // Teacher is now optional
     if (!selectedBranch) {
       toast.error("Please select a branch");
       return;
@@ -216,7 +213,7 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
       const { data: classData, error: classError } = await supabase
         .from("classes")
         .insert({
-          teacher_id: selectedTeacher,
+          teacher_id: selectedTeacher || null,
           class_name: className,
           timing: timing,
           courses: selectedCourses,
@@ -491,10 +488,10 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
 
               {/* Teacher */}
               <div>
-                <Label htmlFor="teacher">Select Teacher</Label>
+                <Label htmlFor="teacher">Select Teacher (Optional)</Label>
                 <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a teacher" />
+                    <SelectValue placeholder="Choose a teacher (optional)" />
                   </SelectTrigger>
                   <SelectContent>
                     {teachers.map((teacher) => (

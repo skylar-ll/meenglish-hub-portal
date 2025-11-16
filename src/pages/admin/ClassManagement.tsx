@@ -79,7 +79,7 @@ interface ExistingClass {
   teacher: {
     id: string;
     full_name: string;
-  };
+  } | null;
   student_count: number;
 }
 
@@ -211,7 +211,7 @@ export default function ClassManagement() {
           branch_id,
           teacher_id,
           branches (name_en),
-          teachers!inner (
+          teachers (
             id,
             full_name
           )
@@ -236,10 +236,10 @@ export default function ClassManagement() {
             program: cls.program,
             start_date: cls.start_date,
             branch: cls.branches,
-            teacher: {
+            teacher: cls.teachers ? {
               id: cls.teachers.id,
               full_name: cls.teachers.full_name,
-            },
+            } : null,
             student_count: enrollments?.length || 0,
           };
         })
@@ -292,10 +292,7 @@ export default function ClassManagement() {
       toast.error("Please select at least one level");
       return;
     }
-    if (!selectedTeacher) {
-      toast.error("Please select a teacher");
-      return;
-    }
+    // Teacher is now optional
     if (!selectedTiming) {
       toast.error("Please select a timing");
       return;
@@ -315,7 +312,7 @@ export default function ClassManagement() {
           branch_id: selectedBranch,
           courses: selectedCourses,
           levels: selectedLevels,
-          teacher_id: selectedTeacher,
+          teacher_id: selectedTeacher || null,
           timing: selectedTiming,
           start_date: startDate,
           status: 'active',
@@ -544,10 +541,10 @@ export default function ClassManagement() {
 
                 {/* Teacher */}
                 <div>
-                  <Label>Teacher</Label>
+                  <Label>Teacher (Optional)</Label>
                   <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose a teacher..." />
+                      <SelectValue placeholder="Choose a teacher (optional)..." />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
                       {teachers.map((teacher) => (
@@ -644,7 +641,7 @@ export default function ClassManagement() {
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold mb-2">{cls.class_name}</h3>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Teacher: {cls.teacher.full_name}
+                          Teacher: {cls.teacher ? cls.teacher.full_name : 'No teacher assigned'}
                         </p>
                         {cls.branch?.name_en && (
                           <p className="text-sm text-muted-foreground mb-2">
