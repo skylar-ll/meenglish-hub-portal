@@ -131,19 +131,32 @@ const CourseSelection = () => {
     return found ?? ({ id: `default-${i}`, config_key: val, config_value: val, display_order: i } as LevelOption);
   });
 
-  // Determine availability per item using normalized comparisons
+  // Determine availability per item using flexible matching
   const hasFilteredOptions = branchId && (filteredOptions.allowedLevels.length > 0 || filteredOptions.allowedCourses.length > 0);
   const normalize = (s: string) => s.toLowerCase().trim();
-  const allowedCoursesSet = new Set(filteredOptions.allowedCourses.map(normalize));
-  const allowedLevelsSet = new Set(filteredOptions.allowedLevels.map(normalize));
   
+  console.log("🎯 CourseSelection - Filtering debug:", {
+    hasFilteredOptions,
+    allowedLevels: filteredOptions.allowedLevels,
+    allowedCourses: filteredOptions.allowedCourses,
+  });
+  
+  // Match levels flexibly - check if any allowed level contains the level identifier
   const isLevelAvailable = (levelValue: string) => {
-    if (!hasFilteredOptions) return true; // All available if no filtering
-    return allowedLevelsSet.has(normalize(levelValue));
+    if (!hasFilteredOptions) return true;
+    const levelId = normalize(levelValue);
+    
+    // Check if any allowed level matches or contains this level identifier
+    return filteredOptions.allowedLevels.some(allowedLevel => {
+      const normalized = normalize(allowedLevel);
+      // Match if exact match OR if the allowed level contains the level identifier
+      return normalized === levelId || normalized.includes(levelId) || levelId.includes(normalized);
+    });
   };
   
   const isCourseAvailable = (courseValue: string, courseLabel?: string) => {
-    if (!hasFilteredOptions) return true; // All available if no filtering
+    if (!hasFilteredOptions) return true;
+    const allowedCoursesSet = new Set(filteredOptions.allowedCourses.map(normalize));
     return allowedCoursesSet.has(normalize(courseValue)) || (courseLabel ? allowedCoursesSet.has(normalize(courseLabel)) : false);
   };
 
