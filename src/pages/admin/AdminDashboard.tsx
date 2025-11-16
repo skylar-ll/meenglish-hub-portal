@@ -304,24 +304,6 @@ const AdminDashboard = () => {
               <UserPlus className="w-5 h-5" />
               Create Teacher
             </Button>
-            <Button 
-              onClick={() => navigate("/admin/terms")}
-              variant="outline"
-              className="gap-2"
-              size="lg"
-            >
-              <FileText className="w-5 h-5" />
-              Terms & Conditions
-            </Button>
-            <Button 
-              onClick={() => navigate("/admin/form-fields")}
-              variant="outline"
-              className="gap-2"
-              size="lg"
-            >
-              <BookOpen className="w-5 h-5" />
-              Edit Forms
-            </Button>
           </div>
         </Card>
 
