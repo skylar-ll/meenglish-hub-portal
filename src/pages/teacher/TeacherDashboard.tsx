@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut } from "lucide-react";
+import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CreateQuizModal } from "@/components/teacher/CreateQuizModal";
 import { UploadLessonModal } from "@/components/teacher/UploadLessonModal";
@@ -26,6 +27,19 @@ const TeacherDashboard = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [teacherName, setTeacherName] = useState<string>("");
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonatedTeacherName, setImpersonatedTeacherName] = useState("");
+
+  useEffect(() => {
+    // Check if admin is impersonating
+    const impersonating = localStorage.getItem('impersonating_teacher');
+    const teacherNameStored = localStorage.getItem('teacher_name');
+    
+    if (impersonating === 'true') {
+      setIsImpersonating(true);
+      setImpersonatedTeacherName(teacherNameStored || '');
+    }
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -159,8 +173,58 @@ const TeacherDashboard = () => {
   }, [navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+    // Check if admin is impersonating
+    const impersonating = localStorage.getItem('impersonating_teacher');
+    
+    if (impersonating === 'true') {
+      await handleReturnToAdmin();
+    } else {
+      await supabase.auth.signOut();
+      navigate("/");
+    }
+  };
+
+  const handleReturnToAdmin = async () => {
+    try {
+      const adminSessionStr = localStorage.getItem('admin_session');
+      
+      if (!adminSessionStr) {
+        toast.error("Admin session not found");
+        await supabase.auth.signOut();
+        navigate("/admin/login");
+        return;
+      }
+
+      const adminSession = JSON.parse(adminSessionStr);
+
+      // Sign out current teacher session
+      await supabase.auth.signOut();
+
+      // Sign in with admin session
+      const { error } = await supabase.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token
+      });
+
+      if (error) {
+        console.error('Error restoring admin session:', error);
+        toast.error("Failed to return to admin account");
+        navigate("/admin/login");
+        return;
+      }
+
+      // Clear impersonation flags
+      localStorage.removeItem('admin_session');
+      localStorage.removeItem('impersonating_teacher');
+      localStorage.removeItem('teacher_name');
+
+      toast.success("Returned to admin account");
+      navigate("/admin/dashboard");
+    } catch (error) {
+      console.error('Error returning to admin:', error);
+      toast.error("An error occurred");
+      navigate("/admin/login");
+    }
   };
 
   if (loading) {
@@ -184,6 +248,27 @@ const TeacherDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
+      {/* Admin Impersonation Banner */}
+      {isImpersonating && (
+        <Alert className="mb-4 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+          <ShieldAlert className="h-5 w-5 text-amber-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-amber-900 dark:text-amber-100">
+              <strong>Admin Mode:</strong> You are viewing {impersonatedTeacherName}'s account
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleReturnToAdmin}
+              className="ml-4 border-amber-600 text-amber-600 hover:bg-amber-100"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Return to Admin Dashboard
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="container max-w-6xl mx-auto py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in flex justify-between items-start">

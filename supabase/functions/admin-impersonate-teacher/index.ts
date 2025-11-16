@@ -76,14 +76,24 @@ Deno.serve(async (req) => {
       throw new Error('Teacher auth account not found');
     }
 
-    // Generate a one-time access token
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+    // Generate a one-time access token using magic link
+    const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: teacher.email,
     });
 
-    if (sessionError) {
-      throw sessionError;
+    if (magicLinkError) {
+      throw magicLinkError;
+    }
+
+    // Extract the token from the action link
+    const actionLink = magicLinkData.properties.action_link;
+    const url = new URL(actionLink);
+    const tokenHash = url.searchParams.get('token');
+    const tokenType = url.searchParams.get('type');
+
+    if (!tokenHash || !tokenType) {
+      throw new Error('Failed to extract token from magic link');
     }
 
     console.log('Admin impersonation successful for teacher:', teacher.email);
@@ -91,8 +101,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        accessToken: sessionData.properties.hashed_token,
-        redirectUrl: sessionData.properties.action_link
+        token: tokenHash,
+        type: tokenType,
+        teacherId: teacher.id,
+        teacherEmail: teacher.email
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
