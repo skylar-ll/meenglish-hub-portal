@@ -105,9 +105,7 @@ const CourseSelection = () => {
   // Otherwise show all courses (backward compatible behavior)
   const shouldFilterByBranch = branchId && filteredOptions.allowedCourses.length > 0;
   
-  const filteredCourses = shouldFilterByBranch
-    ? visibleCourses.filter((c) => filteredOptions.allowedCourses.includes(c.value))
-    : visibleCourses; // Show all if no branch filtering available
+  const filteredCourses = visibleCourses; // Show all courses; availability handled per-item
   
   console.log("📋 Course filtering:", {
     branchId,
@@ -117,7 +115,7 @@ const CourseSelection = () => {
     afterFilter: filteredCourses.length
   });
   
-  const coursesByCategory = filteredCourses.reduce((acc, course) => {
+  const coursesByCategory = visibleCourses.reduce((acc, course) => {
     if (!acc[course.category]) {
       acc[course.category] = [];
     }
@@ -125,31 +123,28 @@ const CourseSelection = () => {
     return acc;
   }, {} as Record<string, Array<{ id: string; value: string; label: string; category: string; price: number }>>);
 
-  // English levels: filter based on branch selection
-  const branchFilteredLevelOptions = branchId && filteredOptions.allowedLevels.length > 0
-    ? levelOptions.filter((l) => filteredOptions.allowedLevels.includes(l.config_value))
-    : levelOptions;
-  
-  const englishLevelOptions: LevelOption[] = branchFilteredLevelOptions.length
-    ? branchFilteredLevelOptions
-    : (filteredOptions.allowedLevels || []).map((v, i) => ({
-        id: `fallback-${i}`,
-        config_key: v,
-        config_value: v,
-        display_order: i,
-      }));
+  // Levels: always show level-1..level-12; disable those not available for branch
+  const DEFAULT_LEVELS = Array.from({ length: 12 }, (_, i) => `level-${i + 1}`);
+  const levelMap = new Map(levelOptions.map(l => [l.config_value.toLowerCase(), l]));
+  const displayLevels: LevelOption[] = DEFAULT_LEVELS.map((val, i) => {
+    const found = levelMap.get(val.toLowerCase());
+    return found ?? ({ id: `default-${i}`, config_key: val, config_value: val, display_order: i } as LevelOption);
+  });
 
-  // Determine which items are available based on branch filtering
+  // Determine availability per item using normalized comparisons
   const hasFilteredOptions = branchId && (filteredOptions.allowedLevels.length > 0 || filteredOptions.allowedCourses.length > 0);
+  const normalize = (s: string) => s.toLowerCase().trim();
+  const allowedCoursesSet = new Set(filteredOptions.allowedCourses.map(normalize));
+  const allowedLevelsSet = new Set(filteredOptions.allowedLevels.map(normalize));
   
   const isLevelAvailable = (levelValue: string) => {
     if (!hasFilteredOptions) return true; // All available if no filtering
-    return filteredOptions.allowedLevels.includes(levelValue);
+    return allowedLevelsSet.has(normalize(levelValue));
   };
   
-  const isCourseAvailable = (courseValue: string) => {
+  const isCourseAvailable = (courseValue: string, courseLabel?: string) => {
     if (!hasFilteredOptions) return true; // All available if no filtering
-    return filteredOptions.allowedCourses.includes(courseValue);
+    return allowedCoursesSet.has(normalize(courseValue)) || (courseLabel ? allowedCoursesSet.has(normalize(courseLabel)) : false);
   };
 
   return (
@@ -188,7 +183,7 @@ const CourseSelection = () => {
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">English Program (Select your starting level) *</Label>
                 <div className="space-y-3">
-                  {levelOptions.map((level) => {
+                  {displayLevels.map((level) => {
                     const available = isLevelAvailable(level.config_value);
                     return (
                       <div key={level.id} className="flex items-center space-x-3">
@@ -225,7 +220,7 @@ const CourseSelection = () => {
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-muted-foreground">{category}</h3>
                     {coursesInCategory.map((course) => {
-                      const available = isCourseAvailable(course.value);
+                      const available = isCourseAvailable(course.value, course.label);
                       return (
                         <div key={course.id} className="flex items-center space-x-3">
                           <Checkbox
