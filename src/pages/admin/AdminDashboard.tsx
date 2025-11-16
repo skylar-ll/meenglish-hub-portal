@@ -278,6 +278,15 @@ const AdminDashboard = () => {
               <Users className="w-5 h-5" />
               Student Management
             </Button>
+            <Button 
+              onClick={() => navigate("/admin/create-teacher")}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600"
+              size="lg"
+            >
+              <UserPlus className="w-5 h-5" />
+              Create Teacher
+            </Button>
           </div>
         </Card>
 
@@ -423,11 +432,10 @@ const AdminDashboard = () => {
                     return (
                       <Card 
                         key={teacher.id} 
-                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => navigate(`/admin/teacher/${teacher.id}`)}
+                        className="p-4 transition-colors"
                       >
                         <div className="flex justify-between items-start">
-                          <div className="flex-1">
+                          <div className="flex-1 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2" onClick={() => navigate(`/admin/teacher/${teacher.id}`)}>
                             <h3 className="text-lg font-semibold text-primary hover:underline">{teacher.full_name}</h3>
                             <p className="text-sm text-muted-foreground">{teacher.email}</p>
                             <p className="text-sm mt-2">
@@ -447,7 +455,21 @@ const AdminDashboard = () => {
                               )}
                             </p>
                           </div>
-                          <Badge variant="secondary" className="ml-2">{teacherStudents.length} {t('admin.students')}</Badge>
+                          <div className="flex flex-col gap-2 ml-2">
+                            <Badge variant="secondary">{teacherStudents.length} {t('admin.students')}</Badge>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/teacher/${teacher.id}`);
+                              }}
+                              className="text-xs"
+                            >
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              Access Account
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     );
