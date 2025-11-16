@@ -166,7 +166,13 @@ export const useBranchFiltering = (branchId: string | null) => {
         allCourses: Array.from(allCourses),
       };
 
-      console.log("✅ Filtered options for branch:", filteredResult);
+      console.log("✅ Branch filtering complete!");
+      console.log("📊 Summary for selected branch:");
+      console.log("  • Programs:", filteredResult.allowedPrograms.join(", ") || "None");
+      console.log("  • Courses:", filteredResult.allowedCourses.join(", ") || "None");
+      console.log("  • Levels:", filteredResult.allowedLevels.join(", ") || "None");
+      console.log("  • Timings:", filteredResult.allowedTimings.join(", ") || "None");
+      console.log("  • Start Dates:", filteredResult.allowedStartDates.join(", ") || "None");
       
       setFilteredOptions(filteredResult);
     } catch (error) {
