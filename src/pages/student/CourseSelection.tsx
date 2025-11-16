@@ -9,8 +9,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface LevelOption {
   id: string;
@@ -139,17 +139,18 @@ const CourseSelection = () => {
         display_order: i,
       }));
 
-  // Convert levels to multi-select options
-  const levelMultiSelectOptions = englishLevelOptions.map(level => ({
-    label: level.config_value,
-    value: level.config_value
-  }));
-
-  // Convert courses to multi-select options grouped by category
-  const courseMultiSelectOptions = filteredCourses.map(course => ({
-    label: course.label,
-    value: course.value
-  }));
+  // Determine which items are available based on branch filtering
+  const hasFilteredOptions = branchId && (filteredOptions.allowedLevels.length > 0 || filteredOptions.allowedCourses.length > 0);
+  
+  const isLevelAvailable = (levelValue: string) => {
+    if (!hasFilteredOptions) return true; // All available if no filtering
+    return filteredOptions.allowedLevels.includes(levelValue);
+  };
+  
+  const isCourseAvailable = (courseValue: string) => {
+    if (!hasFilteredOptions) return true; // All available if no filtering
+    return filteredOptions.allowedCourses.includes(courseValue);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
@@ -183,33 +184,68 @@ const CourseSelection = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* English Program - Levels Multi-Select */}
+              {/* English Program - Levels */}
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">English Program (Select your starting level) *</Label>
-                <MultiSelect
-                  options={levelMultiSelectOptions}
-                  selected={selectedLevels}
-                  onChange={setSelectedLevels}
-                  placeholder="Select levels..."
-                />
+                <div className="space-y-3">
+                  {levelOptions.map((level) => {
+                    const available = isLevelAvailable(level.config_value);
+                    return (
+                      <div key={level.id} className="flex items-center space-x-3">
+                        <Checkbox
+                          id={level.id}
+                          checked={selectedLevels.includes(level.config_value)}
+                          disabled={!available}
+                          onCheckedChange={() => toggleLevel(level.config_value)}
+                          className={!available ? "opacity-50 cursor-not-allowed" : ""}
+                        />
+                        <Label
+                          htmlFor={level.id}
+                          className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          {level.config_value}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </div>
                 {branchId && filteredOptions.allowedTimings.length > 0 && (
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      Available timings: {filteredOptions.allowedTimings.join(', ')}
+                      Available timings for your branch: {filteredOptions.allowedTimings.join(', ')}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Courses Multi-Select */}
+              {/* Courses */}
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Courses (You can select multiple) *</Label>
-                <MultiSelect
-                  options={courseMultiSelectOptions}
-                  selected={selectedCourses}
-                  onChange={setSelectedCourses}
-                  placeholder="Select courses..."
-                />
+                <Label className="text-lg font-semibold">Select Your Courses (You can select multiple) *</Label>
+                {Object.entries(coursesByCategory).map(([category, coursesInCategory]) => (
+                  <div key={category} className="space-y-3">
+                    <h3 className="font-semibold text-muted-foreground">{category}</h3>
+                    {coursesInCategory.map((course) => {
+                      const available = isCourseAvailable(course.value);
+                      return (
+                        <div key={course.id} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={course.id}
+                            checked={selectedCourses.includes(course.value)}
+                            disabled={!available}
+                            onCheckedChange={() => toggleCourse(course.value)}
+                            className={!available ? "opacity-50 cursor-not-allowed" : ""}
+                          />
+                          <Label
+                            htmlFor={course.id}
+                            className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            {course.label}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
 
               <div className="pt-4 space-y-4">
