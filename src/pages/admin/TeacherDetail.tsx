@@ -14,6 +14,7 @@ const TeacherDetail = () => {
   const { teacherId } = useParams();
   const [teacher, setTeacher] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
+  const [assignedClass, setAssignedClass] = useState<any>(null);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -39,6 +40,18 @@ const TeacherDetail = () => {
           .eq("teacher_id", teacherId)
           .order("created_at", { ascending: false });
         setSchedules(schedulesData || []);
+
+        // Fetch the class assigned to this teacher
+        const { data: classData } = await supabase
+          .from("classes")
+          .select(`
+            *,
+            branch:branches(name_en, name_ar)
+          `)
+          .eq("teacher_id", teacherId)
+          .eq("status", "active")
+          .maybeSingle();
+        setAssignedClass(classData);
 
         const { data: quizzesData } = await supabase
           .from("quizzes")
@@ -143,29 +156,42 @@ const TeacherDetail = () => {
 
             <TabsContent value="schedule">
               <h2 className="text-2xl font-bold mb-4">Teaching Schedule</h2>
-              {schedules.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No schedule available</p>
+              {!assignedClass ? (
+                <p className="text-center py-8 text-muted-foreground">No class assigned</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {schedules.map((schedule) => (
-                      <TableRow key={schedule.id}>
-                        <TableCell>{schedule.course_name}</TableCell>
-                        <TableCell>{schedule.level}</TableCell>
-                        <TableCell>{schedule.day_of_week}</TableCell>
-                        <TableCell>{schedule.time_slot}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <Card className="p-6 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">{assignedClass.class_name}</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Branch</p>
+                        <p className="font-medium">{assignedClass.branch?.name_en || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Timing</p>
+                        <p className="font-medium">{assignedClass.timing}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Start Date</p>
+                        <p className="font-medium">{assignedClass.start_date || "Not set"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <Badge variant={assignedClass.status === 'active' ? 'default' : 'secondary'}>
+                          {assignedClass.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Courses</p>
+                        <p className="font-medium">{assignedClass.courses?.join(", ") || "None"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Levels</p>
+                        <p className="font-medium">{assignedClass.levels?.join(", ") || "None"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               )}
             </TabsContent>
 
