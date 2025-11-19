@@ -80,6 +80,23 @@ export const EditClassModal = ({
 
     setSaving(true);
     try {
+      // If a teacher is selected and it's different from the current teacher
+      if (selectedTeacher && selectedTeacher !== classData.teacher_id) {
+        const { data: existingClass } = await supabase
+          .from("classes")
+          .select("id, class_name")
+          .eq("teacher_id", selectedTeacher)
+          .eq("status", "active")
+          .neq("id", classData.id) // Exclude current class
+          .maybeSingle();
+
+        if (existingClass) {
+          toast.error(`This teacher is already assigned to "${existingClass.class_name}". Please unassign them first or select a different teacher.`);
+          setSaving(false);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from("classes")
         .update({
