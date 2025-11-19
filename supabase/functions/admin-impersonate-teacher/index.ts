@@ -67,13 +67,20 @@ Deno.serve(async (req) => {
     const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authUserError) {
+      console.error('Failed to list users:', authUserError);
       throw new Error('Failed to list users');
     }
+
+    console.log('Looking for teacher email:', teacher.email);
+    console.log('Total auth users found:', authUserData.users.length);
+    console.log('Auth user emails:', authUserData.users.map(u => u.email));
 
     const teacherAuthUser = authUserData.users.find(u => u.email === teacher.email);
 
     if (!teacherAuthUser) {
-      throw new Error('Teacher auth account not found');
+      console.error('Teacher auth account not found for email:', teacher.email);
+      console.error('Teacher ID:', teacher.id);
+      throw new Error(`Teacher auth account not found for ${teacher.email}. Please recreate this teacher account.`);
     }
 
     // Generate a one-time access token using magic link
