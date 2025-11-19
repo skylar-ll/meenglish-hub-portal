@@ -504,7 +504,13 @@ const AdminDashboard = () => {
                                   if (error) {
                                     console.error('Impersonation error:', error);
                                     console.error('Full error object:', JSON.stringify(error, null, 2));
-                                    toast.error(`Failed to access teacher account: ${error.message || 'Unknown error'}`);
+                                    
+                                    // Try to get the error message from the response
+                                    const errorMsg = error.message || 'Unknown error';
+                                    toast.error(`Failed to access teacher account: ${errorMsg}`, {
+                                      duration: 6000,
+                                      description: 'This teacher may need to be recreated with proper authentication.'
+                                    });
                                     localStorage.removeItem('admin_session');
                                     localStorage.removeItem('impersonating_teacher');
                                     localStorage.removeItem('teacher_name');
@@ -512,6 +518,19 @@ const AdminDashboard = () => {
                                   }
 
                                   console.log('Edge function response:', data);
+
+                                  // Check if there's an error in the response data
+                                  if (data?.error) {
+                                    console.error('Edge function error:', data.error);
+                                    toast.error(`Access failed: ${data.error}`, {
+                                      duration: 6000,
+                                      description: 'This teacher may need to be recreated.'
+                                    });
+                                    localStorage.removeItem('admin_session');
+                                    localStorage.removeItem('impersonating_teacher');
+                                    localStorage.removeItem('teacher_name');
+                                    return;
+                                  }
 
                                   if (data?.success && data?.token && data?.type) {
                                     // Verify the OTP token to sign in as the teacher
