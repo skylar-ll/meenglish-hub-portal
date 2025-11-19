@@ -503,12 +503,15 @@ const AdminDashboard = () => {
 
                                   if (error) {
                                     console.error('Impersonation error:', error);
-                                    toast.error("Failed to access teacher account");
+                                    console.error('Full error object:', JSON.stringify(error, null, 2));
+                                    toast.error(`Failed to access teacher account: ${error.message || 'Unknown error'}`);
                                     localStorage.removeItem('admin_session');
                                     localStorage.removeItem('impersonating_teacher');
                                     localStorage.removeItem('teacher_name');
                                     return;
                                   }
+
+                                  console.log('Edge function response:', data);
 
                                   if (data?.success && data?.token && data?.type) {
                                     // Verify the OTP token to sign in as the teacher

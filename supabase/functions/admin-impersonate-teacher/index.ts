@@ -112,8 +112,19 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in admin-impersonate-teacher:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorDetails = error instanceof Error ? error.stack : '';
+    
+    console.error('Full error details:', {
+      message: errorMessage,
+      stack: errorDetails,
+      error: JSON.stringify(error)
+    });
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        details: errorDetails
+      }),
       { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
