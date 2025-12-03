@@ -71,22 +71,30 @@ Deno.serve(async (req) => {
       throw new Error('Failed to list users');
     }
 
-    console.log('Looking for teacher email:', teacher.email);
+    const teacherEmailLower = teacher.email.toLowerCase();
+    console.log('Looking for teacher email (lowercase):', teacherEmailLower);
     console.log('Total auth users found:', authUserData.users.length);
-    console.log('Auth user emails:', authUserData.users.map(u => u.email));
 
-    const teacherAuthUser = authUserData.users.find(u => u.email === teacher.email);
+    // Case-insensitive email matching
+    const teacherAuthUser = authUserData.users.find(u => 
+      u.email?.toLowerCase() === teacherEmailLower
+    );
 
     if (!teacherAuthUser) {
       console.error('Teacher auth account not found for email:', teacher.email);
       console.error('Teacher ID:', teacher.id);
+      console.error('Available emails:', authUserData.users.map(u => u.email?.toLowerCase()));
       throw new Error(`Teacher auth account not found for ${teacher.email}. Please recreate this teacher account.`);
     }
+
+    // Use the actual auth user's email (from auth system) for magic link
+    const authEmail = teacherAuthUser.email!;
+    console.log('Found auth user with email:', authEmail);
 
     // Generate a one-time access token using magic link
     const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: teacher.email,
+      email: authEmail,
     });
 
     if (magicLinkError) {
