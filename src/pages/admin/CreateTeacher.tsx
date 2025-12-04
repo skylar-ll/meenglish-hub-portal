@@ -16,7 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
-import { MultiSelect } from "@/components/ui/multi-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CreateTeacher() {
   const navigate = useNavigate();
@@ -32,16 +38,18 @@ export default function CreateTeacher() {
     name: "",
     email: "",
     password: "",
-    classIds: [] as string[],
+    classId: "",
   });
 
-  // Fetch all classes for assignment
+  // Fetch available classes (only those without a teacher assigned)
   const { data: classes = [] } = useQuery({
-    queryKey: ["classes"],
+    queryKey: ["available-classes-for-teacher"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
         .select("*")
+        .is("teacher_id", null)
+        .eq("status", "active")
         .order("class_name");
       
       if (error) throw error;
@@ -49,32 +57,30 @@ export default function CreateTeacher() {
     },
   });
 
-  const classOptions = classes.map((c) => ({
-    label: c.class_name,
-    value: c.id,
-  }));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Call edge function to create teacher (preserves admin session)
       const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session?.access_token) {
+        throw new Error("You must be logged in as admin");
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-teacher`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
             password: formData.password,
-            classIds: formData.classIds,
+            classId: formData.classId || null,
           }),
         }
       );
@@ -82,10 +88,13 @@ export default function CreateTeacher() {
       const result = await response.json();
 
       if (!response.ok) {
+        // Handle specific error cases
+        if (result.error?.includes("email") || result.error?.includes("registered")) {
+          throw new Error("A user with this email already exists. Please use a different email.");
+        }
         throw new Error(result.error || 'Failed to create teacher account');
       }
 
-      // Show password modal
       setCreatedTeacher({
         email: result.teacher.email,
         password: result.teacher.password,
@@ -171,16 +180,38 @@ export default function CreateTeacher() {
             </div>
 
             <div>
-              <Label>Assign Classes</Label>
-              <MultiSelect
-                options={classOptions}
-                selected={formData.classIds}
-                onChange={(selected) =>
-                  setFormData({ ...formData, classIds: selected })
+              <Label>Assign Class (Optional)</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Each teacher can only be assigned to one class
+              </p>
+              <Select
+                value={formData.classId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, classId: value })
                 }
-                placeholder="Select classes to assign..."
-                className="mt-2"
-              />
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select a class to assign..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  {classes.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No available classes (all assigned or none exist)
+                    </SelectItem>
+                  ) : (
+                    classes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.class_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {classes.length === 0 && (
+                <p className="text-sm text-amber-600 mt-2">
+                  No unassigned classes available. Create a new class first or leave unassigned.
+                </p>
+              )}
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
