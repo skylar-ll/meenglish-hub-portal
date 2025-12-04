@@ -52,8 +52,29 @@ serve(async (req) => {
       })
     }
 
-    const { name, email, password, classId } = await req.json()
-    console.log('Creating teacher:', { name, email, classId })
+    const { name, email, password, classIds } = await req.json()
+    console.log('Creating teacher:', { name, email, classIds })
+
+    // Validate timing conflicts if multiple classes selected
+    if (classIds && classIds.length > 1) {
+      const { data: selectedClasses, error: classesError } = await supabaseAdmin
+        .from('classes')
+        .select('id, timing, class_name')
+        .in('id', classIds)
+
+      if (classesError) {
+        console.error('Error fetching classes:', classesError)
+        throw new Error('Failed to validate class timings')
+      }
+
+      const timings = selectedClasses?.map(c => c.timing) || []
+      const uniqueTimings = new Set(timings)
+      
+      if (timings.length !== uniqueTimings.size) {
+        const duplicateTiming = timings.find((t, i) => timings.indexOf(t) !== i)
+        throw new Error(`Cannot assign multiple classes with the same timing (${duplicateTiming})`)
+      }
+    }
 
     // Create the teacher user using admin client
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -88,7 +109,6 @@ serve(async (req) => {
 
     if (teacherError) {
       console.error('Teacher insert error:', teacherError)
-      // Rollback: delete the auth user if teacher record fails
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       throw teacherError
     }
@@ -105,7 +125,6 @@ serve(async (req) => {
 
     if (roleInsertError) {
       console.error('Role insert error:', roleInsertError)
-      // Rollback
       await supabaseAdmin.from('teachers').delete().eq('id', newUser.user.id)
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       throw roleInsertError
@@ -113,32 +132,18 @@ serve(async (req) => {
 
     console.log('Teacher role assigned')
 
-    // Update single class with teacher assignment (one-to-one relationship)
-    if (classId) {
-      // First check if class is already assigned
-      const { data: existingClass, error: checkError } = await supabaseAdmin
+    // Update classes with teacher assignment (multiple classes allowed)
+    if (classIds && classIds.length > 0) {
+      const { error: classError } = await supabaseAdmin
         .from('classes')
-        .select('teacher_id, class_name')
-        .eq('id', classId)
-        .single()
+        .update({ teacher_id: newUser.user.id })
+        .in('id', classIds)
 
-      if (checkError) {
-        console.error('Class check error:', checkError)
-      } else if (existingClass?.teacher_id) {
-        console.log('Class already has a teacher assigned, skipping')
+      if (classError) {
+        console.error('Class update error:', classError)
+        // Don't rollback for class assignment failure
       } else {
-        const { error: classError } = await supabaseAdmin
-          .from('classes')
-          .update({ teacher_id: newUser.user.id })
-          .eq('id', classId)
-
-        if (classError) {
-          console.error('Class update error:', classError)
-          // Don't rollback everything for class assignment failure
-          // Teacher is still created successfully
-        } else {
-          console.log('Class assigned to teacher')
-        }
+        console.log('Classes assigned to teacher:', classIds.length)
       }
     }
 
