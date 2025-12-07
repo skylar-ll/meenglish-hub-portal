@@ -12,9 +12,9 @@ import { toast } from "sonner";
 const TeacherDetail = () => {
   const navigate = useNavigate();
   const { teacherId } = useParams();
-  const [teacher, setTeacher] = useState<any>(null);
+const [teacher, setTeacher] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
-  const [assignedClass, setAssignedClass] = useState<any>(null);
+  const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -41,17 +41,26 @@ const TeacherDetail = () => {
           .order("created_at", { ascending: false });
         setSchedules(schedulesData || []);
 
-        // Fetch the class assigned to this teacher
-        const { data: classData } = await supabase
+        // Fetch ALL classes assigned to this teacher
+        const { data: classesData } = await supabase
           .from("classes")
           .select(`
             *,
             branch:branches(name_en, name_ar)
           `)
           .eq("teacher_id", teacherId)
-          .eq("status", "active")
-          .maybeSingle();
-        setAssignedClass(classData);
+          .eq("status", "active");
+        setAssignedClasses(classesData || []);
+        
+        // Derive courses from all assigned classes
+        const allCourses: string[] = [];
+        const allLevels: string[] = [];
+        (classesData || []).forEach((cls: any) => {
+          if (cls.courses) allCourses.push(...cls.courses);
+          if (cls.levels) allLevels.push(...cls.levels);
+        });
+        const uniqueCourses = [...new Set([...allCourses, ...allLevels])];
+        const coursesString = uniqueCourses.length > 0 ? uniqueCourses.join(", ") : null;
 
         const { data: quizzesData } = await supabase
           .from("quizzes")
@@ -93,8 +102,21 @@ const TeacherDetail = () => {
           .order("created_at", { ascending: false });
         setStudents(studentsData || []);
 
-        // Update teacher's student count using junction table
-        setTeacher({ ...teacherData, student_count: teacherStudentLinks?.length || 0 });
+        // Update teacher's student count and courses assigned from classes
+        const allCoursesList: string[] = [];
+        const allLevelsList: string[] = [];
+        (classesData || []).forEach((cls: any) => {
+          if (cls.courses) allCoursesList.push(...cls.courses);
+          if (cls.levels) allLevelsList.push(...cls.levels);
+        });
+        const uniqueCoursesList = [...new Set([...allCoursesList, ...allLevelsList])];
+        const derivedCoursesString = uniqueCoursesList.length > 0 ? uniqueCoursesList.join(", ") : null;
+        
+        setTeacher({ 
+          ...teacherData, 
+          student_count: teacherStudentLinks?.length || 0,
+          courses_assigned: derivedCoursesString || teacherData.courses_assigned
+        });
 
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -156,42 +178,46 @@ const TeacherDetail = () => {
 
             <TabsContent value="schedule">
               <h2 className="text-2xl font-bold mb-4">Teaching Schedule</h2>
-              {!assignedClass ? (
+              {assignedClasses.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">No class assigned</p>
               ) : (
-                <Card className="p-6 space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">{assignedClass.class_name}</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  {assignedClasses.map((cls) => (
+                    <Card key={cls.id} className="p-6 space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Branch</p>
-                        <p className="font-medium">{assignedClass.branch?.name_en || "N/A"}</p>
+                        <h3 className="text-lg font-semibold mb-3">{cls.class_name}</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Branch</p>
+                            <p className="font-medium">{cls.branch?.name_en || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Timing</p>
+                            <p className="font-medium">{cls.timing}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Start Date</p>
+                            <p className="font-medium">{cls.start_date || "Not set"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Status</p>
+                            <Badge variant={cls.status === 'active' ? 'default' : 'secondary'}>
+                              {cls.status}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Courses</p>
+                            <p className="font-medium">{cls.courses?.join(", ") || "None"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Levels</p>
+                            <p className="font-medium">{cls.levels?.join(", ") || "None"}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Timing</p>
-                        <p className="font-medium">{assignedClass.timing}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Start Date</p>
-                        <p className="font-medium">{assignedClass.start_date || "Not set"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <Badge variant={assignedClass.status === 'active' ? 'default' : 'secondary'}>
-                          {assignedClass.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Courses</p>
-                        <p className="font-medium">{assignedClass.courses?.join(", ") || "None"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Levels</p>
-                        <p className="font-medium">{assignedClass.levels?.join(", ") || "None"}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                    </Card>
+                  ))}
+                </div>
               )}
             </TabsContent>
 
