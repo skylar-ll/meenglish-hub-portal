@@ -77,13 +77,8 @@ const CourseSelection = () => {
   };
 
   const handleNext = () => {
-    if (selectedLevels.length === 0) {
-      toast.error("Please select at least one level");
-      return;
-    }
-    
-    if (selectedCourses.length === 0) {
-      toast.error("Please select at least one course");
+    if (selectedLevels.length === 0 && selectedCourses.length === 0) {
+      toast.error("Please select at least one level or course");
       return;
     }
 
@@ -228,7 +223,7 @@ const CourseSelection = () => {
 
               {/* Courses */}
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Your Courses (You can select multiple) *</Label>
+                <Label className="text-lg font-semibold">Select Your Courses (Optional)</Label>
                 {Object.entries(coursesByCategory).map(([category, coursesInCategory]) => (
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-muted-foreground">{category}</h3>
