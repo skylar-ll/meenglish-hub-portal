@@ -388,16 +388,37 @@ const StudentPayments = () => {
                     });
 
                     const url = URL.createObjectURL(pdfBlob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `billing_${paymentData.studentIdCode}_${Date.now()}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                    const fileName = `billing_${paymentData.studentIdCode}_${Date.now()}.pdf`;
+                    
+                    // Cross-platform download approach
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                    
+                    if (isIOS || isSafari) {
+                      // For iOS/Safari: Open in new tab
+                      const newWindow = window.open(url, '_blank');
+                      if (!newWindow) {
+                        window.location.href = url;
+                      }
+                    } else {
+                      // For other browsers: Use download link
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = fileName;
+                      a.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+                      document.body.appendChild(a);
+                      
+                      setTimeout(() => {
+                        a.click();
+                        setTimeout(() => {
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }, 250);
+                      }, 100);
+                    }
 
                     toast.dismiss();
-                    toast.success('PDF downloaded successfully!');
+                    toast.success('PDF generated - check your downloads or new tab');
                   } catch (e) {
                     toast.dismiss();
                     toast.error('Unable to generate billing form');
