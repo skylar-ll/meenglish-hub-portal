@@ -14,6 +14,13 @@ interface Teacher {
   full_name: string;
 }
 
+interface Billing {
+  fee_after_discount: number;
+  amount_paid: number;
+  amount_remaining: number;
+  discount_percentage: number;
+}
+
 interface Student {
   id: string;
   student_id: string;
@@ -27,6 +34,7 @@ interface Student {
   discount_percentage: number;
   program: string;
   teachers?: Teacher[];
+  billing?: Billing;
 }
 
 const StudentManagement = () => {
@@ -74,8 +82,8 @@ const StudentManagement = () => {
 
       if (error) throw error;
 
-      // Fetch teachers for each student
-      const studentsWithTeachers = await Promise.all(
+      // Fetch teachers and billing for each student
+      const studentsWithData = await Promise.all(
         (data || []).map(async (student) => {
           const { data: teacherLinks } = await supabase
             .from("student_teachers")
@@ -89,14 +97,24 @@ const StudentManagement = () => {
             .select("id, full_name")
             .in("id", teacherIds);
 
+          // Fetch billing data for accurate fee info
+          const { data: billingData } = await supabase
+            .from("billing")
+            .select("fee_after_discount, amount_paid, amount_remaining, discount_percentage")
+            .eq("student_id", student.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             ...student,
-            teachers: teacherData || []
+            teachers: teacherData || [],
+            billing: billingData
           };
         })
       );
 
-      setStudents(studentsWithTeachers);
+      setStudents(studentsWithData);
     } catch (error: any) {
       toast.error("Failed to load students");
     } finally {
@@ -321,34 +339,24 @@ const StudentManagement = () => {
                         />
                       </td>
                       <td className="p-3">
-                        <InlineStudentField
-                          value={`$${student.total_course_fee}`}
-                          onSave={(value) => handleFieldUpdate(student.id, "total_course_fee", parseFloat(value))}
-                          type="number"
-                        />
+                        <span className="font-medium">
+                          ${student.billing?.fee_after_discount || student.total_course_fee || 0}
+                        </span>
                       </td>
                       <td className="p-3">
-                        <InlineStudentField
-                          value={`$${student.amount_paid}`}
-                          onSave={(value) => handleFieldUpdate(student.id, "amount_paid", parseFloat(value))}
-                          type="number"
-                          className="text-success"
-                        />
+                        <span className="font-medium text-green-600">
+                          ${student.billing?.amount_paid || student.amount_paid || 0}
+                        </span>
                       </td>
                       <td className="p-3">
-                        <InlineStudentField
-                          value={`$${student.amount_remaining}`}
-                          onSave={(value) => handleFieldUpdate(student.id, "amount_remaining", parseFloat(value))}
-                          type="number"
-                          className="text-destructive"
-                        />
+                        <span className="font-medium text-red-600">
+                          ${student.billing?.amount_remaining || student.amount_remaining || 0}
+                        </span>
                       </td>
                       <td className="p-3">
-                        <InlineStudentField
-                          value={`${student.discount_percentage}%`}
-                          onSave={(value) => handleFieldUpdate(student.id, "discount_percentage", parseFloat(value))}
-                          type="number"
-                        />
+                        <span className="font-medium">
+                          {student.billing?.discount_percentage || student.discount_percentage || 0}%
+                        </span>
                       </td>
                       <td className="p-3">
                         <Button
