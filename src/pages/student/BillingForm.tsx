@@ -192,14 +192,17 @@ const BillingForm = () => {
 
     // Lightweight validation against expected fields
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+    // Either courses OR level must be selected (not both required)
+    const hasCourses = Array.isArray(registration?.courses) ? registration.courses.length > 0 : !!registration?.courses;
+    const hasLevel = !!registration?.course_level;
+    
     const checks: Array<[string, any]> = [
       ["name_en", billData.clientName],
       ["name_ar", billData.clientNameAr],
       ["phone", billData.contactNumber],
       ["branch", billData.branch],
       ["gender", registration?.gender],
-      ["courses_selected", Array.isArray(registration?.courses) ? registration.courses.length : !!registration?.courses],
-      ["level_selected", !!registration?.course_level],
+      ["course_or_level_selected", hasCourses || hasLevel],
       ["timing_selected", !!registration?.timing],
       ["terms_agreed", registration?.agreedToTerms === true],
     ];
