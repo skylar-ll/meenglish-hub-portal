@@ -71,8 +71,23 @@ const TimingSelection = () => {
   const fetchAllowedTimings = async (registration: any) => {
     try {
       const branchId = registration.branch_id;
-      const selectedLevel = registration.course_level; // This could be a level OR a course (like "Speaking class")
-      const selectedCourses = registration.courses_selected || [];
+      // course_level can be comma-separated string of multiple levels like "level-1 (pre1) مستوى اول, level-3 (intro A) مستوى ثالث"
+      const courseLevelRaw = registration.course_level || "";
+      // courses is an array of selected courses like ["Speaking class", "General English"]
+      const selectedCourses = registration.courses || registration.courses_selected || [];
+
+      // Parse course_level - split by comma to handle multiple selections
+      const selectedLevels: string[] = courseLevelRaw
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+
+      console.log("🎯 TimingSelection - Parsed selections:", {
+        branchId,
+        selectedLevels,
+        selectedCourses,
+        raw: { course_level: courseLevelRaw, courses: registration.courses }
+      });
 
       // Fetch all active classes
       const { data: classes, error } = await supabase
@@ -107,27 +122,35 @@ const TimingSelection = () => {
         const classLevels = cls.levels || [];
         const classCourses = cls.courses || [];
 
-        // Check level match - selectedLevel could be a level like "level-1 (pre1) مستوى اول"
+        // Check if ANY of the selected levels match this class
         let levelMatch = false;
-        if (selectedLevel) {
+        for (const selectedLevel of selectedLevels) {
           const selectedLevelKey = extractLevelKey(selectedLevel);
           
           if (selectedLevelKey) {
             // It's a level format - match by level key
-            levelMatch = classLevels.some(level => {
+            const matches = classLevels.some(level => {
               const classLevelKey = extractLevelKey(level);
               return classLevelKey === selectedLevelKey;
             });
+            if (matches) {
+              levelMatch = true;
+              break;
+            }
           } else {
             // It's a course like "Speaking class" or "1:1 class" - check in courses
-            levelMatch = classCourses.some(classCourse =>
+            const matches = classCourses.some(classCourse =>
               normalizeStr(classCourse).includes(normalizeStr(selectedLevel)) ||
               normalizeStr(selectedLevel).includes(normalizeStr(classCourse))
             );
+            if (matches) {
+              levelMatch = true;
+              break;
+            }
           }
         }
 
-        // Check course match from courses_selected array
+        // Check if ANY of the selected courses match this class
         let courseMatch = false;
         if (selectedCourses && selectedCourses.length > 0) {
           courseMatch = selectedCourses.some((course: string) =>
@@ -142,9 +165,13 @@ const TimingSelection = () => {
         return levelMatch || courseMatch;
       });
 
+      console.log("🎯 TimingSelection - Matching classes:", matchingClasses.map(c => ({ timing: c.timing, levels: c.levels, courses: c.courses })));
+
       // Extract unique timings from matching classes
       const timings = [...new Set(matchingClasses.map(cls => cls.timing))];
       setAllowedTimings(timings);
+
+      console.log("🎯 TimingSelection - Allowed timings:", timings);
 
       // If currently selected timing is no longer allowed, clear it
       if (selectedTiming && !timings.includes(selectedTiming)) {
