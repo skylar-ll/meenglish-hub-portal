@@ -71,7 +71,7 @@ const TimingSelection = () => {
   const fetchAllowedTimings = async (registration: any) => {
     try {
       const branchId = registration.branch_id;
-      const selectedLevel = registration.course_level;
+      const selectedLevel = registration.course_level; // This could be a level OR a course (like "Speaking class")
       const selectedCourses = registration.courses_selected || [];
 
       // Fetch all active classes
@@ -87,6 +87,16 @@ const TimingSelection = () => {
         return;
       }
 
+      // Normalize for comparison - more flexible matching
+      const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Extract just the level key (e.g., "level1", "level2") for matching
+      const extractLevelKey = (val: string): string | null => {
+        if (!val) return null;
+        const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+        return m ? `level${m[1]}` : null;
+      };
+
       // Filter classes that match student's selection
       const matchingClasses = classes.filter((cls: ClassData) => {
         // Must match branch if branch is selected
@@ -94,23 +104,30 @@ const TimingSelection = () => {
           return false;
         }
 
-        // Check if class has matching levels or courses
         const classLevels = cls.levels || [];
         const classCourses = cls.courses || [];
 
-        // Normalize for comparison
-        const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-        // Check level match
+        // Check level match - selectedLevel could be a level like "level-1 (pre1) مستوى اول"
         let levelMatch = false;
         if (selectedLevel) {
-          levelMatch = classLevels.some(level => 
-            normalizeStr(level).includes(normalizeStr(selectedLevel)) ||
-            normalizeStr(selectedLevel).includes(normalizeStr(level))
-          );
+          const selectedLevelKey = extractLevelKey(selectedLevel);
+          
+          if (selectedLevelKey) {
+            // It's a level format - match by level key
+            levelMatch = classLevels.some(level => {
+              const classLevelKey = extractLevelKey(level);
+              return classLevelKey === selectedLevelKey;
+            });
+          } else {
+            // It's a course like "Speaking class" or "1:1 class" - check in courses
+            levelMatch = classCourses.some(classCourse =>
+              normalizeStr(classCourse).includes(normalizeStr(selectedLevel)) ||
+              normalizeStr(selectedLevel).includes(normalizeStr(classCourse))
+            );
+          }
         }
 
-        // Check course match
+        // Check course match from courses_selected array
         let courseMatch = false;
         if (selectedCourses && selectedCourses.length > 0) {
           courseMatch = selectedCourses.some((course: string) =>
@@ -121,7 +138,7 @@ const TimingSelection = () => {
           );
         }
 
-        // Match if either level or course matches (since courses are optional)
+        // Match if either level or course matches
         return levelMatch || courseMatch;
       });
 
