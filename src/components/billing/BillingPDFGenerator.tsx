@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { loadArabicFont } from "@/lib/arabicFontLoader";
 
 interface BillingData {
   student_id: string;
@@ -23,31 +24,22 @@ interface BillingData {
   student_id_code?: string;
 }
 
-// Helper function to transliterate Arabic text to a readable format for PDF
-// Since jsPDF doesn't support Arabic natively without font embedding
-const getArabicDisplayText = (arabicText: string, englishFallback: string): string => {
-  // If Arabic text is empty or undefined, return English fallback
-  if (!arabicText || arabicText.trim() === '') {
-    return englishFallback || 'N/A';
-  }
-  
-  // Check if the text contains Arabic characters
-  const hasArabic = /[\u0600-\u06FF]/.test(arabicText);
-  
-  if (hasArabic) {
-    // Return Arabic text with a note - jsPDF will render what it can
-    // For full Arabic support, we indicate it's Arabic
-    return `[Arabic: ${englishFallback}]`;
-  }
-  
-  return arabicText;
-};
-
 export const generateBillingPDF = async (billingData: BillingData): Promise<Blob> => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 50;
   let yPos = 60;
+
+  // Load and register Arabic font
+  let hasArabicFont = false;
+  try {
+    const arabicFontBase64 = await loadArabicFont();
+    doc.addFileToVFS('Amiri-Regular.ttf', arabicFontBase64);
+    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    hasArabicFont = true;
+  } catch (fontError) {
+    console.warn('Arabic font loading failed, using fallback:', fontError);
+  }
 
   // Helper function to load signature image
   const loadSignatureImage = async (): Promise<string | null> => {
@@ -119,20 +111,27 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFont('helvetica', 'bold');
   doc.text(billingData.student_name_en, leftCol, yPos + 18);
 
-  // Right Column - Arabic Name (display English version with Arabic label since PDF fonts don't support Arabic)
+  // Right Column - Arabic Name
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
   doc.text('Student Name (Arabic)', rightCol, yPos);
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  // Display English name as fallback since standard PDF fonts don't support Arabic characters
-  // The Arabic name is stored in the database and displayed correctly in the web app
-  const arabicDisplayName = billingData.student_name_ar && /[\u0600-\u06FF]/.test(billingData.student_name_ar)
-    ? billingData.student_name_en // Use English as fallback for PDF
-    : billingData.student_name_ar || billingData.student_name_en;
-  doc.text(arabicDisplayName, rightCol, yPos + 18);
+  
+  // Use Arabic font if available, otherwise fallback to English name
+  const hasArabicText = billingData.student_name_ar && /[\u0600-\u06FF]/.test(billingData.student_name_ar);
+  if (hasArabicFont && hasArabicText) {
+    doc.setFont('Amiri', 'normal');
+    // Reverse Arabic text for RTL display in jsPDF
+    const reversedArabic = billingData.student_name_ar.split('').reverse().join('');
+    doc.text(reversedArabic, rightCol + 150, yPos + 18, { align: 'right' });
+    doc.setFont('helvetica', 'bold'); // Reset to default font
+  } else {
+    doc.setFont('helvetica', 'bold');
+    // Fallback: show English name if Arabic font not available
+    doc.text(billingData.student_name_ar || billingData.student_name_en, rightCol, yPos + 18);
+  }
 
   yPos += lineHeight;
 
