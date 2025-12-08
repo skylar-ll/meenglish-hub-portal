@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, AlertCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -34,10 +34,11 @@ const TimingSelection = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [timingOptions, setTimingOptions] = useState<TimingOption[]>([]);
-  const [selectedTiming, setSelectedTiming] = useState<string>("");
+  const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowedTimings, setAllowedTimings] = useState<string[]>([]);
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [hasMultipleSelections, setHasMultipleSelections] = useState(false);
 
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
@@ -71,9 +72,9 @@ const TimingSelection = () => {
   const fetchAllowedTimings = async (registration: any) => {
     try {
       const branchId = registration.branch_id;
-      // course_level can be comma-separated string of multiple levels like "level-1 (pre1) مستوى اول, level-3 (intro A) مستوى ثالث"
+      // course_level can be comma-separated string of multiple levels
       const courseLevelRaw = registration.course_level || "";
-      // courses is an array of selected courses like ["Speaking class", "General English"]
+      // courses is an array of selected courses
       const selectedCourses = registration.courses || registration.courses_selected || [];
 
       // Parse course_level - split by comma to handle multiple selections
@@ -82,10 +83,15 @@ const TimingSelection = () => {
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0);
 
+      // Check if user has multiple levels/courses selected
+      const totalSelections = selectedLevels.length + (selectedCourses?.length || 0);
+      setHasMultipleSelections(totalSelections > 1);
+
       console.log("🎯 TimingSelection - Parsed selections:", {
         branchId,
         selectedLevels,
         selectedCourses,
+        totalSelections,
         raw: { course_level: courseLevelRaw, courses: registration.courses }
       });
 
@@ -102,7 +108,7 @@ const TimingSelection = () => {
         return;
       }
 
-      // Normalize for comparison - more flexible matching
+      // Normalize for comparison
       const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
       
       // Extract just the level key (e.g., "level1", "level2") for matching
@@ -173,41 +179,67 @@ const TimingSelection = () => {
 
       console.log("🎯 TimingSelection - Allowed timings:", timings);
 
-      // If currently selected timing is no longer allowed, clear it
-      if (selectedTiming && !timings.includes(selectedTiming)) {
-        setSelectedTiming("");
-      }
+      // Clear any selected timings that are no longer allowed
+      setSelectedTimings(prev => prev.filter(t => 
+        timings.some(allowed => normalizeTimingForComparison(allowed) === normalizeTimingForComparison(t))
+      ));
     } catch (error) {
       console.error("Error fetching allowed timings:", error);
       setAllowedTimings([]);
     }
   };
 
+  const normalizeTimingForComparison = (s: string) => s.toLowerCase().replace(/[^a-z0-9:.-]/g, '');
+
   const isTimingAllowed = (timingValue: string): boolean => {
     if (allowedTimings.length === 0) {
-      // If no matching classes found, show warning but don't block
       return false;
     }
     
-    // Normalize for comparison
-    const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9:.-]/g, '');
-    
     return allowedTimings.some(allowed => 
-      normalizeStr(allowed) === normalizeStr(timingValue) ||
-      normalizeStr(allowed).includes(normalizeStr(timingValue)) ||
-      normalizeStr(timingValue).includes(normalizeStr(allowed))
+      normalizeTimingForComparison(allowed) === normalizeTimingForComparison(timingValue) ||
+      normalizeTimingForComparison(allowed).includes(normalizeTimingForComparison(timingValue)) ||
+      normalizeTimingForComparison(timingValue).includes(normalizeTimingForComparison(allowed))
     );
   };
 
-  const handleNext = () => {
-    if (!selectedTiming) {
-      toast.error("Please select a timing");
+  const isTimingSelected = (timingValue: string): boolean => {
+    return selectedTimings.some(selected => 
+      normalizeTimingForComparison(selected) === normalizeTimingForComparison(timingValue)
+    );
+  };
+
+  const handleTimingClick = (timingValue: string) => {
+    if (!isTimingAllowed(timingValue)) {
+      toast.error("❌ This timing is not available for your selected class/branch. / هذا التوقيت غير متاح للفصل أو الفرع المحدد.");
       return;
     }
 
-    // Store timing selection
+    if (hasMultipleSelections && allowedTimings.length > 1) {
+      // Multi-select mode: toggle selection
+      setSelectedTimings(prev => {
+        if (isTimingSelected(timingValue)) {
+          return prev.filter(t => normalizeTimingForComparison(t) !== normalizeTimingForComparison(timingValue));
+        } else {
+          return [...prev, timingValue];
+        }
+      });
+    } else {
+      // Single-select mode
+      setSelectedTimings([timingValue]);
+    }
+  };
+
+  const handleNext = () => {
+    if (selectedTimings.length === 0) {
+      toast.error("Please select at least one timing");
+      return;
+    }
+
+    // Store timing selection (as comma-separated string for multiple)
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
-    registration.timing = selectedTiming;
+    registration.timing = selectedTimings.join(", ");
+    registration.selectedTimings = selectedTimings;
     sessionStorage.setItem("studentRegistration", JSON.stringify(registration));
 
     navigate("/student/duration-selection");
@@ -239,8 +271,15 @@ const TimingSelection = () => {
             Select Your Timing
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Choose your preferred class time
+            {hasMultipleSelections && allowedTimings.length > 1 
+              ? "You can select multiple time slots for your different levels/courses"
+              : "Choose your preferred class time"}
           </p>
+          {hasMultipleSelections && allowedTimings.length > 1 && (
+            <p className="text-xs text-primary mt-1">
+              ✨ Multiple selection enabled - tap to select/deselect
+            </p>
+          )}
         </div>
 
         {hasNoMatchingClasses && (
@@ -255,36 +294,50 @@ const TimingSelection = () => {
           </Card>
         )}
 
+        {selectedTimings.length > 0 && (
+          <Card className="p-3 mb-4 border-primary/30 bg-primary/5">
+            <p className="text-sm text-primary font-medium">
+              Selected: {selectedTimings.join(" | ")}
+            </p>
+          </Card>
+        )}
+
         <Card className="p-8 animate-slide-up">
           <div className="space-y-6">
             <Label className="text-lg font-semibold flex items-center gap-2">
               <Clock className="w-5 h-5" />
               Available Time Slots
+              {allowedTimings.length > 0 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({allowedTimings.length} available)
+                </span>
+              )}
             </Label>
             
             <div className="grid gap-4">
               {timingOptions.map((timing) => {
                 const isAllowed = isTimingAllowed(timing.config_value);
+                const isSelected = isTimingSelected(timing.config_value);
+                
                 const timingCard = (
                   <Card
                     key={timing.id}
                     className={`p-6 transition-all ${
-                      selectedTiming === timing.config_value
-                        ? "border-primary border-2 bg-primary/5 shadow-lg"
+                      isSelected
+                        ? "border-primary border-2 bg-primary/10 shadow-lg ring-2 ring-primary/20"
                         : isAllowed 
-                          ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
-                          : "opacity-50 cursor-not-allowed bg-muted/20"
+                          ? "hover:bg-muted/50 hover:shadow-md cursor-pointer border-muted"
+                          : "opacity-50 cursor-not-allowed bg-muted/20 border-muted/30"
                     }`}
-                    onClick={() => {
-                      if (isAllowed) {
-                        setSelectedTiming(timing.config_value);
-                      } else {
-                        toast.error("❌ This timing is not available for your selected class/branch. / هذا التوقيت غير متاح للفصل أو الفرع المحدد.");
-                      }
-                    }}
+                    onClick={() => handleTimingClick(timing.config_value)}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-lg text-center flex-1">{timing.config_value}</p>
+                      <p className="font-medium text-lg flex-1">{timing.config_value}</p>
+                      {isSelected && (
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-4 h-4 text-primary-foreground" />
+                        </div>
+                      )}
                       {!isAllowed && (
                         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                           Not Available
@@ -314,12 +367,12 @@ const TimingSelection = () => {
               })}
             </div>
 
-            {/* Hide inline button on mobile when floating button shows */}
+            {/* Mobile button */}
             <Button
               onClick={handleNext}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity md:hidden"
               size="lg"
-              disabled={!selectedTiming}
+              disabled={selectedTimings.length === 0}
             >
               {t('student.next')}
               <ArrowRight className="w-4 h-4 ml-2" />

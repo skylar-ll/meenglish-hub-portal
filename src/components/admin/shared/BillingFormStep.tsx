@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SignatureCanvas } from "@/components/billing/SignatureCanvas";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
+import { downloadPdfBlob } from "@/lib/pdfDownload";
 import { Download, FileText } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
@@ -64,14 +65,8 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
         signature_url: signature,
       });
 
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `billing_${formData.fullNameEn}_${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const fileName = `billing_${formData.fullNameEn}_${Date.now()}.pdf`;
+      downloadPdfBlob(pdfBlob, fileName);
     } catch (error) {
       console.error("Error downloading PDF:", error);
     } finally {
