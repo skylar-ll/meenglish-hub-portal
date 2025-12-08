@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { downloadPdfBlob } from '@/lib/pdfDownload';
 
 
 interface BillingRecord {
@@ -200,37 +201,8 @@ const AdminBilling = () => {
       const today = new Date().toISOString().slice(0, 10);
       const fileName = `BillingForm_${billing.student_name_en.replace(/[^a-zA-Z0-9]/g, '_')}_${today}.pdf`;
       
-      // Cross-platform download approach
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      
-      // Check if we're on iOS/Safari which handles downloads differently
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      
-      if (isIOS || isSafari) {
-        // For iOS/Safari: Open in new tab (will trigger native PDF viewer with save option)
-        const newWindow = window.open(blobUrl, '_blank');
-        if (!newWindow) {
-          // If popup blocked, try direct navigation
-          window.location.href = blobUrl;
-        }
-      } else {
-        // For other browsers: Use download link
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        link.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
-        document.body.appendChild(link);
-        
-        // Use click() with a slight delay for better compatibility
-        setTimeout(() => {
-          link.click();
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(blobUrl);
-          }, 250);
-        }, 100);
-      }
+      // Use cross-platform download helper
+      downloadPdfBlob(pdfBlob, fileName);
       
       toast.success('PDF generated - check your downloads or new tab');
     } catch (e) {

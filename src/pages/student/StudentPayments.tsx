@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { PayRemainingBalanceModal } from "@/components/billing/PayRemainingBalanceModal";
 import { format } from "date-fns";
+import { downloadPdfBlob } from "@/lib/pdfDownload";
 
 const StudentPayments = () => {
   const navigate = useNavigate();
@@ -387,35 +388,10 @@ const StudentPayments = () => {
                       student_id_code: paymentData.studentIdCode,
                     });
 
-                    const url = URL.createObjectURL(pdfBlob);
                     const fileName = `billing_${paymentData.studentIdCode}_${Date.now()}.pdf`;
                     
-                    // Cross-platform download approach
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                    
-                    if (isIOS || isSafari) {
-                      // For iOS/Safari: Open in new tab
-                      const newWindow = window.open(url, '_blank');
-                      if (!newWindow) {
-                        window.location.href = url;
-                      }
-                    } else {
-                      // For other browsers: Use download link
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = fileName;
-                      a.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
-                      document.body.appendChild(a);
-                      
-                      setTimeout(() => {
-                        a.click();
-                        setTimeout(() => {
-                          document.body.removeChild(a);
-                          URL.revokeObjectURL(url);
-                        }, 250);
-                      }, 100);
-                    }
+                    // Use cross-platform download helper
+                    downloadPdfBlob(pdfBlob, fileName);
 
                     toast.dismiss();
                     toast.success('PDF generated - check your downloads or new tab');
