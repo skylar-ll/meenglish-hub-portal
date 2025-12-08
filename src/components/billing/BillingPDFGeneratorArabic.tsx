@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { loadArabicFont } from "@/lib/arabicFontLoader";
 
 interface BillingData {
   student_id: string;
@@ -28,6 +29,29 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 50;
   let yPos = 60;
+
+  // Load and register Arabic font
+  let hasArabicFont = false;
+  try {
+    const arabicFontBase64 = await loadArabicFont();
+    doc.addFileToVFS('Amiri-Regular.ttf', arabicFontBase64);
+    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    hasArabicFont = true;
+  } catch (fontError) {
+    console.warn('Arabic font loading failed, using fallback:', fontError);
+  }
+
+  // Helper to render Arabic text (reversed for RTL)
+  const renderArabicText = (text: string, x: number, y: number, options?: { align?: 'left' | 'center' | 'right' }) => {
+    if (hasArabicFont && /[\u0600-\u06FF]/.test(text)) {
+      doc.setFont('Amiri', 'normal');
+      const reversed = text.split('').reverse().join('');
+      doc.text(reversed, x, y, options);
+      doc.setFont('helvetica', 'normal');
+    } else {
+      doc.text(text, x, y, options);
+    }
+  };
 
   // Helper function to load signature image
   const loadSignatureImage = async (): Promise<string | null> => {
@@ -90,14 +114,14 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   const rightCol = pageWidth / 2 + 10;
   const lineHeight = 45;
 
-  // Arabic Name (Right)
+  // Arabic Name (Right) - using Arabic font
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text('Student Name (Arabic)', rightCol, yPos);
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text(billingData.student_name_ar, rightCol, yPos + 18);
+  renderArabicText(billingData.student_name_ar, rightCol + 150, yPos + 18, { align: 'right' });
 
   // English Name (Left)
   doc.setFontSize(10);
