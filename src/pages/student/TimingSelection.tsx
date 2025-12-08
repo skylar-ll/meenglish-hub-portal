@@ -44,6 +44,28 @@ const TimingSelection = () => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
     setBranchId(registration.branch_id || null);
     fetchData(registration);
+
+    // Subscribe to realtime changes on classes table
+    const channel = supabase
+      .channel('classes-timing-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          console.log("📡 Classes table changed - refreshing timings");
+          const currentReg = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
+          fetchAllowedTimings(currentReg);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async (registration: any) => {
@@ -83,23 +105,29 @@ const TimingSelection = () => {
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0);
 
-      // Check if user has multiple levels/courses selected
-      const totalSelections = selectedLevels.length + (selectedCourses?.length || 0);
-      setHasMultipleSelections(totalSelections > 1);
+      // Check if user has multiple levels selected (not counting courses)
+      const totalLevels = selectedLevels.length;
+      setHasMultipleSelections(totalLevels > 1);
 
       console.log("🎯 TimingSelection - Parsed selections:", {
         branchId,
         selectedLevels,
         selectedCourses,
-        totalSelections,
+        totalLevels,
         raw: { course_level: courseLevelRaw, courses: registration.courses }
       });
 
-      // Fetch all active classes
-      const { data: classes, error } = await supabase
+      // Fetch all active classes for the branch
+      let query = supabase
         .from('classes')
         .select('id, timing, branch_id, levels, courses')
         .eq('status', 'active');
+      
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data: classes, error } = await query;
 
       if (error) throw error;
 
@@ -118,70 +146,54 @@ const TimingSelection = () => {
         return m ? `level${m[1]}` : null;
       };
 
-      // Filter classes that match student's selection
-      const matchingClasses = classes.filter((cls: ClassData) => {
-        // Must match branch if branch is selected
-        if (branchId && cls.branch_id !== branchId) {
-          return false;
-        }
+      // For each selected level, find the timing(s) available for that level
+      const timingsPerSelection: string[][] = [];
 
-        const classLevels = cls.levels || [];
-        const classCourses = cls.courses || [];
-
-        // Check if ANY of the selected levels match this class
-        let levelMatch = false;
-        for (const selectedLevel of selectedLevels) {
-          const selectedLevelKey = extractLevelKey(selectedLevel);
+      for (const selectedLevel of selectedLevels) {
+        const selectedLevelKey = extractLevelKey(selectedLevel);
+        
+        // Find classes that match this specific level
+        const matchingClasses = classes.filter((cls: ClassData) => {
+          const classLevels = cls.levels || [];
           
           if (selectedLevelKey) {
             // It's a level format - match by level key
-            const matches = classLevels.some(level => {
+            return classLevels.some(level => {
               const classLevelKey = extractLevelKey(level);
               return classLevelKey === selectedLevelKey;
             });
-            if (matches) {
-              levelMatch = true;
-              break;
-            }
           } else {
-            // It's a course like "Speaking class" or "1:1 class" - check in courses
-            const matches = classCourses.some(classCourse =>
+            // It's a course like "Speaking class" - check in class courses
+            const classCourses = cls.courses || [];
+            return classCourses.some(classCourse =>
               normalizeStr(classCourse).includes(normalizeStr(selectedLevel)) ||
               normalizeStr(selectedLevel).includes(normalizeStr(classCourse))
             );
-            if (matches) {
-              levelMatch = true;
-              break;
-            }
           }
+        });
+
+        // Get unique timings for this level
+        const timingsForLevel = [...new Set(matchingClasses.map(c => c.timing))];
+        if (timingsForLevel.length > 0) {
+          timingsPerSelection.push(timingsForLevel);
         }
+        
+        console.log(`🎯 Level "${selectedLevel}" (key: ${selectedLevelKey}) → timings:`, timingsForLevel);
+      }
 
-        // Check if ANY of the selected courses match this class
-        let courseMatch = false;
-        if (selectedCourses && selectedCourses.length > 0) {
-          courseMatch = selectedCourses.some((course: string) =>
-            classCourses.some(classCourse =>
-              normalizeStr(classCourse).includes(normalizeStr(course)) ||
-              normalizeStr(course).includes(normalizeStr(classCourse))
-            )
-          );
-        }
+      // Combine all unique timings from all levels
+      // Each level should contribute its timing(s) to the final list
+      const allTimings = timingsPerSelection.flat();
+      const uniqueTimings = [...new Set(allTimings)];
 
-        // Match if either level or course matches
-        return levelMatch || courseMatch;
-      });
+      console.log("🎯 TimingSelection - Final allowed timings:", uniqueTimings);
+      console.log("🎯 TimingSelection - Timings per selection:", timingsPerSelection);
 
-      console.log("🎯 TimingSelection - Matching classes:", matchingClasses.map(c => ({ timing: c.timing, levels: c.levels, courses: c.courses })));
-
-      // Extract unique timings from matching classes
-      const timings = [...new Set(matchingClasses.map(cls => cls.timing))];
-      setAllowedTimings(timings);
-
-      console.log("🎯 TimingSelection - Allowed timings:", timings);
+      setAllowedTimings(uniqueTimings);
 
       // Clear any selected timings that are no longer allowed
       setSelectedTimings(prev => prev.filter(t => 
-        timings.some(allowed => normalizeTimingForComparison(allowed) === normalizeTimingForComparison(t))
+        uniqueTimings.some(allowed => normalizeTimingForComparison(allowed) === normalizeTimingForComparison(t))
       ));
     } catch (error) {
       console.error("Error fetching allowed timings:", error);
@@ -272,7 +284,7 @@ const TimingSelection = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
             {hasMultipleSelections && allowedTimings.length > 1 
-              ? "You can select multiple time slots for your different levels/courses"
+              ? "You can select multiple time slots for your different levels"
               : "Choose your preferred class time"}
           </p>
           {hasMultipleSelections && allowedTimings.length > 1 && (
