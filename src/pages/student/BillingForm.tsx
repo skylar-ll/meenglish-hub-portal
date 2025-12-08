@@ -477,17 +477,37 @@ const BillingForm = () => {
       }
 
       // Auto-enroll student using shared utility (matches by branch, timing, courses and levels)
+      // Handle multiple timings if student selected multiple
       try {
-        const result = await autoEnrollStudent({
-          id: studentData.id,
-          branch_id: registration.branch_id,
-          program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
-          courses: Array.isArray(registration.courses) ? registration.courses : (registration.courses ? [registration.courses] : []),
-          course_level: registration.course_level || "",
-          timing: registration.timing,
-        });
-        if (result?.count) {
-          toast.success(`Enrollment complete! Added to ${result.count} class(es).`);
+        const timings = Array.isArray(registration.selectedTimings) && registration.selectedTimings.length > 0
+          ? registration.selectedTimings
+          : registration.timing ? [registration.timing] : [];
+        
+        const levels = Array.isArray(registration.selectedLevels) 
+          ? registration.selectedLevels.join(", ")
+          : registration.course_level || "";
+        
+        let totalEnrollments = 0;
+        const allClassIds: string[] = [];
+        
+        // Enroll for each selected timing
+        for (const timing of timings) {
+          const result = await autoEnrollStudent({
+            id: studentData.id,
+            branch_id: registration.branch_id,
+            program: Array.isArray(registration.courses) ? registration.courses[0] : registration.courses,
+            courses: Array.isArray(registration.courses) ? registration.courses : (registration.courses ? [registration.courses] : []),
+            course_level: levels,
+            timing: timing,
+          });
+          if (result?.count) {
+            totalEnrollments += result.count;
+            allClassIds.push(...result.classIds);
+          }
+        }
+        
+        if (totalEnrollments > 0) {
+          toast.success(`Enrollment complete! Added to ${totalEnrollments} class(es).`);
         } else {
           toast.warning("No matching classes found for auto-enrollment.");
         }

@@ -24,7 +24,7 @@ export const MyClasses = () => {
     fetchMyClasses();
     
     // Set up realtime subscription for class updates
-    const channel = supabase
+    const classesChannel = supabase
       .channel('classes-changes')
       .on(
         'postgres_changes',
@@ -39,8 +39,25 @@ export const MyClasses = () => {
       )
       .subscribe();
 
+    // Set up realtime subscription for enrollment updates
+    const enrollmentsChannel = supabase
+      .channel('enrollments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'enrollments'
+        },
+        () => {
+          fetchMyClasses(); // Refetch when enrollments are updated
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(classesChannel);
+      supabase.removeChannel(enrollmentsChannel);
     };
   }, []);
 

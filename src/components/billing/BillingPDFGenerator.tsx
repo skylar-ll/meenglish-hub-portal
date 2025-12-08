@@ -23,6 +23,26 @@ interface BillingData {
   student_id_code?: string;
 }
 
+// Helper function to transliterate Arabic text to a readable format for PDF
+// Since jsPDF doesn't support Arabic natively without font embedding
+const getArabicDisplayText = (arabicText: string, englishFallback: string): string => {
+  // If Arabic text is empty or undefined, return English fallback
+  if (!arabicText || arabicText.trim() === '') {
+    return englishFallback || 'N/A';
+  }
+  
+  // Check if the text contains Arabic characters
+  const hasArabic = /[\u0600-\u06FF]/.test(arabicText);
+  
+  if (hasArabic) {
+    // Return Arabic text with a note - jsPDF will render what it can
+    // For full Arabic support, we indicate it's Arabic
+    return `[Arabic: ${englishFallback}]`;
+  }
+  
+  return arabicText;
+};
+
 export const generateBillingPDF = async (billingData: BillingData): Promise<Blob> => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -99,7 +119,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFont('helvetica', 'bold');
   doc.text(billingData.student_name_en, leftCol, yPos + 18);
 
-  // Right Column
+  // Right Column - Arabic Name (display English version with Arabic label since PDF fonts don't support Arabic)
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
@@ -107,7 +127,12 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text(billingData.student_name_ar, rightCol, yPos + 18);
+  // Display English name as fallback since standard PDF fonts don't support Arabic characters
+  // The Arabic name is stored in the database and displayed correctly in the web app
+  const arabicDisplayName = billingData.student_name_ar && /[\u0600-\u06FF]/.test(billingData.student_name_ar)
+    ? billingData.student_name_en // Use English as fallback for PDF
+    : billingData.student_name_ar || billingData.student_name_en;
+  doc.text(arabicDisplayName, rightCol, yPos + 18);
 
   yPos += lineHeight;
 
