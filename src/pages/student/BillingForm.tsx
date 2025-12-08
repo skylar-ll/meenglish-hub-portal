@@ -420,7 +420,7 @@ const BillingForm = () => {
         full_name_en: billData.clientName,
         phone1: billData.contactNumber,
         phone2: billData.phone2 || null,
-        email: billData.email,
+        email: user.email || billData.email, // Use authenticated user's email for RLS compliance
         national_id: billData.nationalId,
         branch_id: registration.branch_id || null,
         branch: billData.branch,
