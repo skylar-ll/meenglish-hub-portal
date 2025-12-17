@@ -55,11 +55,11 @@ serve(async (req) => {
     const { name, email, password, classIds } = await req.json()
     console.log('Creating teacher:', { name, email, classIds })
 
-    // Validate timing conflicts if multiple classes selected
+    // Validate timing conflicts if multiple classes selected (same timing + same branch not allowed)
     if (classIds && classIds.length > 1) {
       const { data: selectedClasses, error: classesError } = await supabaseAdmin
         .from('classes')
-        .select('id, timing, class_name')
+        .select('id, timing, class_name, branch_id')
         .in('id', classIds)
 
       if (classesError) {
@@ -67,12 +67,23 @@ serve(async (req) => {
         throw new Error('Failed to validate class timings')
       }
 
-      const timings = selectedClasses?.map(c => c.timing) || []
-      const uniqueTimings = new Set(timings)
+      // Check for timing conflicts within the same branch
+      const branchTimings = new Map<string, { timing: string; className: string }[]>()
       
-      if (timings.length !== uniqueTimings.size) {
-        const duplicateTiming = timings.find((t, i) => timings.indexOf(t) !== i)
-        throw new Error(`Cannot assign multiple classes with the same timing (${duplicateTiming})`)
+      for (const cls of selectedClasses || []) {
+        const branchKey = cls.branch_id || 'no-branch'
+        if (!branchTimings.has(branchKey)) {
+          branchTimings.set(branchKey, [])
+        }
+        
+        const existingInBranch = branchTimings.get(branchKey)!
+        const conflict = existingInBranch.find(c => c.timing === cls.timing)
+        
+        if (conflict) {
+          throw new Error(`Cannot assign multiple classes with the same timing (${cls.timing}) in the same branch. Classes "${conflict.className}" and "${cls.class_name}" have conflicting schedules.`)
+        }
+        
+        existingInBranch.push({ timing: cls.timing, className: cls.class_name })
       }
     }
 
