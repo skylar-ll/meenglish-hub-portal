@@ -53,7 +53,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedClassName, setSelectedClassName] = useState<string>("");
   const [classSearchTerm, setClassSearchTerm] = useState<string>("");
-  const [classTimingFilter, setClassTimingFilter] = useState<string>("all");
+  const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
   const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
   const [computedAllowedTimings, setComputedAllowedTimings] = useState<string[]>([]);
   
@@ -235,13 +235,10 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     console.log("🎯 AddPreviousStudentModal - Computed allowed timings:", uniqueTimings);
     setComputedAllowedTimings(uniqueTimings);
 
-    // Clear timing selection if no longer valid
-    if (classTimingFilter !== "all" && !uniqueTimings.some(t => 
-      t.toLowerCase().trim() === classTimingFilter.toLowerCase().trim()
-    )) {
-      setClassTimingFilter("all");
-      setFormData(prev => ({ ...prev, timing: "" }));
-    }
+    // Clear invalid timing selections
+    setSelectedTimings(prev => prev.filter(t => 
+      uniqueTimings.some(allowed => allowed.toLowerCase().trim() === t.toLowerCase().trim())
+    ));
   }, [branchClasses, formData.selectedLevels, formData.courses]);
 
   const countryCodes = [
@@ -411,10 +408,12 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       return;
     }
     
-    if (!formData.timing) {
-      toast.error("Please select a timing");
+    if (selectedTimings.length === 0) {
+      toast.error("Please select at least one timing");
       return;
     }
+    
+    const timingString = selectedTimings.join(", ");
     
     if (!formData.branch) {
       toast.error("Please select a branch");
@@ -565,7 +564,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
             .from('classes')
             .select('start_date')
             .eq('branch_id', branchData.id)
-            .eq('timing', formData.timing)
+            .in('timing', selectedTimings)
             .eq('status', 'active');
           
           if (matchingClasses && matchingClasses.length > 0) {
@@ -594,7 +593,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           program: [...formData.courses, ...formData.selectedLevels].join(', '),
           class_type: [...formData.courses, ...formData.selectedLevels].join(', '),
           course_level: formData.selectedLevels.join(', ') || null,
-          timing: formData.timing,
+          timing: timingString,
           payment_method: formData.paymentMethod,
           subscription_status: "active",
           course_duration_months: durationMonths,
@@ -625,7 +624,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           program: formData.courses[0] || undefined,
           courses: [...formData.courses, ...formData.selectedLevels],
           course_level: formData.selectedLevels.join(', '),
-          timing: formData.timing,
+          timing: timingString,
         });
         
         if (result?.count) {
@@ -643,7 +642,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
         registration_date: registrationDate,
         course_start_date: actualStartDate,
-        time_slot: formData.timing,
+        time_slot: timingString,
         level_count: durationMonths,
         total_fee: totalFee,
         discount_percentage: discountPercent,
@@ -672,7 +671,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           student_name_ar: validatedData.fullNameAr,
           phone: validatedData.phone1,
           course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
-          time_slot: formData.timing,
+          time_slot: timingString,
           registration_date: billingRecord.registration_date,
           course_start_date: billingRecord.course_start_date,
           level_count: durationMonths,
@@ -740,6 +739,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       setSignature(null);
       setPartialPaymentAmount(0);
       setSelectedBranchId(null);
+      setSelectedTimings([]);
       
       onStudentAdded();
       onOpenChange(false);
@@ -960,12 +960,14 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                               const isAvailable = computedAllowedTimings.some(
                                 (opt) => String(opt).trim().toLowerCase() === String(value).trim().toLowerCase(),
                               );
-                              const selected = classTimingFilter === value;
+                              const isSelected = selectedTimings.some(
+                                (sel) => String(sel).trim().toLowerCase() === String(value).trim().toLowerCase()
+                              );
                               const timingCard = (
                                 <Card
                                   key={t.id || value}
                                   className={`p-6 transition-all ${
-                                    selected
+                                    isSelected
                                       ? "border-primary border-2 bg-primary/5 shadow-lg"
                                       : isAvailable
                                         ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
@@ -973,9 +975,14 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                                   }`}
                                   onClick={() => {
                                     if (!isAvailable || isEditMode) return;
-                                    const newValue = selected ? "all" : String(value);
-                                    setClassTimingFilter(newValue);
-                                    setFormData((prev) => ({ ...prev, timing: newValue === "all" ? "" : String(value) }));
+                                    // Toggle selection for multi-select
+                                    setSelectedTimings(prev => {
+                                      if (isSelected) {
+                                        return prev.filter(sel => sel.toLowerCase().trim() !== String(value).toLowerCase().trim());
+                                      } else {
+                                        return [...prev, String(value)];
+                                      }
+                                    });
                                   }}
                                 >
                                   <p className="font-medium text-lg text-center">
@@ -993,6 +1000,9 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                                       String(value)
                                     )}
                                   </p>
+                                  {isSelected && (
+                                    <p className="text-xs text-primary text-center mt-1">✓ Selected</p>
+                                  )}
                                 </Card>
                               );
                               return isAvailable ? (
@@ -1010,6 +1020,16 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                             })
                           )}
                         </div>
+                        {selectedTimings.length > 0 && (
+                          <p className="text-sm text-primary">
+                            Selected: {selectedTimings.join(", ")}
+                          </p>
+                        )}
+                        {computedAllowedTimings.length > 1 && (
+                          <p className="text-xs text-muted-foreground">
+                            ✨ Multiple selection enabled - tap to select/deselect
+                          </p>
+                        )}
                         {isEditMode && (
                           <AddNewFieldButton configType="timing" onAdd={refetch} />
                         )}
@@ -1019,7 +1039,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && classTimingFilter === "all"}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && selectedTimings.length === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
                 </div>
               </div>
             )}
@@ -1154,7 +1174,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           nextLabel={step === 7 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(!isEditMode && ((step === 2 && classTimingFilter === "all") || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed))) || (step === 7 && !signature)}
+          disabled={(!isEditMode && ((step === 2 && selectedTimings.length === 0) || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed))) || (step === 7 && !signature)}
           showBack={step > 1}
           showNext={true}
         />
