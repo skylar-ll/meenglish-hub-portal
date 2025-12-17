@@ -55,6 +55,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [classSearchTerm, setClassSearchTerm] = useState<string>("");
   const [classTimingFilter, setClassTimingFilter] = useState<string>("all");
   const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
+  const [computedAllowedTimings, setComputedAllowedTimings] = useState<string[]>([]);
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -165,6 +166,83 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     countryCode1: "+966",
     countryCode2: "+966",
   });
+
+  // Compute allowed timings based on selected levels/courses (same logic as TimingSelection.tsx)
+  useEffect(() => {
+    if (!branchClasses.length || (formData.selectedLevels.length === 0 && formData.courses.length === 0)) {
+      // If no selections, show all timings from classes
+      const allTimings = [...new Set(branchClasses.map(c => c.timing))];
+      setComputedAllowedTimings(allTimings);
+      return;
+    }
+
+    const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    const extractLevelKeyLocal = (val: string): string | null => {
+      if (!val) return null;
+      const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
+      return m ? `level${m[1]}` : null;
+    };
+
+    const timingsPerSelection: string[][] = [];
+
+    // Process levels
+    for (const selectedLevel of formData.selectedLevels) {
+      const selectedLevelKey = extractLevelKeyLocal(selectedLevel);
+      
+      const matchingClasses = branchClasses.filter((cls: any) => {
+        const classLevels = cls.levels || [];
+        
+        if (selectedLevelKey) {
+          return classLevels.some((level: string) => {
+            const classLevelKey = extractLevelKeyLocal(level);
+            return classLevelKey === selectedLevelKey;
+          });
+        } else {
+          const classCourses = cls.courses || [];
+          return classCourses.some((classCourse: string) =>
+            normalizeStr(classCourse).includes(normalizeStr(selectedLevel)) ||
+            normalizeStr(selectedLevel).includes(normalizeStr(classCourse))
+          );
+        }
+      });
+
+      const timingsForLevel = [...new Set(matchingClasses.map((c: any) => c.timing))];
+      if (timingsForLevel.length > 0) {
+        timingsPerSelection.push(timingsForLevel);
+      }
+    }
+
+    // Process courses (like Speaking, Arabic, etc.)
+    for (const selectedCourse of formData.courses) {
+      const matchingClasses = branchClasses.filter((cls: any) => {
+        const classCourses = cls.courses || [];
+        return classCourses.some((classCourse: string) =>
+          normalizeStr(classCourse).includes(normalizeStr(selectedCourse)) ||
+          normalizeStr(selectedCourse).includes(normalizeStr(classCourse))
+        );
+      });
+
+      const timingsForCourse = [...new Set(matchingClasses.map((c: any) => c.timing))];
+      if (timingsForCourse.length > 0) {
+        timingsPerSelection.push(timingsForCourse);
+      }
+    }
+
+    const allTimings = timingsPerSelection.flat();
+    const uniqueTimings = [...new Set(allTimings)];
+    
+    console.log("🎯 AddPreviousStudentModal - Computed allowed timings:", uniqueTimings);
+    setComputedAllowedTimings(uniqueTimings);
+
+    // Clear timing selection if no longer valid
+    if (classTimingFilter !== "all" && !uniqueTimings.some(t => 
+      t.toLowerCase().trim() === classTimingFilter.toLowerCase().trim()
+    )) {
+      setClassTimingFilter("all");
+      setFormData(prev => ({ ...prev, timing: "" }));
+    }
+  }, [branchClasses, formData.selectedLevels, formData.courses]);
 
   const countryCodes = [
     { value: "+966", label: "+966 (Saudi Arabia)" },
@@ -879,7 +957,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                           ) : (
                             timings.map((t: any) => {
                               const value = t.label ?? t.config_value ?? t.value;
-                              const isAvailable = (filteredOptions.allowedTimings || []).some(
+                              const isAvailable = computedAllowedTimings.some(
                                 (opt) => String(opt).trim().toLowerCase() === String(value).trim().toLowerCase(),
                               );
                               const selected = classTimingFilter === value;
@@ -924,7 +1002,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                                   <Tooltip>
                                     <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
                                     <TooltipContent>
-                                      This timing isn't available for the selected branch.
+                                      This timing isn't available for the selected levels/courses.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
