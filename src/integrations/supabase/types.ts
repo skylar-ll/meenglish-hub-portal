@@ -215,6 +215,7 @@ export type Database = {
           class_name: string
           courses: string[] | null
           created_at: string
+          end_date: string | null
           id: string
           levels: string[] | null
           program: string | null
@@ -229,6 +230,7 @@ export type Database = {
           class_name: string
           courses?: string[] | null
           created_at?: string
+          end_date?: string | null
           id?: string
           levels?: string[] | null
           program?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           class_name?: string
           courses?: string[] | null
           created_at?: string
+          end_date?: string | null
           id?: string
           levels?: string[] | null
           program?: string | null
@@ -346,6 +349,54 @@ export type Database = {
           validation_rules?: Json | null
         }
         Relationships: []
+      }
+      daily_class_status: {
+        Row: {
+          class_id: string
+          completed_at: string | null
+          created_at: string
+          date: string
+          id: string
+          is_completed: boolean
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          is_completed?: boolean
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          is_completed?: boolean
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_class_status_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_class_status_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollments: {
         Row: {
