@@ -311,7 +311,14 @@ const TeacherDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <Button 
+            onClick={() => navigate("/teacher/daily-schedule")}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90"
+          >
+            <Calendar className="w-6 h-6" />
+            <span>Daily Schedule</span>
+          </Button>
           <Button 
             onClick={() => setIsAttendanceModalOpen(true)}
             className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90"
