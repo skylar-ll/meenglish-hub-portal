@@ -304,6 +304,23 @@ export default function ClassManagement() {
 
     setLoading(true);
     try {
+      // If a teacher is selected, check for timing conflicts in the same branch
+      if (selectedTeacher && selectedBranch && selectedTiming) {
+        const { data: existingClasses } = await supabase
+          .from("classes")
+          .select("id, class_name, timing")
+          .eq("teacher_id", selectedTeacher)
+          .eq("branch_id", selectedBranch)
+          .eq("status", "active");
+
+        const conflictingClass = existingClasses?.find(cls => cls.timing === selectedTiming);
+        if (conflictingClass) {
+          toast.error(`This teacher is already assigned to "${conflictingClass.class_name}" at the same timing (${selectedTiming}) in this branch. Please select a different timing.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Create the class
       const { data: newClass, error: classError } = await supabase
         .from("classes")
