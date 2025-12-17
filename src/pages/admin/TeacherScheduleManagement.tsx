@@ -238,7 +238,7 @@ const TeacherScheduleManagement = () => {
       <div className="container max-w-7xl mx-auto py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <Button variant="ghost" onClick={() => navigate("/admin")} className="mb-4">
+          <Button variant="ghost" onClick={() => navigate("/admin/dashboard")} className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>

@@ -26,6 +26,7 @@ import StudentAttendance from "./pages/student/StudentAttendance";
 // Teacher Portal
 import TeacherLogin from "./pages/teacher/TeacherLogin";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import TeacherDailySchedule from "./pages/teacher/TeacherDailySchedule";
 import TeacherQuizzes from "./pages/teacher/TeacherQuizzes";
 import QuizAttempts from "./pages/teacher/QuizAttempts";
 import QuizAttemptDetail from "./pages/teacher/QuizAttemptDetail";
@@ -98,6 +99,7 @@ const App = () => (
           {/* Teacher Portal Routes */}
           <Route path="/teacher/login" element={<TeacherLogin />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/daily-schedule" element={<TeacherDailySchedule />} />
           <Route path="/teacher/quizzes" element={<TeacherQuizzes />} />
           <Route path="/teacher/quizzes/:quizId" element={<QuizAttempts />} />
           <Route path="/teacher/quizzes/:quizId/attempts/:attemptId" element={<QuizAttemptDetail />} />
