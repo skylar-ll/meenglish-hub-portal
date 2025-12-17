@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, AlertCircle, Check, X, RefreshCw } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -316,8 +316,7 @@ const TeacherScheduleManagement = () => {
               </div>
 
               {/* Schedule Table */}
-              <ScrollArea className="w-full">
-                <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/30">
@@ -407,8 +406,7 @@ const TeacherScheduleManagement = () => {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              </ScrollArea>
+              </div>
 
               {/* Date Range Info */}
               <div className="p-3 bg-muted/20 border-t text-center text-sm text-muted-foreground">
