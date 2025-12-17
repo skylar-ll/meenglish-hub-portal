@@ -1,4 +1,4 @@
-import { GraduationCap, Users, BarChart3, Languages } from "lucide-react";
+import { GraduationCap, Users, BarChart3, Languages, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OfferCard } from "@/components/shared/OfferCard";
 import { useEffect, useState } from "react";
 import logo from "@/assets/logo.jpeg";
+import { toast } from "sonner";
 
 interface Offer {
   id: string;
@@ -26,9 +27,10 @@ interface Offer {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, isTranslating } = useLanguage();
   const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [changingLanguage, setChangingLanguage] = useState(false);
 
   useEffect(() => {
     fetchActiveOffers();
@@ -84,17 +86,37 @@ const Index = () => {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 bg-background">
-                <Languages className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="gap-2 bg-background min-w-[120px]">
+                {changingLanguage ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
                 {language === 'en' ? 'English' : 'العربية'}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-background z-50">
-              <DropdownMenuItem onClick={() => setLanguage('en')} className="cursor-pointer">
-                English
+              <DropdownMenuItem 
+                onClick={() => {
+                  setChangingLanguage(true);
+                  setLanguage('en');
+                  toast.success("Language changed to English");
+                  setTimeout(() => setChangingLanguage(false), 500);
+                }} 
+                className="cursor-pointer"
+              >
+                🇺🇸 English
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLanguage('ar')} className="cursor-pointer">
-                العربية
+              <DropdownMenuItem 
+                onClick={() => {
+                  setChangingLanguage(true);
+                  setLanguage('ar');
+                  toast.success("تم تغيير اللغة إلى العربية");
+                  setTimeout(() => setChangingLanguage(false), 500);
+                }} 
+                className="cursor-pointer"
+              >
+                🇸🇦 العربية
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

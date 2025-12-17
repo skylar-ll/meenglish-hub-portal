@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 type Language = 'en' | 'ar';
+
+interface TranslationCache {
+  [key: string]: string;
+}
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  translateText: (text: string) => Promise<string>;
+  translateBatch: (texts: string[]) => Promise<string[]>;
+  isTranslating: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -826,6 +834,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('language');
     return (saved as Language) || 'en';
   });
+  const [isTranslating, setIsTranslating] = useState(false);
+  const translationCache = useRef<TranslationCache>({});
 
   useEffect(() => {
     localStorage.setItem('language', language);
@@ -841,8 +851,79 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translations[language][key] || key;
   };
 
+  const translateText = useCallback(async (text: string): Promise<string> => {
+    if (!text || language === 'en') return text;
+    
+    // Check cache first
+    const cacheKey = `${language}:${text}`;
+    if (translationCache.current[cacheKey]) {
+      return translationCache.current[cacheKey];
+    }
+
+    try {
+      setIsTranslating(true);
+      const { data, error } = await supabase.functions.invoke('translate-text', {
+        body: { texts: [text], targetLanguage: language }
+      });
+
+      if (error) throw error;
+      
+      const translated = data?.translations?.[0] || text;
+      translationCache.current[cacheKey] = translated;
+      return translated;
+    } catch (err) {
+      console.error('Translation failed:', err);
+      return text;
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [language]);
+
+  const translateBatch = useCallback(async (texts: string[]): Promise<string[]> => {
+    if (!texts.length || language === 'en') return texts;
+
+    // Check which texts need translation
+    const needsTranslation: { index: number; text: string }[] = [];
+    const results: string[] = [...texts];
+
+    texts.forEach((text, index) => {
+      const cacheKey = `${language}:${text}`;
+      if (translationCache.current[cacheKey]) {
+        results[index] = translationCache.current[cacheKey];
+      } else {
+        needsTranslation.push({ index, text });
+      }
+    });
+
+    if (needsTranslation.length === 0) return results;
+
+    try {
+      setIsTranslating(true);
+      const { data, error } = await supabase.functions.invoke('translate-text', {
+        body: { texts: needsTranslation.map(t => t.text), targetLanguage: language }
+      });
+
+      if (error) throw error;
+
+      const translations = data?.translations || [];
+      needsTranslation.forEach((item, i) => {
+        const translated = translations[i] || item.text;
+        const cacheKey = `${language}:${item.text}`;
+        translationCache.current[cacheKey] = translated;
+        results[item.index] = translated;
+      });
+
+      return results;
+    } catch (err) {
+      console.error('Batch translation failed:', err);
+      return texts;
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [language]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, translateText, translateBatch, isTranslating }}>
       {children}
     </LanguageContext.Provider>
   );

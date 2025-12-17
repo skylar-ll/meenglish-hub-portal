@@ -126,6 +126,41 @@ All colors MUST be HSL.
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="rtl"] .text-left {
+    text-align: right;
+  }
+
+  [dir="rtl"] .text-right {
+    text-align: left;
+  }
+
+  /* RTL-aware margins and paddings */
+  [dir="rtl"] .ml-auto {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  [dir="rtl"] .mr-auto {
+    margin-right: 0;
+    margin-left: auto;
+  }
+
+  /* RTL flex direction */
+  [dir="rtl"] .flex-row {
+    flex-direction: row-reverse;
+  }
+
+  /* Arabic font support */
+  [dir="rtl"] body,
+  [dir="rtl"] * {
+    font-family: 'Noto Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+  }
 }
 
 @layer components {
@@ -147,5 +182,16 @@ All colors MUST be HSL.
   
   .progress-fill {
     @apply h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500;
+  }
+
+  /* RTL-aware button icons */
+  [dir="rtl"] .btn-icon-right {
+    margin-left: 0;
+    margin-right: 0.5rem;
+  }
+
+  [dir="rtl"] .btn-icon-left {
+    margin-right: 0;
+    margin-left: 0.5rem;
   }
 }
