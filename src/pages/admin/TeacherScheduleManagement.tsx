@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Calendar, AlertCircle, Check, X, Trash2, Edit } from "lucide-react";
+import { ArrowLeft, Calendar, AlertCircle, Check, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,21 +18,27 @@ interface Branch {
 interface Teacher {
   id: string;
   full_name: string;
-  email: string;
 }
 
-interface ScheduleEntry {
+interface ClassData {
   id: string;
-  branch_id: string;
-  teacher_id: string;
+  class_name: string;
   timing: string;
   levels: string[];
   courses: string[];
-  start_date: string;
-  end_date: string;
+  start_date: string | null;
+  end_date: string | null;
+  branch_id: string;
+  teacher_id: string;
   status: string;
-  teacher?: Teacher;
-  branch?: Branch;
+  teacher_name: string;
+  branch_name: string;
+  branch_name_ar: string;
+}
+
+interface DailyStatus {
+  class_id: string;
+  is_completed: boolean;
 }
 
 interface RemovalNotification {
@@ -47,35 +48,18 @@ interface RemovalNotification {
   branch_id: string;
   end_date: string;
   status: string;
-  schedule?: ScheduleEntry;
-  teacher?: Teacher;
-  branch?: Branch;
+  teacher_name?: string;
+  branch_name?: string;
 }
 
 const TeacherScheduleManagement = () => {
   const navigate = useNavigate();
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [dailyStatus, setDailyStatus] = useState<DailyStatus[]>([]);
   const [notifications, setNotifications] = useState<RemovalNotification[]>([]);
-  const [timings, setTimings] = useState<string[]>([]);
-  const [levels, setLevels] = useState<string[]>([]);
-  const [courses, setCourses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBranch, setSelectedBranch] = useState<string>("all");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<ScheduleEntry | null>(null);
-
-  // Form state for add/edit
-  const [formData, setFormData] = useState({
-    branch_id: "",
-    teacher_id: "",
-    timing: "",
-    levels: [] as string[],
-    courses: [] as string[],
-    start_date: format(new Date(), "yyyy-MM-dd"),
-    end_date: "",
-  });
+  const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     fetchData();
@@ -83,8 +67,11 @@ const TeacherScheduleManagement = () => {
     // Subscribe to realtime changes
     const channel = supabase
       .channel('schedule-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teacher_branch_schedules' }, () => {
-        fetchSchedules();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => {
+        fetchClasses();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_class_status' }, () => {
+        fetchDailyStatus();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_removal_notifications' }, () => {
         fetchNotifications();
@@ -100,38 +87,72 @@ const TeacherScheduleManagement = () => {
     setLoading(true);
     await Promise.all([
       fetchBranches(),
-      fetchTeachers(),
-      fetchSchedules(),
+      fetchClasses(),
+      fetchDailyStatus(),
       fetchNotifications(),
-      fetchTimings(),
-      fetchLevels(),
-      fetchCourses(),
     ]);
     setLoading(false);
   };
 
   const fetchBranches = async () => {
-    const { data } = await supabase.from("branches").select("*").order("name_en");
+    const { data } = await supabase
+      .from("branches")
+      .select("*")
+      .order("name_en");
     setBranches(data || []);
   };
 
-  const fetchTeachers = async () => {
-    const { data } = await supabase.from("teachers").select("id, full_name, email").order("full_name");
-    setTeachers(data || []);
-  };
-
-  const fetchSchedules = async () => {
+  const fetchClasses = async () => {
     const { data, error } = await supabase
-      .from("teacher_branch_schedules")
-      .select("*")
-      .order("start_date", { ascending: false });
-    
+      .from("classes")
+      .select(`
+        id,
+        class_name,
+        timing,
+        levels,
+        courses,
+        start_date,
+        end_date,
+        branch_id,
+        teacher_id,
+        status,
+        teachers!classes_teacher_id_fkey (full_name),
+        branches!classes_branch_id_fkey (name_en, name_ar)
+      `)
+      .not("teacher_id", "is", null)
+      .eq("status", "active")
+      .order("timing");
+
     if (error) {
-      console.error("Error fetching schedules:", error);
+      console.error("Error fetching classes:", error);
       return;
     }
-    
-    setSchedules(data || []);
+
+    const formattedClasses: ClassData[] = (data || []).map((c: any) => ({
+      id: c.id,
+      class_name: c.class_name,
+      timing: c.timing,
+      levels: c.levels || [],
+      courses: c.courses || [],
+      start_date: c.start_date,
+      end_date: c.end_date,
+      branch_id: c.branch_id,
+      teacher_id: c.teacher_id,
+      status: c.status,
+      teacher_name: c.teachers?.full_name || "Unknown",
+      branch_name: c.branches?.name_en || "Unknown",
+      branch_name_ar: c.branches?.name_ar || "",
+    }));
+
+    setClasses(formattedClasses);
+  };
+
+  const fetchDailyStatus = async () => {
+    const { data } = await supabase
+      .from("daily_class_status")
+      .select("class_id, is_completed")
+      .eq("date", today);
+    setDailyStatus(data || []);
   };
 
   const fetchNotifications = async () => {
@@ -141,101 +162,6 @@ const TeacherScheduleManagement = () => {
       .eq("status", "pending")
       .order("end_date");
     setNotifications(data || []);
-  };
-
-  const fetchTimings = async () => {
-    const { data } = await supabase
-      .from("form_configurations")
-      .select("config_value")
-      .eq("config_type", "timing")
-      .eq("is_active", true);
-    setTimings(data?.map(t => t.config_value) || []);
-  };
-
-  const fetchLevels = async () => {
-    const { data } = await supabase
-      .from("form_configurations")
-      .select("config_value")
-      .eq("config_type", "level")
-      .eq("is_active", true)
-      .order("display_order");
-    setLevels(data?.map(l => l.config_value) || []);
-  };
-
-  const fetchCourses = async () => {
-    const { data } = await supabase
-      .from("form_configurations")
-      .select("config_value")
-      .eq("config_type", "course")
-      .eq("is_active", true);
-    setCourses(data?.map(c => c.config_value) || []);
-  };
-
-  const handleAddSchedule = async () => {
-    if (!formData.branch_id || !formData.teacher_id || !formData.timing || !formData.end_date) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    const { error } = await supabase.from("teacher_branch_schedules").insert({
-      branch_id: formData.branch_id,
-      teacher_id: formData.teacher_id,
-      timing: formData.timing,
-      levels: formData.levels,
-      courses: formData.courses,
-      start_date: formData.start_date,
-      end_date: formData.end_date,
-      status: "active",
-    });
-
-    if (error) {
-      toast.error("Failed to add schedule: " + error.message);
-      return;
-    }
-
-    toast.success("Schedule added successfully");
-    setIsAddModalOpen(false);
-    resetForm();
-    fetchSchedules();
-  };
-
-  const handleUpdateSchedule = async () => {
-    if (!editingSchedule) return;
-
-    const { error } = await supabase
-      .from("teacher_branch_schedules")
-      .update({
-        branch_id: formData.branch_id,
-        teacher_id: formData.teacher_id,
-        timing: formData.timing,
-        levels: formData.levels,
-        courses: formData.courses,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-      })
-      .eq("id", editingSchedule.id);
-
-    if (error) {
-      toast.error("Failed to update schedule: " + error.message);
-      return;
-    }
-
-    toast.success("Schedule updated successfully");
-    setEditingSchedule(null);
-    resetForm();
-    fetchSchedules();
-  };
-
-  const handleDeleteSchedule = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this schedule?")) return;
-
-    const { error } = await supabase.from("teacher_branch_schedules").delete().eq("id", id);
-    if (error) {
-      toast.error("Failed to delete schedule");
-      return;
-    }
-    toast.success("Schedule deleted");
-    fetchSchedules();
   };
 
   const handleApproveRemoval = async (notification: RemovalNotification) => {
@@ -257,7 +183,7 @@ const TeacherScheduleManagement = () => {
 
     toast.success("Teacher removal approved");
     fetchNotifications();
-    fetchSchedules();
+    fetchClasses();
   };
 
   const handleRejectRemoval = async (notification: RemovalNotification) => {
@@ -270,33 +196,13 @@ const TeacherScheduleManagement = () => {
     fetchNotifications();
   };
 
-  const resetForm = () => {
-    setFormData({
-      branch_id: "",
-      teacher_id: "",
-      timing: "",
-      levels: [],
-      courses: [],
-      start_date: format(new Date(), "yyyy-MM-dd"),
-      end_date: "",
-    });
-  };
-
-  const openEditModal = (schedule: ScheduleEntry) => {
-    setEditingSchedule(schedule);
-    setFormData({
-      branch_id: schedule.branch_id,
-      teacher_id: schedule.teacher_id,
-      timing: schedule.timing,
-      levels: schedule.levels || [],
-      courses: schedule.courses || [],
-      start_date: schedule.start_date,
-      end_date: schedule.end_date,
-    });
+  const isClassCompleted = (classId: string): boolean => {
+    return dailyStatus.some(s => s.class_id === classId && s.is_completed);
   };
 
   const getTeacherName = (teacherId: string) => {
-    return teachers.find(t => t.id === teacherId)?.full_name || "Unknown";
+    const cls = classes.find(c => c.teacher_id === teacherId);
+    return cls?.teacher_name || "Unknown";
   };
 
   const getBranchName = (branchId: string) => {
@@ -304,32 +210,25 @@ const TeacherScheduleManagement = () => {
     return branch ? `${branch.name_en} / ${branch.name_ar}` : "Unknown";
   };
 
-  const filteredSchedules = selectedBranch === "all" 
-    ? schedules 
-    : schedules.filter(s => s.branch_id === selectedBranch);
-
-  // Group schedules by branch and date range
-  const groupedSchedules = filteredSchedules.reduce((acc, schedule) => {
-    const key = `${schedule.branch_id}-${schedule.start_date}-${schedule.end_date}`;
-    if (!acc[key]) {
-      acc[key] = {
-        branch_id: schedule.branch_id,
-        start_date: schedule.start_date,
-        end_date: schedule.end_date,
-        schedules: [],
-      };
-    }
-    acc[key].schedules.push(schedule);
+  // Group classes by branch
+  const classesByBranch = branches.reduce((acc, branch) => {
+    acc[branch.id] = classes.filter(c => c.branch_id === branch.id);
     return acc;
-  }, {} as Record<string, { branch_id: string; start_date: string; end_date: string; schedules: ScheduleEntry[] }>);
+  }, {} as Record<string, ClassData[]>);
 
-  // Get unique timings from current schedules for display
-  const uniqueTimings = [...new Set(filteredSchedules.map(s => s.timing))].sort();
+  // Check if all classes for a teacher are completed today
+  const areAllTeacherClassesCompleted = (branchId: string, teacherId: string): boolean => {
+    const teacherClasses = classes.filter(
+      c => c.branch_id === branchId && c.teacher_id === teacherId
+    );
+    if (teacherClasses.length === 0) return false;
+    return teacherClasses.every(c => isClassCompleted(c.id));
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -348,36 +247,15 @@ const TeacherScheduleManagement = () => {
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Teacher Schedule Management
               </h1>
-              <p className="text-muted-foreground">
-                Manage teacher assignments by branch, timing, and course period
+              <p className="text-muted-foreground flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Today: {format(new Date(), "EEEE, MMMM d, yyyy")}
               </p>
             </div>
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Schedule
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add New Schedule</DialogTitle>
-                </DialogHeader>
-                <ScheduleForm
-                  formData={formData}
-                  setFormData={setFormData}
-                  branches={branches}
-                  teachers={teachers}
-                  timings={timings}
-                  levels={levels}
-                  courses={courses}
-                />
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddSchedule}>Add Schedule</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button variant="outline" onClick={fetchData} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
           </div>
         </div>
 
@@ -395,7 +273,7 @@ const TeacherScheduleManagement = () => {
                   <div>
                     <p className="font-medium">{getTeacherName(notification.teacher_id)}</p>
                     <p className="text-sm text-muted-foreground">
-                      {getBranchName(notification.branch_id)} - Ended: {format(new Date(notification.end_date), "PPP")}
+                      {getBranchName(notification.branch_id)} - Course Ended: {notification.end_date}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -414,111 +292,114 @@ const TeacherScheduleManagement = () => {
           </Card>
         )}
 
-        {/* Filter */}
-        <Card className="p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Label>Filter by Branch:</Label>
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name_en} / {branch.name_ar}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        {/* Branch Tables */}
+        {branches.map((branch) => {
+          const branchClasses = classesByBranch[branch.id] || [];
+          if (branchClasses.length === 0) return null;
 
-        {/* Schedule Grid */}
-        {Object.values(groupedSchedules).length === 0 ? (
-          <Card className="p-8 text-center">
-            <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No schedules found. Add a new schedule to get started.</p>
-          </Card>
-        ) : (
-          Object.values(groupedSchedules).map((group, groupIndex) => (
-            <Card key={groupIndex} className="mb-6 overflow-hidden">
-              {/* Group Header */}
-              <div className="bg-primary/10 p-4 border-b">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-lg">{getBranchName(group.branch_id)}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(group.start_date), "yyyy-MM-dd")} → {format(new Date(group.end_date), "yyyy-MM-dd")}
-                    </p>
-                  </div>
-                </div>
+          // Get unique teachers and timings for this branch
+          const teacherIds = [...new Set(branchClasses.map(c => c.teacher_id))];
+          const timings = [...new Set(branchClasses.map(c => c.timing))].sort();
+
+          return (
+            <Card key={branch.id} className="mb-6 overflow-hidden">
+              {/* Branch Header */}
+              <div className="bg-primary p-4 text-primary-foreground">
+                <h3 className="font-bold text-xl text-center">
+                  {branch.name_ar} / {branch.name_en}
+                </h3>
+              </div>
+
+              {/* Date Header */}
+              <div className="bg-muted/50 p-3 text-center border-b">
+                <span className="font-semibold text-lg">{today}</span>
               </div>
 
               {/* Schedule Table */}
               <ScrollArea className="w-full">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm border-collapse">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-3 text-left font-medium min-w-[120px]">Time</th>
-                        {[...new Set(group.schedules.map(s => s.teacher_id))].map((teacherId) => (
-                          <th key={teacherId} className="p-3 text-center font-medium min-w-[150px]">
-                            {getTeacherName(teacherId)}
-                          </th>
-                        ))}
+                      <tr className="border-b bg-muted/30">
+                        <th className="p-3 text-left font-semibold min-w-[120px] border-r">
+                          Time
+                        </th>
+                        {teacherIds.map((teacherId) => {
+                          const allCompleted = areAllTeacherClassesCompleted(branch.id, teacherId);
+                          const teacherName = branchClasses.find(c => c.teacher_id === teacherId)?.teacher_name || "Unknown";
+                          return (
+                            <th 
+                              key={teacherId} 
+                              className={`p-3 text-center font-semibold min-w-[150px] border-r transition-colors ${
+                                allCompleted ? 'bg-green-500/20 text-green-700' : ''
+                              }`}
+                            >
+                              {teacherName}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
-                      {[...new Set(group.schedules.map(s => s.timing))].sort().map((timing) => (
-                        <tr key={timing} className="border-b hover:bg-muted/30">
-                          <td className="p-3 font-medium">{timing}</td>
-                          {[...new Set(group.schedules.map(s => s.teacher_id))].map((teacherId) => {
-                            const schedule = group.schedules.find(
-                              s => s.timing === timing && s.teacher_id === teacherId
+                      {timings.map((timing) => (
+                        <tr key={timing} className="border-b hover:bg-muted/20">
+                          <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
+                          {teacherIds.map((teacherId) => {
+                            const classAtTiming = branchClasses.find(
+                              c => c.timing === timing && c.teacher_id === teacherId
                             );
+                            
+                            if (!classAtTiming) {
+                              return <td key={teacherId} className="p-3 text-center border-r">-</td>;
+                            }
+
+                            const completed = isClassCompleted(classAtTiming.id);
+                            
                             return (
-                              <td key={teacherId} className="p-3 text-center">
-                                {schedule ? (
-                                  <div className="flex flex-col gap-1 items-center">
-                                    <div className="flex flex-wrap gap-1 justify-center">
-                                      {schedule.levels?.map((level, i) => (
-                                        <Badge key={i} variant="secondary" className="text-xs">
-                                          {level}
+                              <td 
+                                key={teacherId} 
+                                className={`p-3 text-center border-r transition-colors ${
+                                  completed ? 'bg-green-500/30' : 'bg-yellow-500/10'
+                                }`}
+                              >
+                                <div className="flex flex-col gap-1 items-center">
+                                  {/* Levels */}
+                                  <div className="flex flex-wrap gap-1 justify-center">
+                                    {classAtTiming.levels?.map((level, i) => {
+                                      // Extract short level name (e.g., "pre1" from "level-1 (pre1) مستوى اول")
+                                      const match = level.match(/\(([^)]+)\)/);
+                                      const shortName = match ? match[1] : level.split(' ')[0];
+                                      return (
+                                        <Badge 
+                                          key={i} 
+                                          variant={completed ? "default" : "secondary"} 
+                                          className={`text-xs ${completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                        >
+                                          {shortName}
                                         </Badge>
-                                      ))}
-                                    </div>
-                                    {schedule.courses?.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 justify-center">
-                                        {schedule.courses.map((course, i) => (
-                                          <Badge key={i} variant="outline" className="text-xs">
-                                            {course}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                    <div className="flex gap-1 mt-1">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6"
-                                        onClick={() => openEditModal(schedule)}
-                                      >
-                                        <Edit className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6 text-destructive"
-                                        onClick={() => handleDeleteSchedule(schedule.id)}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                                      );
+                                    })}
                                   </div>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
+                                  
+                                  {/* Courses */}
+                                  {classAtTiming.courses?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                      {classAtTiming.courses.map((course, i) => {
+                                        const shortCourse = course.split(' ')[0];
+                                        return (
+                                          <span key={i} className="text-xs text-muted-foreground">
+                                            {shortCourse}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Completion indicator */}
+                                  {completed && (
+                                    <Check className="w-4 h-4 text-green-600 mt-1" />
+                                  )}
+                                </div>
                               </td>
                             );
                           })}
@@ -528,181 +409,64 @@ const TeacherScheduleManagement = () => {
                   </table>
                 </div>
               </ScrollArea>
+
+              {/* Date Range Info */}
+              <div className="p-3 bg-muted/20 border-t text-center text-sm text-muted-foreground">
+                {(() => {
+                  const startDates = branchClasses.filter(c => c.start_date).map(c => c.start_date);
+                  const endDates = branchClasses.filter(c => c.end_date).map(c => c.end_date);
+                  const minStart = startDates.length > 0 ? startDates.sort()[0] : null;
+                  const maxEnd = endDates.length > 0 ? endDates.sort().reverse()[0] : null;
+                  
+                  if (minStart || maxEnd) {
+                    return (
+                      <span>
+                        Course Period: {minStart || 'N/A'} → {maxEnd || 'Ongoing'}
+                      </span>
+                    );
+                  }
+                  return <span>No date range set</span>;
+                })()}
+              </div>
             </Card>
-          ))
+          );
+        })}
+
+        {/* Empty State */}
+        {classes.length === 0 && (
+          <Card className="p-8 text-center">
+            <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              No classes with assigned teachers found. Add classes in the Class Management page.
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => navigate("/admin/classes")}
+            >
+              Go to Class Management
+            </Button>
+          </Card>
         )}
 
-        {/* Edit Modal */}
-        <Dialog open={!!editingSchedule} onOpenChange={(open) => !open && setEditingSchedule(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Edit Schedule</DialogTitle>
-            </DialogHeader>
-            <ScheduleForm
-              formData={formData}
-              setFormData={setFormData}
-              branches={branches}
-              teachers={teachers}
-              timings={timings}
-              levels={levels}
-              courses={courses}
-            />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingSchedule(null)}>Cancel</Button>
-              <Button onClick={handleUpdateSchedule}>Update Schedule</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
-  );
-};
-
-// Schedule Form Component
-interface ScheduleFormData {
-  branch_id: string;
-  teacher_id: string;
-  timing: string;
-  levels: string[];
-  courses: string[];
-  start_date: string;
-  end_date: string;
-}
-
-interface ScheduleFormProps {
-  formData: ScheduleFormData;
-  setFormData: React.Dispatch<React.SetStateAction<ScheduleFormData>>;
-  branches: Branch[];
-  teachers: Teacher[];
-  timings: string[];
-  levels: string[];
-  courses: string[];
-}
-
-const ScheduleForm = ({ formData, setFormData, branches, teachers, timings, levels, courses }: ScheduleFormProps) => {
-  const toggleLevel = (level: string) => {
-    setFormData(prev => ({
-      ...prev,
-      levels: prev.levels.includes(level)
-        ? prev.levels.filter(l => l !== level)
-        : [...prev.levels, level]
-    }));
-  };
-
-  const toggleCourse = (course: string) => {
-    setFormData(prev => ({
-      ...prev,
-      courses: prev.courses.includes(course)
-        ? prev.courses.filter(c => c !== course)
-        : [...prev.courses, course]
-    }));
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Branch *</Label>
-          <Select value={formData.branch_id} onValueChange={(v) => setFormData(prev => ({ ...prev, branch_id: v }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select branch" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id}>
-                  {branch.name_en}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Teacher *</Label>
-          <Select value={formData.teacher_id} onValueChange={(v) => setFormData(prev => ({ ...prev, teacher_id: v }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select teacher" />
-            </SelectTrigger>
-            <SelectContent>
-              {teachers.map((teacher) => (
-                <SelectItem key={teacher.id} value={teacher.id}>
-                  {teacher.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Timing *</Label>
-        <Select value={formData.timing} onValueChange={(v) => setFormData(prev => ({ ...prev, timing: v }))}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select timing" />
-          </SelectTrigger>
-          <SelectContent>
-            {timings.map((timing) => (
-              <SelectItem key={timing} value={timing}>
-                {timing}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Start Date *</Label>
-          <Input
-            type="date"
-            value={formData.start_date}
-            onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>End Date *</Label>
-          <Input
-            type="date"
-            value={formData.end_date}
-            onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Levels</Label>
-        <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
-          {levels.map((level) => (
-            <div key={level} className="flex items-center space-x-2">
-              <Checkbox
-                id={`level-${level}`}
-                checked={formData.levels.includes(level)}
-                onCheckedChange={() => toggleLevel(level)}
-              />
-              <label htmlFor={`level-${level}`} className="text-sm cursor-pointer">
-                {level}
-              </label>
+        {/* Legend */}
+        <Card className="p-4 mt-6">
+          <h4 className="font-semibold mb-3">Legend</h4>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-yellow-500/30 rounded" />
+              <span>Class pending</span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Courses</Label>
-        <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
-          {courses.map((course) => (
-            <div key={course} className="flex items-center space-x-2">
-              <Checkbox
-                id={`course-${course}`}
-                checked={formData.courses.includes(course)}
-                onCheckedChange={() => toggleCourse(course)}
-              />
-              <label htmlFor={`course-${course}`} className="text-sm cursor-pointer">
-                {course}
-              </label>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-500/30 rounded" />
+              <span>Class completed</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-500/20 rounded border border-green-500" />
+              <span>All teacher classes done for today</span>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
