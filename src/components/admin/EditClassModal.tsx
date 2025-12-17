@@ -80,18 +80,19 @@ export const EditClassModal = ({
 
     setSaving(true);
     try {
-      // If a teacher is selected and it's different from the current teacher
-      if (selectedTeacher && selectedTeacher !== classData.teacher_id) {
-        const { data: existingClass } = await supabase
+      // If a teacher is selected, check for timing conflicts in the same branch
+      if (selectedTeacher && selectedBranch && selectedTiming) {
+        const { data: existingClasses } = await supabase
           .from("classes")
-          .select("id, class_name")
+          .select("id, class_name, timing")
           .eq("teacher_id", selectedTeacher)
+          .eq("branch_id", selectedBranch)
           .eq("status", "active")
-          .neq("id", classData.id) // Exclude current class
-          .maybeSingle();
+          .neq("id", classData.id); // Exclude current class
 
-        if (existingClass) {
-          toast.error(`This teacher is already assigned to "${existingClass.class_name}". Please unassign them first or select a different teacher.`);
+        const conflictingClass = existingClasses?.find(cls => cls.timing === selectedTiming);
+        if (conflictingClass) {
+          toast.error(`This teacher is already assigned to "${conflictingClass.class_name}" at the same timing (${selectedTiming}) in this branch. Please select a different timing.`);
           setSaving(false);
           return;
         }

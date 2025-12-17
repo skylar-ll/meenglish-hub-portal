@@ -205,25 +205,26 @@ export const CreateClassModal = ({ open, onOpenChange }: CreateClassModalProps) 
 
     setLoading(true);
     try {
-      // If a teacher is selected, check if they're already assigned to another class
-      if (selectedTeacher) {
-        const { data: existingClass } = await supabase
-          .from("classes")
-          .select("id, class_name")
-          .eq("teacher_id", selectedTeacher)
-          .eq("status", "active")
-          .maybeSingle();
+      // Get branch ID first
+      const branch = branches.find(b => b.value === selectedBranch);
+      const branchId = branch?.id;
 
-        if (existingClass) {
-          toast.error(`This teacher is already assigned to "${existingClass.class_name}". Please unassign them first or select a different teacher.`);
+      // If a teacher is selected, check for timing conflicts in the same branch
+      if (selectedTeacher && branchId) {
+        const { data: existingClasses } = await supabase
+          .from("classes")
+          .select("id, class_name, timing")
+          .eq("teacher_id", selectedTeacher)
+          .eq("branch_id", branchId)
+          .eq("status", "active");
+
+        const conflictingClass = existingClasses?.find(cls => cls.timing === timing);
+        if (conflictingClass) {
+          toast.error(`This teacher is already assigned to "${conflictingClass.class_name}" at the same timing (${timing}) in this branch. Please select a different timing.`);
           setLoading(false);
           return;
         }
       }
-
-      // Get branch ID
-      const branch = branches.find(b => b.value === selectedBranch);
-      const branchId = branch?.id;
 
       // Create the class
       const { data: classData, error: classError } = await supabase
