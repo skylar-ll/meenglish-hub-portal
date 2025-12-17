@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { computeAllowedTimingsForSelections } from "@/lib/timingAvailability";
 
 interface TimingOption {
   id: string;
@@ -94,107 +95,58 @@ const TimingSelection = () => {
   const fetchAllowedTimings = async (registration: any) => {
     try {
       const branchId = registration.branch_id;
-      // course_level can be comma-separated string of multiple levels
       const courseLevelRaw = registration.course_level || "";
-      // courses is an array of selected courses
-      const selectedCourses = registration.courses || registration.courses_selected || [];
+      const selectedCourses: string[] = registration.courses || registration.courses_selected || [];
 
-      // Parse course_level - split by comma to handle multiple selections
       const selectedLevels: string[] = courseLevelRaw
-        .split(',')
+        .split(",")
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0);
 
-      // Check if user has multiple levels selected (not counting courses)
-      const totalLevels = selectedLevels.length;
-      setHasMultipleSelections(totalLevels > 1);
+      // Multi-select is driven by number of LEVELS, not courses.
+      setHasMultipleSelections(selectedLevels.length > 1);
 
       console.log("🎯 TimingSelection - Parsed selections:", {
         branchId,
         selectedLevels,
         selectedCourses,
-        totalLevels,
-        raw: { course_level: courseLevelRaw, courses: registration.courses }
+        raw: { course_level: courseLevelRaw, courses: registration.courses },
       });
 
-      // Fetch all active classes for the branch
       let query = supabase
-        .from('classes')
-        .select('id, timing, branch_id, levels, courses')
-        .eq('status', 'active');
-      
+        .from("classes")
+        .select("id, timing, branch_id, levels, courses")
+        .eq("status", "active");
+
       if (branchId) {
-        query = query.eq('branch_id', branchId);
+        query = query.eq("branch_id", branchId);
       }
 
       const { data: classes, error } = await query;
-
       if (error) throw error;
 
       if (!classes || classes.length === 0) {
         setAllowedTimings([]);
         return;
       }
-
-      // Normalize for comparison
-      const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-      
-      // Extract just the level key (e.g., "level1", "level2") for matching
-      const extractLevelKey = (val: string): string | null => {
-        if (!val) return null;
-        const m = val.toLowerCase().match(/level[\s\-_]?(\d{1,2})/i);
-        return m ? `level${m[1]}` : null;
-      };
-
-      // For each selected level, find the timing(s) available for that level
-      const timingsPerSelection: string[][] = [];
-
-      for (const selectedLevel of selectedLevels) {
-        const selectedLevelKey = extractLevelKey(selectedLevel);
-        
-        // Find classes that match this specific level
-        const matchingClasses = classes.filter((cls: ClassData) => {
-          const classLevels = cls.levels || [];
-          
-          if (selectedLevelKey) {
-            // It's a level format - match by level key
-            return classLevels.some(level => {
-              const classLevelKey = extractLevelKey(level);
-              return classLevelKey === selectedLevelKey;
-            });
-          } else {
-            // It's a course like "Speaking class" - check in class courses
-            const classCourses = cls.courses || [];
-            return classCourses.some(classCourse =>
-              normalizeStr(classCourse).includes(normalizeStr(selectedLevel)) ||
-              normalizeStr(selectedLevel).includes(normalizeStr(classCourse))
-            );
-          }
-        });
-
-        // Get unique timings for this level
-        const timingsForLevel = [...new Set(matchingClasses.map(c => c.timing))];
-        if (timingsForLevel.length > 0) {
-          timingsPerSelection.push(timingsForLevel);
-        }
-        
-        console.log(`🎯 Level "${selectedLevel}" (key: ${selectedLevelKey}) → timings:`, timingsForLevel);
-      }
-
-      // Combine all unique timings from all levels
-      // Each level should contribute its timing(s) to the final list
-      const allTimings = timingsPerSelection.flat();
-      const uniqueTimings = [...new Set(allTimings)];
+      const uniqueTimings = computeAllowedTimingsForSelections(classes, {
+        selectedLevels,
+        selectedCourses,
+      });
 
       console.log("🎯 TimingSelection - Final allowed timings:", uniqueTimings);
-      console.log("🎯 TimingSelection - Timings per selection:", timingsPerSelection);
-
       setAllowedTimings(uniqueTimings);
 
       // Clear any selected timings that are no longer allowed
-      setSelectedTimings(prev => prev.filter(t => 
-        uniqueTimings.some(allowed => normalizeTimingForComparison(allowed) === normalizeTimingForComparison(t))
-      ));
+      setSelectedTimings((prev) =>
+        prev.filter((t) =>
+          uniqueTimings.some(
+            (allowed: string) =>
+              normalizeTimingForComparison(allowed) ===
+              normalizeTimingForComparison(t)
+          )
+        )
+      );
     } catch (error) {
       console.error("Error fetching allowed timings:", error);
       setAllowedTimings([]);
