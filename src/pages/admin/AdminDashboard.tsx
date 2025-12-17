@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, BookOpen } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, BookOpen, CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -303,6 +303,15 @@ const AdminDashboard = () => {
             >
               <UserPlus className="w-5 h-5" />
               Create Teacher
+            </Button>
+            <Button 
+              onClick={() => navigate("/admin/teacher-schedule")}
+              variant="default"
+              className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600"
+              size="lg"
+            >
+              <CalendarRange className="w-5 h-5" />
+              Teacher Schedule
             </Button>
           </div>
         </Card>

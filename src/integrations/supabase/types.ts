@@ -737,6 +737,70 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_removal_notifications: {
+        Row: {
+          admin_approved: boolean | null
+          admin_approved_at: string | null
+          admin_approved_by: string | null
+          branch_id: string
+          created_at: string
+          end_date: string
+          id: string
+          notification_sent_at: string | null
+          schedule_id: string
+          status: string
+          teacher_id: string
+        }
+        Insert: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          branch_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          notification_sent_at?: string | null
+          schedule_id: string
+          status?: string
+          teacher_id: string
+        }
+        Update: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          branch_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          notification_sent_at?: string | null
+          schedule_id?: string
+          status?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_removal_notifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_removal_notifications_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_branch_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_removal_notifications_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_answers: {
         Row: {
           attempt_id: string
@@ -1074,6 +1138,63 @@ export type Database = {
           },
         ]
       }
+      teacher_branch_schedules: {
+        Row: {
+          branch_id: string
+          courses: string[] | null
+          created_at: string
+          end_date: string
+          id: string
+          levels: string[] | null
+          start_date: string
+          status: string
+          teacher_id: string
+          timing: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          courses?: string[] | null
+          created_at?: string
+          end_date: string
+          id?: string
+          levels?: string[] | null
+          start_date?: string
+          status?: string
+          teacher_id: string
+          timing: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          courses?: string[] | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          levels?: string[] | null
+          start_date?: string
+          status?: string
+          teacher_id?: string
+          timing?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_branch_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_branch_schedules_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_schedules: {
         Row: {
           course_name: string
@@ -1109,36 +1230,53 @@ export type Database = {
       }
       teachers: {
         Row: {
+          branch_id: string | null
           courses_assigned: string | null
           created_at: string
           email: string
           full_name: string
           id: string
           phone: string | null
+          preferred_levels: string[] | null
+          preferred_timing: string | null
           student_count: number | null
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           courses_assigned?: string | null
           created_at?: string
           email: string
           full_name: string
           id?: string
           phone?: string | null
+          preferred_levels?: string[] | null
+          preferred_timing?: string | null
           student_count?: number | null
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           courses_assigned?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
           phone?: string | null
+          preferred_levels?: string[] | null
+          preferred_timing?: string | null
           student_count?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teachers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       terms_and_conditions: {
         Row: {

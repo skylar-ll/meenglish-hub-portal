@@ -47,6 +47,7 @@ import ClassManagement from "./pages/admin/ClassManagement";
 import TermsManagement from "./pages/admin/TermsManagement";
 import CreateTeacher from "./pages/admin/CreateTeacher";
 import FormFieldsEditor from "./pages/admin/FormFieldsEditor";
+import TeacherScheduleManagement from "./pages/admin/TeacherScheduleManagement";
 
 // Student Reports
 import StudentReports from "./pages/student/StudentReports";
@@ -117,6 +118,7 @@ const App = () => (
           <Route path="/admin/terms" element={<TermsManagement />} />
           <Route path="/admin/create-teacher" element={<CreateTeacher />} />
           <Route path="/admin/form-fields" element={<FormFieldsEditor />} />
+          <Route path="/admin/teacher-schedule" element={<TeacherScheduleManagement />} />
           
           {/* Student Reports */}
           <Route path="/student/reports" element={<StudentReports />} />
