@@ -110,32 +110,59 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
 
   // Load classes for selected branch
   const [loadingClasses, setLoadingClasses] = useState(false);
+
+  const loadClasses = async () => {
+    if (!selectedBranchId) { 
+      setBranchClasses([]);
+      setSelectedClassId(null);
+      return;
+    }
+    setLoadingClasses(true);
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, class_name, timing, levels, courses, program, start_date')
+        .eq('branch_id', selectedBranchId)
+        .eq('status', 'active');
+      if (error) throw error;
+      console.log('Loaded classes for branch:', selectedBranchId, data);
+      setBranchClasses(data || []);
+    } catch (e) {
+      console.error('Failed to load classes for branch', e);
+      setBranchClasses([]);
+    } finally {
+      setLoadingClasses(false);
+    }
+  };
+
   useEffect(() => {
-    const loadClasses = async () => {
-      if (!selectedBranchId) { 
-        setBranchClasses([]);
-        setSelectedClassId(null);
-        return;
-      }
-      setLoadingClasses(true);
-      try {
-        const { data, error } = await supabase
-          .from('classes')
-          .select('id, class_name, timing, levels, courses, program, start_date')
-          .eq('branch_id', selectedBranchId)
-          .eq('status', 'active');
-        if (error) throw error;
-        console.log('Loaded classes for branch:', selectedBranchId, data);
-        setBranchClasses(data || []);
-      } catch (e) {
-        console.error('Failed to load classes for branch', e);
-        setBranchClasses([]);
-      } finally {
-        setLoadingClasses(false);
-      }
-    };
     loadClasses();
   }, [selectedBranchId, open]);
+
+  // Real-time subscription for classes updates
+  useEffect(() => {
+    if (!open) return;
+
+    const channel = supabase
+      .channel('admin-add-previous-student-classes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          console.log("📡 Classes table changed - refreshing classes in AddPreviousStudentModal");
+          loadClasses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, selectedBranchId]);
 
   // When class changes, prefill courses and levels from class
   useEffect(() => {
