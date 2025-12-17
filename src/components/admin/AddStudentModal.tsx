@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { studentSignupSchema } from "@/lib/validations";
-import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2, Clock } from "lucide-react";
+import { ArrowRight, ArrowLeft, Pencil, Check, X, Loader2, Clock, AlertTriangle, Copy } from "lucide-react";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { EditFormConfigModal } from "./EditFormConfigModal";
@@ -43,6 +43,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [autoTranslationEnabled, setAutoTranslationEnabled] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [partialPaymentAmount, setPartialPaymentAmount] = useState<number>(0);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
@@ -701,6 +703,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           first_payment: partialPaymentAmount,
           second_payment: feeAfterDiscount - partialPaymentAmount,
           signature_url: signatureFileName,
+          student_id_code: studentData.student_id || undefined,
         });
 
         const pdfPath = `${authData.user.id}/billing_${billing.id}.pdf`;
@@ -731,7 +734,9 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         })
         .eq("id", authData.user.id);
 
-      toast.success("Student created successfully!");
+      // Store credentials and show modal
+      setCreatedCredentials({ email: validatedData.email, password: validatedData.password });
+      setShowCredentialsModal(true);
       
       setFormData({
         fullNameAr: "",
@@ -760,7 +765,6 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       setSelectedTimings([]);
       
       onStudentAdded();
-      onOpenChange(false);
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.errors?.[0]?.message || "Failed to create student");
@@ -1486,6 +1490,83 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           showNext={true}
         />
       )}
+
+      {/* Credentials Modal */}
+      <Dialog open={showCredentialsModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowCredentialsModal(false);
+          setCreatedCredentials(null);
+          onOpenChange(false);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Check className="w-5 h-5" />
+              Student Created Successfully!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-amber-800">Important!</p>
+                  <p className="text-sm text-amber-700">Save these credentials now. This is the only time you will see the password.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Email</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={createdCredentials?.email || ''} readOnly className="font-mono bg-muted" />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdCredentials?.email || '');
+                      toast.success("Email copied!");
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Password</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={createdCredentials?.password || ''} readOnly className="font-mono bg-muted" />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdCredentials?.password || '');
+                      toast.success("Password copied!");
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setShowCredentialsModal(false);
+                setCreatedCredentials(null);
+                onOpenChange(false);
+                toast.success("Student created successfully!");
+              }}
+            >
+              I've Saved the Credentials - Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
