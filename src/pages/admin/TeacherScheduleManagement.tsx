@@ -307,7 +307,6 @@ const TeacherScheduleManagement = () => {
         {/* Branch Tables */}
         {branches.map((branch) => {
           const branchClasses = classesByBranch[branch.id] || [];
-          if (branchClasses.length === 0) return null;
 
           // Get unique teachers and timings for this branch
           const teacherIds = [...new Set(branchClasses.map(c => c.teacher_id))];
@@ -339,7 +338,7 @@ const TeacherScheduleManagement = () => {
                       <SelectValue>{branch.name_ar} / {branch.name_en}</SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-background z-50">
-                      {branches.filter(b => (classesByBranch[b.id] || []).length > 0).map((b) => (
+                      {branches.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.name_ar} / {b.name_en}
                         </SelectItem>
@@ -349,135 +348,147 @@ const TeacherScheduleManagement = () => {
                 </div>
               </div>
 
-              {/* Schedule Table */}
-              <div className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      {/* Start Date Row */}
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-2 text-left font-medium min-w-[120px] border-r text-muted-foreground text-xs">
-                          Start Date
-                        </th>
-                        {teacherIds.map((teacherId) => {
-                          const startDate = getTeacherStartDate(teacherId);
-                          return (
-                            <th 
-                              key={teacherId} 
-                              className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
-                            >
-                              {startDate ? format(new Date(startDate), "MMM d, yyyy") : "N/A"}
+              {/* Empty State for branches with no classes */}
+              {branchClasses.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    No classes with assigned teachers in this branch.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Schedule Table */}
+                  <div className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          {/* Start Date Row */}
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-2 text-left font-medium min-w-[120px] border-r text-muted-foreground text-xs">
+                              Start Date
                             </th>
-                          );
-                        })}
-                      </tr>
-                      {/* Teacher Names Row */}
-                      <tr className="border-b bg-muted/30">
-                        <th className="p-3 text-left font-semibold min-w-[120px] border-r">
-                          Time
-                        </th>
-                        {teacherIds.map((teacherId) => {
-                          const allCompleted = areAllTeacherClassesCompleted(branch.id, teacherId);
-                          const teacherName = branchClasses.find(c => c.teacher_id === teacherId)?.teacher_name || "Unknown";
-                          return (
-                            <th 
-                              key={teacherId} 
-                              className={`p-3 text-center font-semibold min-w-[150px] border-r transition-colors ${
-                                allCompleted ? 'bg-green-500/20 text-green-700' : ''
-                              }`}
-                            >
-                              {teacherName}
+                            {teacherIds.map((teacherId) => {
+                              const startDate = getTeacherStartDate(teacherId);
+                              return (
+                                <th 
+                                  key={teacherId} 
+                                  className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
+                                >
+                                  {startDate ? format(new Date(startDate), "MMM d, yyyy") : "N/A"}
+                                </th>
+                              );
+                            })}
+                          </tr>
+                          {/* Teacher Names Row */}
+                          <tr className="border-b bg-muted/30">
+                            <th className="p-3 text-left font-semibold min-w-[120px] border-r">
+                              Time
                             </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timings.map((timing) => (
-                        <tr key={timing} className="border-b hover:bg-muted/20">
-                          <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
-                          {teacherIds.map((teacherId) => {
-                            const classAtTiming = branchClasses.find(
-                              c => c.timing === timing && c.teacher_id === teacherId
-                            );
-                            
-                            if (!classAtTiming) {
-                              return <td key={teacherId} className="p-3 text-center border-r">-</td>;
-                            }
+                            {teacherIds.map((teacherId) => {
+                              const allCompleted = areAllTeacherClassesCompleted(branch.id, teacherId);
+                              const teacherName = branchClasses.find(c => c.teacher_id === teacherId)?.teacher_name || "Unknown";
+                              return (
+                                <th 
+                                  key={teacherId} 
+                                  className={`p-3 text-center font-semibold min-w-[150px] border-r transition-colors ${
+                                    allCompleted ? 'bg-green-500/20 text-green-700' : ''
+                                  }`}
+                                >
+                                  {teacherName}
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {timings.map((timing) => (
+                            <tr key={timing} className="border-b hover:bg-muted/20">
+                              <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
+                              {teacherIds.map((teacherId) => {
+                                const classAtTiming = branchClasses.find(
+                                  c => c.timing === timing && c.teacher_id === teacherId
+                                );
+                                
+                                if (!classAtTiming) {
+                                  return <td key={teacherId} className="p-3 text-center border-r">-</td>;
+                                }
 
-                            const completed = isClassCompleted(classAtTiming.id);
-                            
-                            return (
-                              <td 
-                                key={teacherId} 
-                                className={`p-3 text-center border-r transition-colors ${
-                                  completed ? 'bg-green-500/30' : 'bg-yellow-500/10'
-                                }`}
-                              >
-                                <div className="flex flex-col gap-1 items-center">
-                                  {/* Levels */}
-                                  <div className="flex flex-wrap gap-1 justify-center">
-                                    {classAtTiming.levels?.map((level, i) => {
-                                      // Extract short level name (e.g., "pre1" from "level-1 (pre1) مستوى اول")
-                                      const match = level.match(/\(([^)]+)\)/);
-                                      const shortName = match ? match[1] : level.split(' ')[0];
-                                      return (
-                                        <Badge 
-                                          key={i} 
-                                          variant={completed ? "default" : "secondary"} 
-                                          className={`text-xs ${completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                                        >
-                                          {shortName}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                  
-                                  {/* Courses */}
-                                  {classAtTiming.courses?.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 justify-center">
-                                      {classAtTiming.courses.map((course, i) => {
-                                        const shortCourse = course.split(' ')[0];
-                                        return (
-                                          <span key={i} className="text-xs text-muted-foreground">
-                                            {shortCourse}
-                                          </span>
-                                        );
-                                      })}
+                                const completed = isClassCompleted(classAtTiming.id);
+                                
+                                return (
+                                  <td 
+                                    key={teacherId} 
+                                    className={`p-3 text-center border-r transition-colors ${
+                                      completed ? 'bg-green-500/30' : 'bg-yellow-500/10'
+                                    }`}
+                                  >
+                                    <div className="flex flex-col gap-1 items-center">
+                                      {/* Levels */}
+                                      <div className="flex flex-wrap gap-1 justify-center">
+                                        {classAtTiming.levels?.map((level, i) => {
+                                          // Extract short level name (e.g., "pre1" from "level-1 (pre1) مستوى اول")
+                                          const match = level.match(/\(([^)]+)\)/);
+                                          const shortName = match ? match[1] : level.split(' ')[0];
+                                          return (
+                                            <Badge 
+                                              key={i} 
+                                              variant={completed ? "default" : "secondary"} 
+                                              className={`text-xs ${completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                            >
+                                              {shortName}
+                                            </Badge>
+                                          );
+                                        })}
+                                      </div>
+                                      
+                                      {/* Courses */}
+                                      {classAtTiming.courses?.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 justify-center">
+                                          {classAtTiming.courses.map((course, i) => {
+                                            const shortCourse = course.split(' ')[0];
+                                            return (
+                                              <span key={i} className="text-xs text-muted-foreground">
+                                                {shortCourse}
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+
+                                      {/* Completion indicator */}
+                                      {completed && (
+                                        <Check className="w-4 h-4 text-green-600 mt-1" />
+                                      )}
                                     </div>
-                                  )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                  </div>
 
-                                  {/* Completion indicator */}
-                                  {completed && (
-                                    <Check className="w-4 h-4 text-green-600 mt-1" />
-                                  )}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-              </div>
-
-              {/* Date Range Info */}
-              <div className="p-3 bg-muted/20 border-t text-center text-sm text-muted-foreground">
-                {(() => {
-                  const startDates = branchClasses.filter(c => c.start_date).map(c => c.start_date);
-                  const endDates = branchClasses.filter(c => c.end_date).map(c => c.end_date);
-                  const minStart = startDates.length > 0 ? startDates.sort()[0] : null;
-                  const maxEnd = endDates.length > 0 ? endDates.sort().reverse()[0] : null;
-                  
-                  if (minStart || maxEnd) {
-                    return (
-                      <span>
-                        Course Period: {minStart || 'N/A'} → {maxEnd || 'Ongoing'}
-                      </span>
-                    );
-                  }
-                  return <span>No date range set</span>;
-                })()}
-              </div>
+                  {/* Date Range Info */}
+                  <div className="p-3 bg-muted/20 border-t text-center text-sm text-muted-foreground">
+                    {(() => {
+                      const startDates = branchClasses.filter(c => c.start_date).map(c => c.start_date);
+                      const endDates = branchClasses.filter(c => c.end_date).map(c => c.end_date);
+                      const minStart = startDates.length > 0 ? startDates.sort()[0] : null;
+                      const maxEnd = endDates.length > 0 ? endDates.sort().reverse()[0] : null;
+                      
+                      if (minStart || maxEnd) {
+                        return (
+                          <span>
+                            Course Period: {minStart || 'N/A'} → {maxEnd || 'Ongoing'}
+                          </span>
+                        );
+                      }
+                      return <span>No date range set</span>;
+                    })()}
+                  </div>
+                </>
+              )}
             </Card>
           );
         })}
