@@ -304,40 +304,33 @@ const TeacherScheduleManagement = () => {
           </Card>
         )}
 
-        {/* Branch Selector and Schedule Table */}
-        {(() => {
-          const selectedBranch = branches.find(b => b.id === selectedBranchId);
-          const branchClasses = selectedBranchId ? (classesByBranch[selectedBranchId] || []) : [];
-          
-          if (!selectedBranch || branchClasses.length === 0) {
-            return (
-              <Card className="mb-6 overflow-hidden">
-                {/* Branch Header with Dropdown */}
-                <div className="bg-primary p-4 text-primary-foreground">
-                  <div className="flex justify-center">
-                    <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                      <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground">
-                        <SelectValue placeholder="Select a branch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {branches.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name_ar} / {branch.name_en}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="p-8 text-center">
-                  <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    No classes with assigned teachers found for this branch.
-                  </p>
-                </div>
-              </Card>
-            );
-          }
+        {/* Branch Filter Dropdown */}
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm font-medium">Jump to Branch:</span>
+          <Select value={selectedBranchId} onValueChange={(value) => {
+            setSelectedBranchId(value);
+            const element = document.getElementById(`branch-${value}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
+            <SelectTrigger className="w-auto min-w-[250px]">
+              <SelectValue placeholder="Select a branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  {branch.name_ar} / {branch.name_en}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Branch Tables */}
+        {branches.map((branch) => {
+          const branchClasses = classesByBranch[branch.id] || [];
+          if (branchClasses.length === 0) return null;
 
           // Get unique teachers and timings for this branch
           const teacherIds = [...new Set(branchClasses.map(c => c.teacher_id))];
@@ -352,23 +345,12 @@ const TeacherScheduleManagement = () => {
           };
 
           return (
-            <Card className="mb-6 overflow-hidden">
-              {/* Branch Header with Dropdown */}
+            <Card key={branch.id} id={`branch-${branch.id}`} className="mb-6 overflow-hidden">
+              {/* Branch Header */}
               <div className="bg-primary p-4 text-primary-foreground">
-                <div className="flex justify-center">
-                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                    <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground">
-                      <SelectValue placeholder="Select a branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name_ar} / {branch.name_en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <h3 className="font-bold text-xl text-center">
+                  {branch.name_ar} / {branch.name_en}
+                </h3>
               </div>
 
               {/* Schedule Table */}
@@ -398,7 +380,7 @@ const TeacherScheduleManagement = () => {
                           Time
                         </th>
                         {teacherIds.map((teacherId) => {
-                          const allCompleted = areAllTeacherClassesCompleted(selectedBranchId, teacherId);
+                          const allCompleted = areAllTeacherClassesCompleted(branch.id, teacherId);
                           const teacherName = branchClasses.find(c => c.teacher_id === teacherId)?.teacher_name || "Unknown";
                           return (
                             <th 
@@ -502,7 +484,7 @@ const TeacherScheduleManagement = () => {
               </div>
             </Card>
           );
-        })()}
+        })}
 
         {/* Empty State */}
         {classes.length === 0 && (
