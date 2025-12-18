@@ -304,29 +304,6 @@ const TeacherScheduleManagement = () => {
           </Card>
         )}
 
-        {/* Branch Filter Dropdown */}
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-sm font-medium">Jump to Branch:</span>
-          <Select value={selectedBranchId} onValueChange={(value) => {
-            setSelectedBranchId(value);
-            const element = document.getElementById(`branch-${value}`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }}>
-            <SelectTrigger className="w-auto min-w-[250px]">
-              <SelectValue placeholder="Select a branch" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id}>
-                  {branch.name_ar} / {branch.name_en}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Branch Tables */}
         {branches.map((branch) => {
           const branchClasses = classesByBranch[branch.id] || [];
@@ -346,11 +323,30 @@ const TeacherScheduleManagement = () => {
 
           return (
             <Card key={branch.id} id={`branch-${branch.id}`} className="mb-6 overflow-hidden">
-              {/* Branch Header */}
+              {/* Branch Header with Dropdown */}
               <div className="bg-primary p-4 text-primary-foreground">
-                <h3 className="font-bold text-xl text-center">
-                  {branch.name_ar} / {branch.name_en}
-                </h3>
+                <div className="flex justify-center">
+                  <Select 
+                    value={branch.id} 
+                    onValueChange={(value) => {
+                      const element = document.getElementById(`branch-${value}`);
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-auto min-w-[280px] bg-transparent border-primary-foreground/30 text-primary-foreground font-bold text-xl justify-center gap-2 hover:bg-primary-foreground/10">
+                      <SelectValue>{branch.name_ar} / {branch.name_en}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {branches.filter(b => (classesByBranch[b.id] || []).length > 0).map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name_ar} / {b.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Schedule Table */}
