@@ -4,6 +4,13 @@ import { ArrowLeft, Calendar, AlertCircle, Check, X, RefreshCw } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +66,7 @@ const TeacherScheduleManagement = () => {
   const [dailyStatus, setDailyStatus] = useState<DailyStatus[]>([]);
   const [notifications, setNotifications] = useState<RemovalNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
@@ -100,6 +108,10 @@ const TeacherScheduleManagement = () => {
       .select("*")
       .order("name_en");
     setBranches(data || []);
+    // Set initial selected branch if not set
+    if (data && data.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(data[0].id);
+    }
   };
 
   const fetchClasses = async () => {
@@ -292,39 +304,101 @@ const TeacherScheduleManagement = () => {
           </Card>
         )}
 
-        {/* Branch Tables */}
-        {branches.map((branch) => {
-          const branchClasses = classesByBranch[branch.id] || [];
-          if (branchClasses.length === 0) return null;
+        {/* Branch Selector and Schedule Table */}
+        {(() => {
+          const selectedBranch = branches.find(b => b.id === selectedBranchId);
+          const branchClasses = selectedBranchId ? (classesByBranch[selectedBranchId] || []) : [];
+          
+          if (!selectedBranch || branchClasses.length === 0) {
+            return (
+              <Card className="mb-6 overflow-hidden">
+                {/* Branch Header with Dropdown */}
+                <div className="bg-primary p-4 text-primary-foreground">
+                  <div className="flex justify-center">
+                    <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                      <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground">
+                        <SelectValue placeholder="Select a branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name_ar} / {branch.name_en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="p-8 text-center">
+                  <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    No classes with assigned teachers found for this branch.
+                  </p>
+                </div>
+              </Card>
+            );
+          }
 
           // Get unique teachers and timings for this branch
           const teacherIds = [...new Set(branchClasses.map(c => c.teacher_id))];
           const timings = [...new Set(branchClasses.map(c => c.timing))].sort();
 
-          return (
-            <Card key={branch.id} className="mb-6 overflow-hidden">
-              {/* Branch Header */}
-              <div className="bg-primary p-4 text-primary-foreground">
-                <h3 className="font-bold text-xl text-center">
-                  {branch.name_ar} / {branch.name_en}
-                </h3>
-              </div>
+          // Get earliest start date for each teacher in this branch
+          const getTeacherStartDate = (teacherId: string): string | null => {
+            const teacherClasses = branchClasses.filter(c => c.teacher_id === teacherId && c.start_date);
+            if (teacherClasses.length === 0) return null;
+            const startDates = teacherClasses.map(c => c.start_date!).sort();
+            return startDates[0];
+          };
 
-              {/* Date Header */}
-              <div className="bg-muted/50 p-3 text-center border-b">
-                <span className="font-semibold text-lg">{today}</span>
+          return (
+            <Card className="mb-6 overflow-hidden">
+              {/* Branch Header with Dropdown */}
+              <div className="bg-primary p-4 text-primary-foreground">
+                <div className="flex justify-center">
+                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                    <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground">
+                      <SelectValue placeholder="Select a branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name_ar} / {branch.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Schedule Table */}
               <div className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <table className="w-full text-sm border-collapse">
                     <thead>
+                      {/* Start Date Row */}
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-2 text-left font-medium min-w-[120px] border-r text-muted-foreground text-xs">
+                          Start Date
+                        </th>
+                        {teacherIds.map((teacherId) => {
+                          const startDate = getTeacherStartDate(teacherId);
+                          return (
+                            <th 
+                              key={teacherId} 
+                              className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
+                            >
+                              {startDate ? format(new Date(startDate), "MMM d, yyyy") : "N/A"}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                      {/* Teacher Names Row */}
                       <tr className="border-b bg-muted/30">
                         <th className="p-3 text-left font-semibold min-w-[120px] border-r">
                           Time
                         </th>
                         {teacherIds.map((teacherId) => {
-                          const allCompleted = areAllTeacherClassesCompleted(branch.id, teacherId);
+                          const allCompleted = areAllTeacherClassesCompleted(selectedBranchId, teacherId);
                           const teacherName = branchClasses.find(c => c.teacher_id === teacherId)?.teacher_name || "Unknown";
                           return (
                             <th 
@@ -428,7 +502,7 @@ const TeacherScheduleManagement = () => {
               </div>
             </Card>
           );
-        })}
+        })()}
 
         {/* Empty State */}
         {classes.length === 0 && (
