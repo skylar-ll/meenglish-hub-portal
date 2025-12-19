@@ -1276,6 +1276,7 @@ export type Database = {
           student_id: string
           teacher_id: string
           teachers_evaluation: number | null
+          teachers_evaluation_2: number | null
           updated_at: string
           week1_m: string | null
           week1_su: string | null
@@ -1315,6 +1316,7 @@ export type Database = {
           student_id: string
           teacher_id: string
           teachers_evaluation?: number | null
+          teachers_evaluation_2?: number | null
           updated_at?: string
           week1_m?: string | null
           week1_su?: string | null
@@ -1354,6 +1356,7 @@ export type Database = {
           student_id?: string
           teacher_id?: string
           teachers_evaluation?: number | null
+          teachers_evaluation_2?: number | null
           updated_at?: string
           week1_m?: string | null
           week1_su?: string | null
