@@ -429,52 +429,54 @@ const TeacherAttendanceSheet = () => {
           </p>
         </Card>
 
-        {students.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-muted-foreground">No students assigned to your classes yet.</p>
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  {/* Week Headers */}
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                {/* Week Headers */}
+                <tr>
+                  <th rowSpan={2} className="p-2 border border-border bg-card sticky left-0 z-10">#</th>
+                  <th rowSpan={2} className="p-2 border border-border bg-card min-w-[180px] sticky left-10 z-10">Student Name</th>
+                  <th rowSpan={2} className="p-2 border border-border bg-card min-w-[120px]">Phone</th>
+                  {renderWeekHeader(1)}
+                  {renderWeekHeader(2)}
+                  {renderWeekHeader(3)}
+                  {renderWeekHeader(4)}
+                  <th colSpan={4} className="bg-muted text-center p-2 border border-border">Monthly Totals</th>
+                  <th colSpan={6} className="bg-primary text-primary-foreground text-center p-2 border border-border">OVERALL</th>
+                </tr>
+                <tr>
+                  {/* Week 1 days */}
+                  {renderDayHeaders()}
+                  {/* Week 2 days */}
+                  {renderDayHeaders()}
+                  {/* Week 3 days */}
+                  {renderDayHeaders()}
+                  {/* Week 4 days */}
+                  {renderDayHeaders()}
+                  {/* Monthly totals */}
+                  <th className="p-1 text-xs border border-border bg-success text-success-foreground">P</th>
+                  <th className="p-1 text-xs border border-border bg-accent text-accent-foreground">L</th>
+                  <th className="p-1 text-xs border border-border bg-secondary text-secondary-foreground">VL</th>
+                  <th className="p-1 text-xs border border-border bg-destructive text-destructive-foreground">A</th>
+                  {/* Overall */}
+                  <th className="p-1 text-xs border border-border bg-muted">V</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Eval /20</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Final</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Equiv</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Status</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[100px]">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
                   <tr>
-                    <th rowSpan={2} className="p-2 border border-border bg-card sticky left-0 z-10">#</th>
-                    <th rowSpan={2} className="p-2 border border-border bg-card min-w-[180px] sticky left-10 z-10">Student Name</th>
-                    <th rowSpan={2} className="p-2 border border-border bg-card min-w-[120px]">Phone</th>
-                    {renderWeekHeader(1)}
-                    {renderWeekHeader(2)}
-                    {renderWeekHeader(3)}
-                    {renderWeekHeader(4)}
-                    <th colSpan={4} className="bg-muted text-center p-2 border border-border">Monthly Totals</th>
-                    <th colSpan={6} className="bg-primary text-primary-foreground text-center p-2 border border-border">OVERALL</th>
+                    <td colSpan={37} className="p-8 text-center text-muted-foreground">
+                      No students assigned to your classes yet.
+                    </td>
                   </tr>
-                  <tr>
-                    {/* Week 1 days */}
-                    {renderDayHeaders()}
-                    {/* Week 2 days */}
-                    {renderDayHeaders()}
-                    {/* Week 3 days */}
-                    {renderDayHeaders()}
-                    {/* Week 4 days */}
-                    {renderDayHeaders()}
-                    {/* Monthly totals */}
-                    <th className="p-1 text-xs border border-border bg-success text-success-foreground">P</th>
-                    <th className="p-1 text-xs border border-border bg-accent text-accent-foreground">L</th>
-                    <th className="p-1 text-xs border border-border bg-secondary text-secondary-foreground">VL</th>
-                    <th className="p-1 text-xs border border-border bg-destructive text-destructive-foreground">A</th>
-                    {/* Overall */}
-                    <th className="p-1 text-xs border border-border bg-muted">V</th>
-                    <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Eval /20</th>
-                    <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Final</th>
-                    <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Equiv</th>
-                    <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Status</th>
-                    <th className="p-1 text-xs border border-border bg-muted min-w-[100px]">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student, idx) => (
+                ) : (
+                  students.map((student, idx) => (
                     <tr key={student.student_id} className="hover:bg-muted/50">
                       <td className="p-2 border border-border text-center bg-card sticky left-0 z-10">{idx + 1}</td>
                       <td className="p-2 border border-border bg-card sticky left-10 z-10 font-medium">{student.student_name}</td>
@@ -586,12 +588,12 @@ const TeacherAttendanceSheet = () => {
                         />
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </div>
     </div>
   );
