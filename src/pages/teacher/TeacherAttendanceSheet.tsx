@@ -62,32 +62,19 @@ const TeacherAttendanceSheet = () => {
 
       setTeacherId(session.user.id);
 
-      // Get students assigned to this teacher via class_students
-      const { data: classesData } = await supabase
-        .from("classes")
-        .select("id")
+      // Get students assigned to this teacher via student_teachers table
+      const { data: studentTeachersData } = await supabase
+        .from("student_teachers")
+        .select("student_id")
         .eq("teacher_id", session.user.id);
 
-      if (!classesData || classesData.length === 0) {
+      if (!studentTeachersData || studentTeachersData.length === 0) {
         setStudents([]);
         setLoading(false);
         return;
       }
 
-      const classIds = classesData.map(c => c.id);
-
-      const { data: classStudents } = await supabase
-        .from("class_students")
-        .select("student_id")
-        .in("class_id", classIds);
-
-      if (!classStudents || classStudents.length === 0) {
-        setStudents([]);
-        setLoading(false);
-        return;
-      }
-
-      const studentIds = [...new Set(classStudents.map(cs => cs.student_id))];
+      const studentIds = [...new Set(studentTeachersData.map(st => st.student_id))];
 
       // Get student details
       const { data: studentsData } = await supabase
