@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { computeAllowedTimingsForSelections } from "@/lib/timingAvailability";
+import { computeAllowedTimingsForSelections, timingsMatch, normalizeTimingForComparison as normalizeTimingUtil } from "@/lib/timingAvailability";
 
 interface TimingOption {
   id: string;
@@ -140,11 +140,7 @@ const TimingSelection = () => {
       // Clear any selected timings that are no longer allowed
       setSelectedTimings((prev) =>
         prev.filter((t) =>
-          uniqueTimings.some(
-            (allowed: string) =>
-              normalizeTimingForComparison(allowed) ===
-              normalizeTimingForComparison(t)
-          )
+          uniqueTimings.some((allowed: string) => timingsMatch(allowed, t))
         )
       );
     } catch (error) {
@@ -153,24 +149,16 @@ const TimingSelection = () => {
     }
   };
 
-  const normalizeTimingForComparison = (s: string) => s.toLowerCase().replace(/[^a-z0-9:.-]/g, '');
-
   const isTimingAllowed = (timingValue: string): boolean => {
     if (allowedTimings.length === 0) {
       return false;
     }
     
-    return allowedTimings.some(allowed => 
-      normalizeTimingForComparison(allowed) === normalizeTimingForComparison(timingValue) ||
-      normalizeTimingForComparison(allowed).includes(normalizeTimingForComparison(timingValue)) ||
-      normalizeTimingForComparison(timingValue).includes(normalizeTimingForComparison(allowed))
-    );
+    return allowedTimings.some(allowed => timingsMatch(allowed, timingValue));
   };
 
   const isTimingSelected = (timingValue: string): boolean => {
-    return selectedTimings.some(selected => 
-      normalizeTimingForComparison(selected) === normalizeTimingForComparison(timingValue)
-    );
+    return selectedTimings.some(selected => timingsMatch(selected, timingValue));
   };
 
   const handleTimingClick = (timingValue: string) => {
@@ -183,7 +171,7 @@ const TimingSelection = () => {
       // Multi-select mode: toggle selection
       setSelectedTimings(prev => {
         if (isTimingSelected(timingValue)) {
-          return prev.filter(t => normalizeTimingForComparison(t) !== normalizeTimingForComparison(timingValue));
+          return prev.filter(t => !timingsMatch(t, timingValue));
         } else {
           return [...prev, timingValue];
         }
