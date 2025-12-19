@@ -334,13 +334,6 @@ const TeacherDashboard = () => {
             <span>Daily Schedule</span>
           </Button>
           <Button 
-            onClick={() => setIsAttendanceModalOpen(true)}
-            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-secondary to-accent hover:opacity-90"
-          >
-            <Calendar className="w-6 h-6" />
-            <span>{t('teacher.markAttendance')}</span>
-          </Button>
-          <Button 
             onClick={() => setIsLessonModalOpen(true)}
             className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-accent to-primary hover:opacity-90"
           >
