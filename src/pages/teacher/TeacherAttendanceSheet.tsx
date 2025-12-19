@@ -447,10 +447,10 @@ const TeacherAttendanceSheet = () => {
                   <th className="p-1 text-xs border border-border bg-secondary text-secondary-foreground">VL</th>
                   <th className="p-1 text-xs border border-border bg-destructive text-destructive-foreground">A</th>
                   {/* Overall */}
-                  <th className="p-1 text-xs border border-border bg-muted">V</th>
-                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Eval /20</th>
-                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Final</th>
-                  <th className="p-1 text-xs border border-border bg-muted min-w-[60px]">Equiv</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[40px]">WE</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[80px]">TEACHER'S EVALUATION</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Final GRADES</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[80px]">EQUIVALENT</th>
                   <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Status</th>
                   <th className="p-1 text-xs border border-border bg-muted min-w-[100px]">Notes</th>
                 </tr>
