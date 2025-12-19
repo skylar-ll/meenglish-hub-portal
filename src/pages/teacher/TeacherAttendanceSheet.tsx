@@ -25,6 +25,7 @@ interface StudentAttendanceData {
   // Overall
   overall_v: number | null;
   teachers_evaluation: number | null;
+  teachers_evaluation_2: number | null;
   final_grades: number | null;
   equivalent: string | null;
   status: 'Passed' | 'Repeat' | null;
@@ -119,6 +120,7 @@ const TeacherAttendanceSheet = () => {
           week4: weekData(4),
           overall_v: existingSheet?.overall_v as number | null || null,
           teachers_evaluation: existingSheet?.teachers_evaluation as number | null || null,
+          teachers_evaluation_2: (existingSheet as any)?.teachers_evaluation_2 as number | null || null,
           final_grades: existingSheet?.final_grades as number | null || null,
           equivalent: existingSheet?.equivalent || null,
           status: existingSheet?.status as 'Passed' | 'Repeat' | null || null,
@@ -236,6 +238,7 @@ const TeacherAttendanceSheet = () => {
           week4_wa: student.week4.wa,
           overall_v: student.overall_v,
           teachers_evaluation: student.teachers_evaluation,
+          teachers_evaluation_2: student.teachers_evaluation_2,
           final_grades: student.final_grades,
           equivalent: student.equivalent,
           status: student.status,
@@ -430,7 +433,7 @@ const TeacherAttendanceSheet = () => {
                   {renderWeekHeader(3)}
                   {renderWeekHeader(4)}
                   <th colSpan={4} className="bg-muted text-center p-2 border border-border">Monthly Totals</th>
-                  <th colSpan={6} className="bg-primary text-primary-foreground text-center p-2 border border-border">OVERALL</th>
+                  <th colSpan={7} className="bg-primary text-primary-foreground text-center p-2 border border-border">OVERALL</th>
                 </tr>
                 <tr>
                   {/* Week 1 days */}
@@ -447,8 +450,8 @@ const TeacherAttendanceSheet = () => {
                   <th className="p-1 text-xs border border-border bg-secondary text-secondary-foreground">VL</th>
                   <th className="p-1 text-xs border border-border bg-destructive text-destructive-foreground">A</th>
                   {/* Overall */}
-                  <th className="p-1 text-xs border border-border bg-muted min-w-[40px]">WE</th>
-                  <th className="p-1 text-xs border border-border bg-muted min-w-[80px]">TEACHER'S EVALUATION</th>
+                  <th className="p-1 text-xs border border-border bg-muted min-w-[50px]">WE</th>
+                  <th colSpan={2} className="p-1 text-xs border border-border bg-muted min-w-[100px]">TEACHER'S EVALUATION</th>
                   <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Final GRADES</th>
                   <th className="p-1 text-xs border border-border bg-muted min-w-[80px]">EQUIVALENT</th>
                   <th className="p-1 text-xs border border-border bg-muted min-w-[70px]">Status</th>
@@ -458,7 +461,7 @@ const TeacherAttendanceSheet = () => {
               <tbody>
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan={37} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={38} className="p-8 text-center text-muted-foreground">
                       No students assigned to your classes yet.
                     </td>
                   </tr>
@@ -507,23 +510,33 @@ const TeacherAttendanceSheet = () => {
                       <td className="p-2 border border-border text-center bg-secondary/20 font-bold">{student.monthly_vl}</td>
                       <td className="p-2 border border-border text-center bg-destructive/20 font-bold">{student.monthly_a}</td>
                       
-                      {/* Overall V */}
+                      {/* Overall V (WE) */}
                       <td className="p-0 border border-border">
                         <Input
                           type="number"
                           value={student.overall_v ?? ''}
                           onChange={(e) => updateOverall(idx, 'overall_v', e.target.value ? parseFloat(e.target.value) : null)}
-                          className="h-8 w-12 text-xs text-center rounded-none border-0"
+                          className="h-8 w-16 text-xs text-center rounded-none border-0"
                         />
                       </td>
                       
-                      {/* Teachers Evaluation */}
+                      {/* Teachers Evaluation 1 */}
+                      <td className="p-0 border border-border">
+                        <Input
+                          type="number"
+                          value={student.teachers_evaluation ?? ''}
+                          onChange={(e) => updateOverall(idx, 'teachers_evaluation', e.target.value ? parseFloat(e.target.value) : null)}
+                          className="h-8 w-14 text-xs text-center rounded-none border-0"
+                        />
+                      </td>
+                      
+                      {/* Teachers Evaluation 2 */}
                       <td className="p-0 border border-border">
                         <Input
                           type="number"
                           max={20}
-                          value={student.teachers_evaluation ?? ''}
-                          onChange={(e) => updateOverall(idx, 'teachers_evaluation', e.target.value ? parseFloat(e.target.value) : null)}
+                          value={student.teachers_evaluation_2 ?? ''}
+                          onChange={(e) => updateOverall(idx, 'teachers_evaluation_2', e.target.value ? parseFloat(e.target.value) : null)}
                           className="h-8 w-14 text-xs text-center rounded-none border-0"
                         />
                       </td>
