@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Users, Calendar, BookOpen, FileText, LogOut, ShieldAlert, ClipboardList, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -311,7 +311,21 @@ const TeacherDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <Button 
+            onClick={() => navigate("/teacher/attendance-sheet")}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-90"
+          >
+            <ClipboardList className="w-6 h-6" />
+            <span>Attendance & Grading Sheet</span>
+          </Button>
+          <Button 
+            onClick={() => navigate("/teacher/weekly-reports")}
+            className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-blue-500 to-cyan-600 hover:opacity-90"
+          >
+            <Send className="w-6 h-6" />
+            <span>Send Weekly Reports</span>
+          </Button>
           <Button 
             onClick={() => navigate("/teacher/daily-schedule")}
             className="p-6 h-auto flex-col gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90"
