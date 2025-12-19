@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck, FileText, NotebookPen } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck, FileText, NotebookPen, Award, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -192,7 +192,7 @@ const CoursePage = () => {
             alt="Modern Education Center" 
             className="h-12 object-contain"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="ghost"
               onClick={() => navigate("/")}
@@ -208,6 +208,24 @@ const CoursePage = () => {
             >
               <UserCheck className="w-4 h-4 mr-2" />
               Mark Attendance
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => navigate("/student/grades")}
+              size="sm"
+              className="bg-gradient-to-r from-purple-500 to-indigo-600"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              My Grades
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => navigate("/student/certificates")}
+              size="sm"
+              className="bg-gradient-to-r from-success to-emerald-600"
+            >
+              <Award className="w-4 h-4 mr-2" />
+              Certificates
             </Button>
             <Button
               variant="default"
@@ -228,7 +246,7 @@ const CoursePage = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/student/reports")}
+              onClick={() => navigate("/student/weekly-reports")}
               size="sm"
             >
               <FileText className="w-4 h-4 mr-2" />

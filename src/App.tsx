@@ -22,6 +22,9 @@ import BillingForm from "./pages/student/BillingForm";
 import Payment from "./pages/student/Payment";
 import CoursePage from "./pages/student/CoursePage";
 import StudentAttendance from "./pages/student/StudentAttendance";
+import StudentGrades from "./pages/student/StudentGrades";
+import StudentCertificates from "./pages/student/StudentCertificates";
+import StudentWeeklyReportsView from "./pages/student/StudentWeeklyReportsView";
 
 // Teacher Portal
 import TeacherLogin from "./pages/teacher/TeacherLogin";
@@ -30,6 +33,8 @@ import TeacherDailySchedule from "./pages/teacher/TeacherDailySchedule";
 import TeacherQuizzes from "./pages/teacher/TeacherQuizzes";
 import QuizAttempts from "./pages/teacher/QuizAttempts";
 import QuizAttemptDetail from "./pages/teacher/QuizAttemptDetail";
+import TeacherAttendanceSheet from "./pages/teacher/TeacherAttendanceSheet";
+import TeacherWeeklyReports from "./pages/teacher/TeacherWeeklyReports";
 
 // Student Quiz
 import StudentQuizzes from "./pages/student/StudentQuizzes";
@@ -104,6 +109,8 @@ const App = () => (
           <Route path="/teacher/quizzes/:quizId" element={<QuizAttempts />} />
           <Route path="/teacher/quizzes/:quizId/attempts/:attemptId" element={<QuizAttemptDetail />} />
           <Route path="/teacher/students" element={<AssignedStudents />} />
+          <Route path="/teacher/attendance-sheet" element={<TeacherAttendanceSheet />} />
+          <Route path="/teacher/weekly-reports" element={<TeacherWeeklyReports />} />
           
           {/* Admin Portal Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -122,8 +129,11 @@ const App = () => (
           <Route path="/admin/form-fields" element={<FormFieldsEditor />} />
           <Route path="/admin/teacher-schedule" element={<TeacherScheduleManagement />} />
           
-          {/* Student Reports */}
+          {/* Student Reports & Grades */}
           <Route path="/student/reports" element={<StudentReports />} />
+          <Route path="/student/grades" element={<StudentGrades />} />
+          <Route path="/student/certificates" element={<StudentCertificates />} />
+          <Route path="/student/weekly-reports" element={<StudentWeeklyReportsView />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
