@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Download, Send } from "lucide-react";
+import { ArrowLeft, Save, Download, Send, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,9 +44,12 @@ const TeacherAttendanceSheet = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [students, setStudents] = useState<StudentAttendanceData[]>([]);
   const [teacherId, setTeacherId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
+  const isInitialLoad = useRef(true);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadData();
@@ -133,12 +136,126 @@ const TeacherAttendanceSheet = () => {
       });
 
       setStudents(mappedStudents);
+      isInitialLoad.current = true; // Mark as initial load complete
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load attendance data');
     }
     setLoading(false);
   };
+
+  // Auto-save function
+  const saveStudentData = useCallback(async (student: StudentAttendanceData) => {
+    if (!teacherId) return;
+    
+    const sheetData = {
+      student_id: student.student_id,
+      teacher_id: teacherId,
+      month_year: selectedMonth,
+      week1_su: student.week1.su,
+      week1_m: student.week1.m,
+      week1_tu: student.week1.tu,
+      week1_w: student.week1.w,
+      week1_th: student.week1.th,
+      week1_wa: student.week1.wa,
+      week2_su: student.week2.su,
+      week2_m: student.week2.m,
+      week2_tu: student.week2.tu,
+      week2_w: student.week2.w,
+      week2_th: student.week2.th,
+      week2_wa: student.week2.wa,
+      week3_su: student.week3.su,
+      week3_m: student.week3.m,
+      week3_tu: student.week3.tu,
+      week3_w: student.week3.w,
+      week3_th: student.week3.th,
+      week3_wa: student.week3.wa,
+      week4_su: student.week4.su,
+      week4_m: student.week4.m,
+      week4_tu: student.week4.tu,
+      week4_w: student.week4.w,
+      week4_th: student.week4.th,
+      week4_wa: student.week4.wa,
+      overall_v: student.overall_v,
+      teachers_evaluation: student.teachers_evaluation,
+      teachers_evaluation_2: student.teachers_evaluation_2,
+      final_grades: student.final_grades,
+      equivalent: student.equivalent,
+      status: student.status,
+      notes: student.notes,
+    };
+
+    try {
+      if (student.id) {
+        await supabase
+          .from("teacher_attendance_sheets")
+          .update(sheetData)
+          .eq("id", student.id);
+      } else {
+        const { data } = await supabase
+          .from("teacher_attendance_sheets")
+          .insert(sheetData)
+          .select()
+          .single();
+        
+        if (data) {
+          // Update the student's id in local state
+          setStudents(prev => prev.map(s => 
+            s.student_id === student.student_id ? { ...s, id: data.id } : s
+          ));
+          
+          // Handle status change - create certificate
+          if (student.status === 'Passed') {
+            await supabase.from("student_certificates").insert({
+              student_id: student.student_id,
+              teacher_id: teacherId,
+              attendance_sheet_id: data.id,
+              issue_date: new Date().toISOString().split('T')[0],
+              certificate_type: 'passing',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving student data:', error);
+    }
+  }, [teacherId, selectedMonth]);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    // Skip the first render (initial load)
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    // Skip if no students or still loading
+    if (students.length === 0 || loading) return;
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save (1 second delay)
+    saveTimeoutRef.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await Promise.all(students.map(student => saveStudentData(student)));
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+      setSaving(false);
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [students, saveStudentData, loading]);
 
   const updateAttendance = (studentIndex: number, week: number, day: keyof StudentAttendanceData['week1'], value: AttendanceValue) => {
     setStudents(prev => {
@@ -204,102 +321,6 @@ const TeacherAttendanceSheet = () => {
     });
   };
 
-  const saveAll = async () => {
-    setSaving(true);
-    try {
-      for (const student of students) {
-        const sheetData = {
-          student_id: student.student_id,
-          teacher_id: teacherId,
-          month_year: selectedMonth,
-          week1_su: student.week1.su,
-          week1_m: student.week1.m,
-          week1_tu: student.week1.tu,
-          week1_w: student.week1.w,
-          week1_th: student.week1.th,
-          week1_wa: student.week1.wa,
-          week2_su: student.week2.su,
-          week2_m: student.week2.m,
-          week2_tu: student.week2.tu,
-          week2_w: student.week2.w,
-          week2_th: student.week2.th,
-          week2_wa: student.week2.wa,
-          week3_su: student.week3.su,
-          week3_m: student.week3.m,
-          week3_tu: student.week3.tu,
-          week3_w: student.week3.w,
-          week3_th: student.week3.th,
-          week3_wa: student.week3.wa,
-          week4_su: student.week4.su,
-          week4_m: student.week4.m,
-          week4_tu: student.week4.tu,
-          week4_w: student.week4.w,
-          week4_th: student.week4.th,
-          week4_wa: student.week4.wa,
-          overall_v: student.overall_v,
-          teachers_evaluation: student.teachers_evaluation,
-          teachers_evaluation_2: student.teachers_evaluation_2,
-          final_grades: student.final_grades,
-          equivalent: student.equivalent,
-          status: student.status,
-          notes: student.notes,
-        };
-
-        if (student.id) {
-          await supabase
-            .from("teacher_attendance_sheets")
-            .update(sheetData)
-            .eq("id", student.id);
-        } else {
-          const { data } = await supabase
-            .from("teacher_attendance_sheets")
-            .insert(sheetData)
-            .select()
-            .single();
-          
-          if (data) {
-            // Handle status change - create certificate or send repeat message
-            if (student.status === 'Passed') {
-              await supabase.from("student_certificates").insert({
-                student_id: student.student_id,
-                teacher_id: teacherId,
-                attendance_sheet_id: data.id,
-                issue_date: new Date().toISOString().split('T')[0],
-                certificate_type: 'passing',
-              });
-            }
-          }
-        }
-
-        // Handle status changes for existing records
-        if (student.id && student.status === 'Passed') {
-          // Check if certificate already exists
-          const { data: existingCert } = await supabase
-            .from("student_certificates")
-            .select("id")
-            .eq("attendance_sheet_id", student.id)
-            .maybeSingle();
-
-          if (!existingCert) {
-            await supabase.from("student_certificates").insert({
-              student_id: student.student_id,
-              teacher_id: teacherId,
-              attendance_sheet_id: student.id,
-              issue_date: new Date().toISOString().split('T')[0],
-              certificate_type: 'passing',
-            });
-          }
-        }
-      }
-
-      toast.success('Attendance sheet saved successfully');
-      loadData();
-    } catch (error) {
-      console.error('Error saving:', error);
-      toast.error('Failed to save attendance sheet');
-    }
-    setSaving(false);
-  };
 
   const getAttendanceColor = (value: AttendanceValue) => {
     switch (value) {
@@ -404,10 +425,19 @@ const TeacherAttendanceSheet = () => {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-40"
             />
-            <Button onClick={saveAll} disabled={saving}>
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save All'}
-            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : lastSaved ? (
+                <>
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span>Auto-saved</span>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
 
