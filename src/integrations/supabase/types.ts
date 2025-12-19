@@ -900,6 +900,64 @@ export type Database = {
           },
         ]
       }
+      student_certificates: {
+        Row: {
+          attendance_sheet_id: string | null
+          certificate_type: string
+          course_name: string | null
+          created_at: string
+          id: string
+          issue_date: string
+          level: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          attendance_sheet_id?: string | null
+          certificate_type?: string
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          issue_date?: string
+          level?: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          attendance_sheet_id?: string | null
+          certificate_type?: string
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          issue_date?: string
+          level?: string | null
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_certificates_attendance_sheet_id_fkey"
+            columns: ["attendance_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_attendance_sheets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_certificates_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_certificates_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_notes: {
         Row: {
           content: string
@@ -990,6 +1048,11 @@ export type Database = {
           updated_at: string | null
           vocabulary_rating: number | null
           week_number: number
+          weekly_a_count: number | null
+          weekly_assessment: number | null
+          weekly_l_count: number | null
+          weekly_p_count: number | null
+          weekly_vl_count: number | null
           writing_rating: number | null
         }
         Insert: {
@@ -1018,6 +1081,11 @@ export type Database = {
           updated_at?: string | null
           vocabulary_rating?: number | null
           week_number: number
+          weekly_a_count?: number | null
+          weekly_assessment?: number | null
+          weekly_l_count?: number | null
+          weekly_p_count?: number | null
+          weekly_vl_count?: number | null
           writing_rating?: number | null
         }
         Update: {
@@ -1046,6 +1114,11 @@ export type Database = {
           updated_at?: string | null
           vocabulary_rating?: number | null
           week_number?: number
+          weekly_a_count?: number | null
+          weekly_assessment?: number | null
+          weekly_l_count?: number | null
+          weekly_p_count?: number | null
+          weekly_vl_count?: number | null
           writing_rating?: number | null
         }
         Relationships: [
@@ -1182,6 +1255,148 @@ export type Database = {
           },
           {
             foreignKeyName: "students_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_attendance_sheets: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          equivalent: string | null
+          final_grades: number | null
+          id: string
+          month_year: string
+          notes: string | null
+          overall_v: number | null
+          status: string | null
+          student_id: string
+          teacher_id: string
+          teachers_evaluation: number | null
+          updated_at: string
+          week1_m: string | null
+          week1_su: string | null
+          week1_th: string | null
+          week1_tu: string | null
+          week1_w: string | null
+          week1_wa: number | null
+          week2_m: string | null
+          week2_su: string | null
+          week2_th: string | null
+          week2_tu: string | null
+          week2_w: string | null
+          week2_wa: number | null
+          week3_m: string | null
+          week3_su: string | null
+          week3_th: string | null
+          week3_tu: string | null
+          week3_w: string | null
+          week3_wa: number | null
+          week4_m: string | null
+          week4_su: string | null
+          week4_th: string | null
+          week4_tu: string | null
+          week4_w: string | null
+          week4_wa: number | null
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          equivalent?: string | null
+          final_grades?: number | null
+          id?: string
+          month_year: string
+          notes?: string | null
+          overall_v?: number | null
+          status?: string | null
+          student_id: string
+          teacher_id: string
+          teachers_evaluation?: number | null
+          updated_at?: string
+          week1_m?: string | null
+          week1_su?: string | null
+          week1_th?: string | null
+          week1_tu?: string | null
+          week1_w?: string | null
+          week1_wa?: number | null
+          week2_m?: string | null
+          week2_su?: string | null
+          week2_th?: string | null
+          week2_tu?: string | null
+          week2_w?: string | null
+          week2_wa?: number | null
+          week3_m?: string | null
+          week3_su?: string | null
+          week3_th?: string | null
+          week3_tu?: string | null
+          week3_w?: string | null
+          week3_wa?: number | null
+          week4_m?: string | null
+          week4_su?: string | null
+          week4_th?: string | null
+          week4_tu?: string | null
+          week4_w?: string | null
+          week4_wa?: number | null
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          equivalent?: string | null
+          final_grades?: number | null
+          id?: string
+          month_year?: string
+          notes?: string | null
+          overall_v?: number | null
+          status?: string | null
+          student_id?: string
+          teacher_id?: string
+          teachers_evaluation?: number | null
+          updated_at?: string
+          week1_m?: string | null
+          week1_su?: string | null
+          week1_th?: string | null
+          week1_tu?: string | null
+          week1_w?: string | null
+          week1_wa?: number | null
+          week2_m?: string | null
+          week2_su?: string | null
+          week2_th?: string | null
+          week2_tu?: string | null
+          week2_w?: string | null
+          week2_wa?: number | null
+          week3_m?: string | null
+          week3_su?: string | null
+          week3_th?: string | null
+          week3_tu?: string | null
+          week3_w?: string | null
+          week3_wa?: number | null
+          week4_m?: string | null
+          week4_su?: string | null
+          week4_th?: string | null
+          week4_tu?: string | null
+          week4_w?: string | null
+          week4_wa?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_attendance_sheets_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_sheets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_sheets_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "teachers"
