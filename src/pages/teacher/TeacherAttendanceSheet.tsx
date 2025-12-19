@@ -587,7 +587,7 @@ const TeacherAttendanceSheet = () => {
                           value={student.equivalent || ''}
                           onValueChange={(v) => updateOverall(idx, 'equivalent', v || null)}
                         >
-                          <SelectTrigger className="h-8 w-14 text-xs rounded-none border-0">
+                          <SelectTrigger className="h-8 w-20 text-xs rounded-none border-0">
                             <SelectValue placeholder="-" />
                           </SelectTrigger>
                           <SelectContent>
