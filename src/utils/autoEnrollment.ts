@@ -43,6 +43,17 @@ const toLevelKey = (val: string) => {
   return lower;
 };
 
+const normalizeTimingForComparison = (s: string) =>
+  (s || "").toLowerCase().replace(/[^a-z0-9:.-]/g, "");
+
+const timingsMatch = (timing1: string, timing2: string): boolean => {
+  const n1 = normalizeTimingForComparison(timing1);
+  const n2 = normalizeTimingForComparison(timing2);
+  if (n1 === n2) return true;
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+  return false;
+};
+
 export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoEnrollResult> => {
   try {
     // Build student course list from program/courses
@@ -84,29 +95,40 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
       return { count: 0, classIds: [], earliestStartDate: null };
     }
 
+    const hasCourseSelection = studentCourses.length > 0;
+    const hasLevelSelection = studentLevelKeys.length > 0;
+
     const eligible = classes.filter((cls: any) => {
       // Timing match (if provided)
-      if (studentData.timing && cls.timing !== studentData.timing) return false;
+      if (studentData.timing && !timingsMatch(cls.timing, studentData.timing)) return false;
 
-      // Course/program match using class.courses array
-      if (studentCourses.length > 0) {
-        const allowed = Array.isArray(cls.courses) ? cls.courses : [];
-        const normAllowed = allowed.map(normalize);
-        const hasCourse = studentCourses.some((c) =>
-          normAllowed.some((a) => a.includes(normalize(c)) || normalize(c).includes(a))
-        );
-        if (!hasCourse) return false;
-      }
+      // Course match
+      const courseMatches = hasCourseSelection
+        ? (() => {
+            const allowed = Array.isArray(cls.courses) ? cls.courses : [];
+            const normAllowed = allowed.map(normalize);
+            return studentCourses.some((c) =>
+              normAllowed.some((a) => a.includes(normalize(c)) || normalize(c).includes(a))
+            );
+          })()
+        : false;
 
-      // Level overlap (if student specified)
-      if (studentLevelKeys.length > 0) {
-        const classLevelKeys = (Array.isArray(cls.levels) ? cls.levels : [])
-          .map(String)
-          .map(toLevelKey);
-        const hasLevel = studentLevelKeys.some((lk) => classLevelKeys.includes(lk));
-        if (!hasLevel) return false;
-      }
+      // Level match
+      const levelMatches = hasLevelSelection
+        ? (() => {
+            const classLevelKeys = (Array.isArray(cls.levels) ? cls.levels : [])
+              .map(String)
+              .map(toLevelKey);
+            return studentLevelKeys.some((lk) => classLevelKeys.includes(lk));
+          })()
+        : false;
 
+      // IMPORTANT: If both were selected by the student, treat as union (course OR level)
+      if (hasCourseSelection && hasLevelSelection) return courseMatches || levelMatches;
+      if (hasCourseSelection) return courseMatches;
+      if (hasLevelSelection) return levelMatches;
+
+      // If neither specified, enroll in all timings (shouldn't happen in normal flows)
       return true;
     });
 
