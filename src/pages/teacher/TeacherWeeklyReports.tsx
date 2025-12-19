@@ -79,30 +79,21 @@ const TeacherWeeklyReports = () => {
         setTeacherName(teacherData.full_name);
       }
 
-      // Get students assigned to this teacher
-      const { data: classesData } = await supabase
-        .from("classes")
-        .select("id")
+      // Get students assigned to this teacher via student_teachers table
+      const { data: studentTeachersData } = await supabase
+        .from("student_teachers")
+        .select("student_id")
         .eq("teacher_id", session.user.id);
 
-      if (classesData && classesData.length > 0) {
-        const classIds = classesData.map(c => c.id);
+      if (studentTeachersData && studentTeachersData.length > 0) {
+        const studentIds = [...new Set(studentTeachersData.map(st => st.student_id))];
 
-        const { data: classStudents } = await supabase
-          .from("class_students")
-          .select("student_id")
-          .in("class_id", classIds);
+        const { data: studentsData } = await supabase
+          .from("students")
+          .select("id, full_name_en, phone1")
+          .in("id", studentIds);
 
-        if (classStudents && classStudents.length > 0) {
-          const studentIds = [...new Set(classStudents.map(cs => cs.student_id))];
-
-          const { data: studentsData } = await supabase
-            .from("students")
-            .select("id, full_name_en, phone1")
-            .in("id", studentIds);
-
-          setStudents(studentsData || []);
-        }
+        setStudents(studentsData || []);
       }
 
       // Get sent reports
