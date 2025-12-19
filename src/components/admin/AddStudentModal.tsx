@@ -642,7 +642,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
           id: studentData.id,
           branch_id: actualBranchId || undefined,
           program: formData.courses[0] || undefined,
-          courses: [...formData.courses, ...formData.selectedLevels],
+          courses: [...formData.courses],
           course_level: formData.selectedLevels.join(', '),
           timing: timingString,
         });

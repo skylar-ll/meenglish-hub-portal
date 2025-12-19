@@ -67,7 +67,7 @@ const matchCourse = (classCourse: string, selectedCourse: string): boolean => {
  * Computes allowed timings from classes based on selected levels and courses.
  * 
  * Rules:
- * - If both levels and courses are selected, a class must match at least one level AND at least one course
+ * - If both levels and courses are selected, a class is included if it matches at least one selected level OR at least one selected course (union)
  * - If only levels are selected, match any class that has a matching level
  * - If only courses are selected, match any class that has a matching course
  * - If neither is selected, return all timings
@@ -79,46 +79,42 @@ export function computeAllowedTimingsForSelections(
     selectedCourses: string[];
   }
 ): string[] {
-  const selectedLevels = (selections.selectedLevels ?? []).filter(s => s && s.trim().length > 0);
-  const selectedCourses = (selections.selectedCourses ?? []).filter(s => s && s.trim().length > 0);
-  
+  const selectedLevels = (selections.selectedLevels ?? []).filter(
+    (s) => s && s.trim().length > 0
+  );
+  const selectedCourses = (selections.selectedCourses ?? []).filter(
+    (s) => s && s.trim().length > 0
+  );
+
   const hasLevelSelection = selectedLevels.length > 0;
   const hasCourseSelection = selectedCourses.length > 0;
-  
+
   // If nothing is selected, return all timings
   if (!hasLevelSelection && !hasCourseSelection) {
-    return [...new Set(classes.map(c => c.timing).filter(Boolean))];
+    return [...new Set(classes.map((c) => c.timing).filter(Boolean))];
   }
 
   const matchedClasses = classes.filter((cls) => {
     const classLevels = cls.levels ?? [];
     const classCourses = cls.courses ?? [];
-    
-    // Check level match
-    let levelMatches = true;
-    if (hasLevelSelection) {
-      levelMatches = selectedLevels.some(selectedLevel =>
-        classLevels.some(classLevel => matchLevel(classLevel, selectedLevel))
-      );
-    }
-    
-    // Check course match
-    let courseMatches = true;
-    if (hasCourseSelection) {
-      courseMatches = selectedCourses.some(selectedCourse =>
-        classCourses.some(classCourse => matchCourse(classCourse, selectedCourse))
-      );
-    }
-    
-    // If both are selected, both must match
-    // If only one is selected, only that one needs to match
-    if (hasLevelSelection && hasCourseSelection) {
-      return levelMatches && courseMatches;
-    } else if (hasLevelSelection) {
-      return levelMatches;
-    } else {
-      return courseMatches;
-    }
+
+    const levelMatches = hasLevelSelection
+      ? selectedLevels.some((selectedLevel) =>
+          classLevels.some((classLevel) => matchLevel(classLevel, selectedLevel))
+        )
+      : false;
+
+    const courseMatches = hasCourseSelection
+      ? selectedCourses.some((selectedCourse) =>
+          classCourses.some((classCourse) => matchCourse(classCourse, selectedCourse))
+        )
+      : false;
+
+    // Union when both are selected (matches user expectation for multi-level + multi-course selections)
+    if (hasLevelSelection && hasCourseSelection) return levelMatches || courseMatches;
+    if (hasLevelSelection) return levelMatches;
+    if (hasCourseSelection) return courseMatches;
+    return true;
   });
 
   // Extract unique timings from matched classes

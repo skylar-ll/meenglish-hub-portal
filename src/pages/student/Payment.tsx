@@ -159,16 +159,22 @@ const Payment = () => {
       // AUTO-ENROLL student in matching classes
       const { autoEnrollStudent } = await import("@/utils/autoEnrollment");
       try {
-        const enrollResult = await autoEnrollStudent({
-          id: studentData.id,
-          branch_id: registration.branchId || '',
-          program: selectedCourses,
-          course_level: registration.courseLevel || '',
-          timing: registration.timing || '',
-          courses: selectedCourses
-        });
-        
-        console.log(`Auto-enrolled in ${enrollResult.count} class(es)`);
+        const timingList: string[] = Array.isArray(registration.selectedTimings) && registration.selectedTimings.length > 0
+          ? registration.selectedTimings
+          : registration.timing ? String(registration.timing).split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+
+        for (const timing of (timingList.length > 0 ? timingList : [" "])) {
+          const enrollResult = await autoEnrollStudent({
+            id: studentData.id,
+            branch_id: (registration.branch_id || registration.branchId || '') as string,
+            program: selectedCourses,
+            course_level: registration.courseLevel || '',
+            timing: timing.trim() || undefined,
+            courses: selectedCourses,
+          });
+
+          console.log(`Auto-enrolled in ${enrollResult.count} class(es)`);
+        }
       } catch (enrollError) {
         console.error("Auto-enrollment error:", enrollError);
         // Don't block registration if enrollment fails
