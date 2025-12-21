@@ -66,8 +66,8 @@ const TeacherScheduleManagement = () => {
   const [dailyStatus, setDailyStatus] = useState<DailyStatus[]>([]);
   const [notifications, setNotifications] = useState<RemovalNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  // Track which branch is displayed at each position (by index)
-  const [displayOrder, setDisplayOrder] = useState<string[]>([]);
+  // Track which single branch is currently displayed
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
@@ -109,9 +109,9 @@ const TeacherScheduleManagement = () => {
       .select("*")
       .order("name_en");
     setBranches(data || []);
-    // Initialize display order if not set
-    if (data && data.length > 0 && displayOrder.length === 0) {
-      setDisplayOrder(data.map(b => b.id));
+    // Initialize selected branch if not set
+    if (data && data.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(data[0].id);
     }
   };
 
@@ -305,9 +305,9 @@ const TeacherScheduleManagement = () => {
           </Card>
         )}
 
-        {/* Branch Tables */}
-        {displayOrder.map((branchId, positionIndex) => {
-          const branch = branches.find(b => b.id === branchId);
+        {/* Single Branch Table with Dropdown */}
+        {(() => {
+          const branch = branches.find(b => b.id === selectedBranchId);
           if (!branch) return null;
           
           const branchClasses = classesByBranch[branch.id] || [];
@@ -324,28 +324,14 @@ const TeacherScheduleManagement = () => {
             return startDates[0];
           };
 
-          // Handle branch swap
-          const handleBranchChange = (newBranchId: string) => {
-            setDisplayOrder(prev => {
-              const newOrder = [...prev];
-              newOrder[positionIndex] = newBranchId;
-              return newOrder;
-            });
-          };
-
-          // Get branches not currently displayed (for dropdown options)
-          const availableBranches = branches.filter(b => 
-            b.id === branchId || !displayOrder.includes(b.id)
-          );
-
           return (
-            <Card key={positionIndex} className="mb-6 overflow-hidden">
+            <Card className="mb-6 overflow-hidden">
               {/* Branch Header with Dropdown */}
               <div className="bg-primary p-4 text-primary-foreground">
                 <div className="flex justify-center">
                   <Select 
-                    value={branch.id} 
-                    onValueChange={handleBranchChange}
+                    value={selectedBranchId} 
+                    onValueChange={setSelectedBranchId}
                   >
                     <SelectTrigger className="w-auto min-w-[280px] bg-transparent border-primary-foreground/30 text-primary-foreground font-bold text-xl justify-center gap-2 hover:bg-primary-foreground/10">
                       <SelectValue>{branch.name_ar} / {branch.name_en}</SelectValue>
@@ -504,7 +490,7 @@ const TeacherScheduleManagement = () => {
               )}
             </Card>
           );
-        })}
+        })()}
 
         {/* Empty State */}
         {classes.length === 0 && (
