@@ -94,55 +94,65 @@ const TeacherScheduleManagement = () => {
 
   const monthFilteredClasses = useMemo(() => {
     if (selectedMonth === "all") return branchFilteredClasses;
-    return branchFilteredClasses.filter((c) => !!c.start_date && c.start_date.startsWith(selectedMonth));
-  }, [branchFilteredClasses, selectedMonth]);
-
-  // Generate dates based on selected month or from filtered classes
-  const availableDates = useMemo(() => {
-    const dates: { value: string; label: string }[] = [];
-
-    if (selectedMonth !== "all") {
+    // Filter classes that overlap with the selected month
+    return branchFilteredClasses.filter((c) => {
+      if (!c.start_date) return false;
+      const startDate = parseISO(c.start_date);
+      const endDate = c.end_date ? parseISO(c.end_date) : startDate;
       const monthStart = parse(selectedMonth + "-01", "yyyy-MM-dd", new Date());
       const monthEnd = endOfMonth(monthStart);
-      const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-      daysInMonth.forEach((date) => {
-        dates.push({
-          value: format(date, "yyyy-MM-dd"),
-          label: format(date, "EEEE, MMMM d, yyyy"),
-        });
-      });
-
-      return dates;
-    }
-
-    // Month = All: show only dates that actually exist in data (by start_date)
-    const uniqueDates = new Set<string>();
-    branchFilteredClasses.forEach((cls) => {
-      if (cls.start_date) uniqueDates.add(cls.start_date);
+      // Class overlaps with month if it starts before month ends AND ends after month starts
+      return startDate <= monthEnd && endDate >= monthStart;
     });
+  }, [branchFilteredClasses, selectedMonth]);
 
-    Array.from(uniqueDates)
-      .sort()
-      .forEach((dateStr) => {
-        const date = parseISO(dateStr);
-        if (isValid(date)) {
-          dates.push({
-            value: dateStr,
-            label: format(date, "EEEE, MMMM d, yyyy"),
+  // Generate ALL dates where classes are active (from start_date to end_date)
+  const availableDates = useMemo(() => {
+    const uniqueDates = new Set<string>();
+    
+    // For each class, add all dates from start_date to end_date
+    branchFilteredClasses.forEach((cls) => {
+      if (cls.start_date) {
+        const startDate = parseISO(cls.start_date);
+        const endDate = cls.end_date ? parseISO(cls.end_date) : startDate;
+        
+        if (isValid(startDate) && isValid(endDate)) {
+          const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+          allDays.forEach((day) => {
+            const dateStr = format(day, "yyyy-MM-dd");
+            // If a month is selected, only add dates from that month
+            if (selectedMonth === "all" || dateStr.startsWith(selectedMonth)) {
+              uniqueDates.add(dateStr);
+            }
           });
         }
-      });
+      }
+    });
 
-    return dates;
+    // Convert to array and sort
+    return Array.from(uniqueDates)
+      .sort()
+      .map((dateStr) => {
+        const date = parseISO(dateStr);
+        return {
+          value: dateStr,
+          label: format(date, "EEEE, MMMM d, yyyy"),
+        };
+      });
   }, [selectedMonth, branchFilteredClasses]);
 
   const classesAfterBranchMonthDate = useMemo(() => {
     let result = [...monthFilteredClasses];
 
-    // Exact-date filter: ONLY classes whose start_date equals the selected date
+    // Filter: classes that are active on the selected date (between start_date and end_date)
     if (selectedDate !== "all") {
-      result = result.filter((c) => c.start_date === selectedDate);
+      result = result.filter((c) => {
+        if (!c.start_date) return false;
+        const startDate = parseISO(c.start_date);
+        const endDate = c.end_date ? parseISO(c.end_date) : startDate;
+        const selectedDateObj = parseISO(selectedDate);
+        return selectedDateObj >= startDate && selectedDateObj <= endDate;
+      });
     }
 
     return result;
