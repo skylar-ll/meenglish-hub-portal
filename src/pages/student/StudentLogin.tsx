@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,27 @@ const StudentLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check if already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Verify student role
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "student")
+          .maybeSingle();
+
+        if (roleData) {
+          navigate("/student/course");
+        }
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -45,7 +66,7 @@ const StudentLogin = () => {
         return;
       }
 
-      // Fetch student data and store in sessionStorage
+      // Fetch student data from database (not sessionStorage)
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("*")
@@ -58,7 +79,8 @@ const StudentLogin = () => {
         return;
       }
 
-      // Store student data in sessionStorage for CoursePage
+      // Clear any old sessionStorage and set fresh data from DB
+      sessionStorage.removeItem("studentRegistration");
       const registrationData = {
         fullNameEn: studentData.full_name_en,
         fullNameAr: studentData.full_name_ar,
@@ -67,12 +89,18 @@ const StudentLogin = () => {
         classType: studentData.class_type,
         branch: studentData.branch,
         courseLevel: studentData.course_level,
+        studentId: studentData.student_id,
+        timing: studentData.timing,
+        teacherId: studentData.teacher_id,
+        registrationDate: studentData.registration_date,
+        expirationDate: studentData.expiration_date,
       };
       sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
 
       toast.success("Login successful!");
       navigate("/student/course");
     } catch (error: any) {
+      console.error("Login error:", error);
       toast.error(error.message || "Invalid email or password");
     } finally {
       setLoading(false);
