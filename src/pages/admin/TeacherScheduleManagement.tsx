@@ -14,7 +14,7 @@ import {
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parse, isValid, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { format, parse, isValid, endOfMonth, eachDayOfInterval, parseISO } from "date-fns";
 
 interface Branch {
   id: string;
@@ -66,8 +66,17 @@ const TeacherScheduleManagement = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("all");
+  const [selectedTime, setSelectedTime] = useState<string>("all");
   
   const today = format(new Date(), "yyyy-MM-dd");
+
+  const normalizeTiming = (s: string) =>
+    (s || "").toLowerCase().replace(/\s+/g, "").replace(/–/g, "-");
+
+  const branchFilteredClasses = useMemo(() => {
+    if (selectedBranchId === "all") return classes;
+    return classes.filter((c) => c.branch_id === selectedBranchId);
+  }, [classes, selectedBranchId]);
 
   // Generate months for the dropdown (current year and next year)
   const availableMonths = useMemo(() => {
@@ -77,102 +86,94 @@ const TeacherScheduleManagement = () => {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
       months.push({
         value: format(date, "yyyy-MM"),
-        label: format(date, "MMMM yyyy")
+        label: format(date, "MMMM yyyy"),
       });
     }
     return months;
   }, []);
 
-  // Generate dates based on selected month or from all classes
+  const monthFilteredClasses = useMemo(() => {
+    if (selectedMonth === "all") return branchFilteredClasses;
+    return branchFilteredClasses.filter((c) => !!c.start_date && c.start_date.startsWith(selectedMonth));
+  }, [branchFilteredClasses, selectedMonth]);
+
+  // Generate dates based on selected month or from filtered classes
   const availableDates = useMemo(() => {
     const dates: { value: string; label: string }[] = [];
-    
+
     if (selectedMonth !== "all") {
-      // Generate all days in the selected month
       const monthStart = parse(selectedMonth + "-01", "yyyy-MM-dd", new Date());
       const monthEnd = endOfMonth(monthStart);
       const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      
-      daysInMonth.forEach(date => {
+
+      daysInMonth.forEach((date) => {
         dates.push({
           value: format(date, "yyyy-MM-dd"),
-          label: format(date, "EEEE, MMMM d, yyyy")
+          label: format(date, "EEEE, MMMM d, yyyy"),
         });
       });
-    } else {
-      // Get unique dates from all classes (start_date and end_date)
-      const uniqueDates = new Set<string>();
-      classes.forEach(cls => {
-        if (cls.start_date) uniqueDates.add(cls.start_date);
-        if (cls.end_date) uniqueDates.add(cls.end_date);
-      });
-      
-      Array.from(uniqueDates).sort().forEach(dateStr => {
+
+      return dates;
+    }
+
+    // Month = All: show only dates that actually exist in data (by start_date)
+    const uniqueDates = new Set<string>();
+    branchFilteredClasses.forEach((cls) => {
+      if (cls.start_date) uniqueDates.add(cls.start_date);
+    });
+
+    Array.from(uniqueDates)
+      .sort()
+      .forEach((dateStr) => {
         const date = parseISO(dateStr);
         if (isValid(date)) {
           dates.push({
             value: dateStr,
-            label: format(date, "EEEE, MMMM d, yyyy")
+            label: format(date, "EEEE, MMMM d, yyyy"),
           });
         }
       });
-    }
-    
-    return dates;
-  }, [selectedMonth, classes]);
 
-  // Filter classes based on selected filters
-  const filteredClasses = useMemo(() => {
-    let result = [...classes];
-    
-    // Filter by branch
-    if (selectedBranchId !== "all") {
-      result = result.filter(c => c.branch_id === selectedBranchId);
-    }
-    
-    // Filter by month
-    if (selectedMonth !== "all") {
-      result = result.filter(c => {
-        if (!c.start_date && !c.end_date) return false;
-        
-        const monthStart = parse(selectedMonth + "-01", "yyyy-MM-dd", new Date());
-        const monthEnd = endOfMonth(monthStart);
-        
-        // Check if class is active during the selected month
-        const startDate = c.start_date ? parseISO(c.start_date) : null;
-        const endDate = c.end_date ? parseISO(c.end_date) : null;
-        
-        // Class is active if it starts before month end AND (has no end date OR ends after month start)
-        if (startDate && startDate <= monthEnd) {
-          if (!endDate || endDate >= monthStart) {
-            return true;
-          }
-        }
-        return false;
-      });
-    }
-    
-    // Filter by specific date
+    return dates;
+  }, [selectedMonth, branchFilteredClasses]);
+
+  const classesAfterBranchMonthDate = useMemo(() => {
+    let result = [...monthFilteredClasses];
+
+    // Exact-date filter: ONLY classes whose start_date equals the selected date
     if (selectedDate !== "all") {
-      const targetDate = parseISO(selectedDate);
-      result = result.filter(c => {
-        if (!c.start_date) return false;
-        
-        const startDate = parseISO(c.start_date);
-        const endDate = c.end_date ? parseISO(c.end_date) : null;
-        
-        // Class is active on this date if start_date <= targetDate AND (no end_date OR end_date >= targetDate)
-        if (startDate <= targetDate) {
-          if (!endDate || endDate >= targetDate) {
-            return true;
-          }
-        }
-        return false;
-      });
+      result = result.filter((c) => c.start_date === selectedDate);
     }
-    
+
     return result;
-  }, [classes, selectedBranchId, selectedMonth, selectedDate]);
+  }, [monthFilteredClasses, selectedDate]);
+
+  const availableTimes = useMemo(() => {
+    const times = new Set<string>();
+    classesAfterBranchMonthDate.forEach((c) => {
+      if (c.timing) times.add(c.timing);
+    });
+    return Array.from(times).sort();
+  }, [classesAfterBranchMonthDate]);
+
+  // Final filtered classes (includes time filter)
+  const filteredClasses = useMemo(() => {
+    let result = [...classesAfterBranchMonthDate];
+
+    if (selectedTime !== "all") {
+      const selected = normalizeTiming(selectedTime);
+      result = result.filter((c) => normalizeTiming(c.timing) === selected);
+    }
+
+    return result;
+  }, [classesAfterBranchMonthDate, selectedTime]);
+
+  // Reset time if it no longer exists for the current branch/month/date selection
+  useEffect(() => {
+    if (selectedTime !== "all" && !availableTimes.includes(selectedTime)) {
+      setSelectedTime("all");
+    }
+  }, [availableTimes, selectedTime]);
 
   // Reset date when month changes
   useEffect(() => {
@@ -360,6 +361,7 @@ const TeacherScheduleManagement = () => {
     setSelectedBranchId("all");
     setSelectedMonth("all");
     setSelectedDate("all");
+    setSelectedTime("all");
   };
 
   if (loading) {
@@ -535,8 +537,23 @@ const TeacherScheduleManagement = () => {
                   </tr>
                   {/* Teacher Names Row */}
                   <tr className="border-b bg-muted/30">
-                    <th className="p-3 text-left font-semibold min-w-[120px] border-r">
-                      Time
+                    <th className="p-3 text-left font-semibold min-w-[140px] border-r">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-muted-foreground text-xs">Time</span>
+                        <Select value={selectedTime} onValueChange={setSelectedTime}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="All times" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value="all">All Times</SelectItem>
+                            {availableTimes.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </th>
                     {(() => {
                       const allTeacherIds = [...new Set(filteredClasses.map(c => c.teacher_id))];
