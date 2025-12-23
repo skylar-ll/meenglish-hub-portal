@@ -254,7 +254,6 @@ const TeacherScheduleManagement = () => {
         branches!classes_branch_id_fkey (name_en, name_ar)
       `)
       .not("teacher_id", "is", null)
-      .eq("status", "active")
       .order("timing");
 
     if (error) {
