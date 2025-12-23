@@ -41,6 +41,27 @@ const TeacherLogin = () => {
     );
   };
 
+  // Check if already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Verify teacher role
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "teacher")
+          .maybeSingle();
+
+        if (roleData) {
+          navigate("/teacher/dashboard");
+        }
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   // Auto-translate Arabic name to English
   useEffect(() => {
     const arabicName = signupNameAr.trim();
