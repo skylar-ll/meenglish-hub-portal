@@ -80,19 +80,65 @@ const TeacherScheduleManagement = () => {
     return classes.filter((c) => c.branch_id === selectedBranchId);
   }, [classes, selectedBranchId]);
 
-  // Generate months for the dropdown (current year and next year)
-  const availableMonths = useMemo(() => {
-    const months = [];
-    const currentDate = new Date();
-    for (let i = -6; i <= 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
-      months.push({
-        value: format(date, "yyyy-MM"),
-        label: format(date, "MMMM yyyy"),
+  // Build a calendar of ONLY the months/dates that actually exist in created classes
+  // (based on class start_date → end_date, respecting the selected branch)
+  const datesByMonth = useMemo(() => {
+    const sets: Record<string, Set<string>> = {};
+
+    branchFilteredClasses.forEach((cls) => {
+      if (!cls.start_date) return;
+
+      const startDate = parseDateOnly(cls.start_date);
+      const endDate = cls.end_date ? parseDateOnly(cls.end_date) : startDate;
+      if (!isValid(startDate) || !isValid(endDate)) return;
+
+      const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+      allDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const monthKey = dateStr.slice(0, 7); // yyyy-MM
+        sets[monthKey] ??= new Set<string>();
+        sets[monthKey].add(dateStr);
       });
-    }
-    return months;
-  }, []);
+    });
+
+    const out: Record<string, string[]> = {};
+    Object.keys(sets)
+      .sort()
+      .forEach((monthKey) => {
+        out[monthKey] = Array.from(sets[monthKey]).sort();
+      });
+
+    return out;
+  }, [branchFilteredClasses]);
+
+  // Months dropdown = only months that have at least 1 class date
+  const availableMonths = useMemo(() => {
+    return Object.keys(datesByMonth).map((monthKey) => {
+      const monthDate = parse(monthKey + "-01", "yyyy-MM-dd", new Date());
+      return {
+        value: monthKey,
+        label: format(monthDate, "MMMM yyyy"),
+      };
+    });
+  }, [datesByMonth]);
+
+  // Dates dropdown = only dates that exist in created classes (optionally within selectedMonth)
+  const availableDates = useMemo(() => {
+    const dateStrs =
+      selectedMonth === "all"
+        ? Object.values(datesByMonth).flat()
+        : datesByMonth[selectedMonth] || [];
+
+    const uniqueSorted = Array.from(new Set(dateStrs)).sort();
+
+    return uniqueSorted.map((dateStr) => {
+      const date = parseDateOnly(dateStr);
+      return {
+        value: dateStr,
+        label: format(date, "EEEE, MMMM d, yyyy"),
+      };
+    });
+  }, [datesByMonth, selectedMonth]);
 
   const monthFilteredClasses = useMemo(() => {
     if (selectedMonth === "all") return branchFilteredClasses;
@@ -108,53 +154,18 @@ const TeacherScheduleManagement = () => {
     });
   }, [branchFilteredClasses, selectedMonth]);
 
-  // Generate ALL dates where classes are active (from start_date to end_date)
-  const availableDates = useMemo(() => {
-    const uniqueDates = new Set<string>();
-    
-    // For each class, add all dates from start_date to end_date
-    branchFilteredClasses.forEach((cls) => {
-      if (cls.start_date) {
-        const startDate = parseDateOnly(cls.start_date);
-        const endDate = cls.end_date ? parseDateOnly(cls.end_date) : startDate;
-
-        if (isValid(startDate) && isValid(endDate)) {
-          const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-          allDays.forEach((day) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            // If a month is selected, only add dates from that month
-            if (selectedMonth === "all" || dateStr.startsWith(selectedMonth)) {
-              uniqueDates.add(dateStr);
-            }
-          });
-        }
-      }
-    });
-
-    // Convert to array and sort
-    return Array.from(uniqueDates)
-      .sort()
-      .map((dateStr) => {
-        const date = parseDateOnly(dateStr);
-        return {
-          value: dateStr,
-          label: format(date, "EEEE, MMMM d, yyyy"),
-        };
-      });
-  }, [selectedMonth, branchFilteredClasses]);
-
   const classesAfterBranchMonthDate = useMemo(() => {
     let result = [...monthFilteredClasses];
 
     // Filter: classes that are active on the selected date (between start_date and end_date)
     if (selectedDate !== "all") {
-        result = result.filter((c) => {
-          if (!c.start_date) return false;
-          const startDate = parseDateOnly(c.start_date);
-          const endDate = c.end_date ? parseDateOnly(c.end_date) : startDate;
-          const selectedDateObj = parseDateOnly(selectedDate);
-          return selectedDateObj >= startDate && selectedDateObj <= endDate;
-        });
+      result = result.filter((c) => {
+        if (!c.start_date) return false;
+        const startDate = parseDateOnly(c.start_date);
+        const endDate = c.end_date ? parseDateOnly(c.end_date) : startDate;
+        const selectedDateObj = parseDateOnly(selectedDate);
+        return selectedDateObj >= startDate && selectedDateObj <= endDate;
+      });
     }
 
     return result;
@@ -180,22 +191,25 @@ const TeacherScheduleManagement = () => {
     return result;
   }, [classesAfterBranchMonthDate, selectedTime]);
 
+  // Reset month/date if they no longer exist for the current branch/classes
+  useEffect(() => {
+    if (selectedMonth !== "all" && !availableMonths.some((m) => m.value === selectedMonth)) {
+      setSelectedMonth("all");
+    }
+  }, [availableMonths, selectedMonth]);
+
+  useEffect(() => {
+    if (selectedDate !== "all" && !availableDates.some((d) => d.value === selectedDate)) {
+      setSelectedDate("all");
+    }
+  }, [availableDates, selectedDate]);
+
   // Reset time if it no longer exists for the current branch/month/date selection
   useEffect(() => {
     if (selectedTime !== "all" && !availableTimes.includes(selectedTime)) {
       setSelectedTime("all");
     }
   }, [availableTimes, selectedTime]);
-
-  // Reset date when month changes
-  useEffect(() => {
-    if (selectedMonth !== "all" && selectedDate !== "all") {
-      // Check if selected date is in the selected month
-      if (!selectedDate.startsWith(selectedMonth)) {
-        setSelectedDate("all");
-      }
-    }
-  }, [selectedMonth, selectedDate]);
 
   useEffect(() => {
     fetchData();
@@ -406,6 +420,162 @@ const TeacherScheduleManagement = () => {
     setSelectedTime("all");
   };
 
+  const shouldGroupByBranch =
+    selectedBranchId === "all" &&
+    selectedMonth === "all" &&
+    selectedDate === "all" &&
+    selectedTime === "all";
+
+  const renderScheduleGrid = (tableClasses: ClassData[], opts?: { showTimeFilter?: boolean }) => {
+    const teacherIdsLocal = Array.from(
+      new Set(
+        tableClasses
+          .map((c) => c.teacher_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const timingsLocal = Array.from(new Set(tableClasses.map((c) => c.timing).filter(Boolean))).sort();
+
+    return (
+      <div
+        className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="p-2 text-left font-medium min-w-[120px] border-r">
+                <span className="text-muted-foreground text-xs">Start Date</span>
+              </th>
+
+              {teacherIdsLocal.map((teacherId) => {
+                const teacherClasses = tableClasses.filter((c) => c.teacher_id === teacherId && c.start_date);
+                const startDates = teacherClasses.map((c) => c.start_date!).sort();
+                const earliestDate = startDates[0];
+
+                return (
+                  <th key={teacherId} className="p-2 text-center font-semibold min-w-[150px] border-r text-sm">
+                    {earliestDate ? format(parseDateOnly(earliestDate), "MMM d, yyyy") : "N/A"}
+                  </th>
+                );
+              })}
+            </tr>
+
+            <tr className="border-b bg-muted/30">
+              <th className="p-3 text-left font-semibold min-w-[140px] border-r">
+                <div className="flex flex-col gap-2">
+                  <span className="text-muted-foreground text-xs">Time</span>
+
+                  {opts?.showTimeFilter ? (
+                    <Select value={selectedTime} onValueChange={setSelectedTime}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="All times" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <SelectItem value="all">All Times</SelectItem>
+                        {availableTimes.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+                </div>
+              </th>
+
+              {teacherIdsLocal.map((teacherId) => {
+                const teacherClasses = tableClasses.filter((c) => c.teacher_id === teacherId);
+                const allCompleted = teacherClasses.length > 0 && teacherClasses.every((c) => isClassCompleted(c.id));
+                const teacherName = teacherClasses[0]?.teacher_name || "Unknown";
+
+                return (
+                  <th
+                    key={teacherId}
+                    className={`p-3 text-center font-semibold min-w-[150px] border-r transition-colors ${
+                      allCompleted ? "bg-green-500/20 text-green-700" : ""
+                    }`}
+                  >
+                    {teacherName}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+
+          <tbody>
+            {timingsLocal.map((timing) => (
+              <tr key={timing} className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
+
+                {teacherIdsLocal.map((teacherId) => {
+                  const classAtTiming = tableClasses.find(
+                    (c) =>
+                      normalizeTiming(c.timing) === normalizeTiming(timing) &&
+                      c.teacher_id === teacherId
+                  );
+
+                  if (!classAtTiming) {
+                    return <td key={teacherId} className="p-3 text-center border-r">-</td>;
+                  }
+
+                  const completed = isClassCompleted(classAtTiming.id);
+
+                  return (
+                    <td
+                      key={teacherId}
+                      className={`p-3 text-center border-r transition-colors ${
+                        completed ? "bg-green-500/30" : "bg-yellow-500/10"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1 items-center">
+                        {/* Levels */}
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {classAtTiming.levels?.map((level, i) => {
+                            const match = level.match(/\(([^)]+)\)/);
+                            const shortName = match ? match[1] : level.split(" ")[0];
+                            return (
+                              <Badge
+                                key={i}
+                                variant={completed ? "default" : "secondary"}
+                                className={`text-xs ${completed ? "bg-green-600 hover:bg-green-700" : ""}`}
+                              >
+                                {shortName}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+
+                        {/* Courses */}
+                        {classAtTiming.courses?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 justify-center">
+                            {classAtTiming.courses.map((course, i) => {
+                              const shortCourse = course.split(" ")[0];
+                              return (
+                                <span key={i} className="text-xs text-muted-foreground">
+                                  {shortCourse}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Completion indicator */}
+                        {completed && <Check className="w-4 h-4 text-green-600 mt-1" />}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -512,213 +682,110 @@ const TeacherScheduleManagement = () => {
         <Card className="overflow-hidden">
           {/* Branch Header with Dropdown */}
           <div className="bg-primary p-4 text-primary-foreground">
-            <div className="flex justify-center items-center gap-4">
-              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
-                  <SelectValue>
-                    {selectedBranchId === "all" 
-                      ? "All Branches / جميع الفروع" 
-                      : (() => {
-                          const branch = branches.find(b => b.id === selectedBranchId);
-                          return branch ? `${branch.name_ar} / ${branch.name_en}` : "Select Branch";
-                        })()
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Branches / جميع الفروع</SelectItem>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name_ar} / {branch.name_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex justify-center items-center gap-4 flex-wrap">
+                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                  <SelectTrigger className="w-auto min-w-[250px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+                    <SelectValue>
+                      {selectedBranchId === "all"
+                        ? "All Branches / جميع الفروع"
+                        : (() => {
+                            const branch = branches.find((b) => b.id === selectedBranchId);
+                            return branch
+                              ? `${branch.name_ar} / ${branch.name_en}`
+                              : "Select Branch";
+                          })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Branches / جميع الفروع</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name_ar} / {branch.name_en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20"
+                >
+                  Clear
+                </Button>
+              </div>
+
+              {/* Month + Date dropdowns moved into the blue area (as requested) */}
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <span className="text-xs text-primary-foreground/80">Start Date</span>
+
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="h-9 w-[170px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    {availableMonths.map((month) => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedDate} onValueChange={setSelectedDate}>
+                  <SelectTrigger className="h-9 w-[170px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">All Dates</SelectItem>
+                    {availableDates.map((date) => (
+                      <SelectItem key={date.value} value={date.value}>
+                        {format(parseDateOnly(date.value), "MMM d, yyyy")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          {branchesWithClasses.length === 0 ? (
-            <div className="p-8 text-center">
-              <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                No classes found matching the selected filters.
-              </p>
-              <Button variant="outline" onClick={clearFilters} className="mt-4">
-                Clear Filters
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto overflow-y-visible -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  {/* Date Filters Row */}
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-2 text-left font-medium min-w-[120px] border-r">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-muted-foreground text-xs">Start Date</span>
-                        <div className="flex flex-col gap-1">
-                          {/* Month Filter */}
-                          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Month" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Dates</SelectItem>
-                              {availableMonths.map((month) => (
-                                <SelectItem key={month.value} value={month.value}>
-                                  {month.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {/* Date Filter */}
-                          <Select value={selectedDate} onValueChange={setSelectedDate}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Date" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px]">
-                              <SelectItem value="all">All Dates</SelectItem>
-                              {availableDates.map((date) => (
-                                <SelectItem key={date.value} value={date.value}>
-                                  {format(parseDateOnly(date.value), "MMM d, yyyy")}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+
+            {branchesWithClasses.length === 0 ? (
+              <div className="p-8 text-center">
+                <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No classes found matching the selected filters.</p>
+                <Button variant="outline" onClick={clearFilters} className="mt-4">
+                  Clear Filters
+                </Button>
+              </div>
+            ) : shouldGroupByBranch ? (
+              <div className="divide-y">
+                {branchesWithClasses.map((branch) => {
+                  const branchClasses = classesByBranch[branch.id] || [];
+
+                  return (
+                    <section key={branch.id}>
+                      <div className="px-4 py-3 border-b bg-muted/40">
+                        <h2 className="font-semibold">
+                          {branch.name_ar} / {branch.name_en}
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Showing {branchClasses.length} classes
+                        </p>
                       </div>
-                    </th>
-                    {/* Teacher Start Dates */}
-                    {teacherIds.map((teacherId) => {
-                      const teacherClasses = filteredClasses.filter(
-                        (c) => c.teacher_id === teacherId && c.start_date
-                      );
-                      const startDates = teacherClasses.map((c) => c.start_date!).sort();
-                      const earliestDate = startDates[0];
-                      return (
-                        <th
-                          key={teacherId}
-                          className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
-                        >
-                          {earliestDate ? format(parseDateOnly(earliestDate), "MMM d, yyyy") : "N/A"}
-                        </th>
-                      );
-                    })}
 
-                  </tr>
-                  {/* Teacher Names Row */}
-                  <tr className="border-b bg-muted/30">
-                    <th className="p-3 text-left font-semibold min-w-[140px] border-r">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-muted-foreground text-xs">Time</span>
-                        <Select value={selectedTime} onValueChange={setSelectedTime}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="All times" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            <SelectItem value="all">All Times</SelectItem>
-                            {availableTimes.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </th>
-                    {(() => {
-                      const allTeacherIds = [...new Set(filteredClasses.map(c => c.teacher_id))];
-                      return allTeacherIds.map((teacherId) => {
-                        const teacherClasses = filteredClasses.filter(c => c.teacher_id === teacherId);
-                        const allCompleted = teacherClasses.length > 0 && teacherClasses.every(c => isClassCompleted(c.id));
-                        const teacherName = teacherClasses[0]?.teacher_name || "Unknown";
-                        return (
-                          <th 
-                            key={teacherId} 
-                            className={`p-3 text-center font-semibold min-w-[150px] border-r transition-colors ${
-                              allCompleted ? 'bg-green-500/20 text-green-700' : ''
-                            }`}
-                          >
-                            {teacherName}
-                          </th>
-                        );
-                      });
-                    })()}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const allTeacherIds = [...new Set(filteredClasses.map(c => c.teacher_id))];
-                    const allTimings = [...new Set(filteredClasses.map(c => c.timing))].sort();
-                    
-                    return allTimings.map((timing) => (
-                      <tr key={timing} className="border-b hover:bg-muted/20">
-                        <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
-                        {allTeacherIds.map((teacherId) => {
-                          const classAtTiming = filteredClasses.find(
-                            c => c.timing === timing && c.teacher_id === teacherId
-                          );
-                          
-                          if (!classAtTiming) {
-                            return <td key={teacherId} className="p-3 text-center border-r">-</td>;
-                          }
+                      {renderScheduleGrid(branchClasses, { showTimeFilter: false })}
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              renderScheduleGrid(filteredClasses, { showTimeFilter: true })
+            )}
 
-                          const completed = isClassCompleted(classAtTiming.id);
-                          
-                          return (
-                            <td 
-                              key={teacherId} 
-                              className={`p-3 text-center border-r transition-colors ${
-                                completed ? 'bg-green-500/30' : 'bg-yellow-500/10'
-                              }`}
-                            >
-                              <div className="flex flex-col gap-1 items-center">
-                                {/* Levels */}
-                                <div className="flex flex-wrap gap-1 justify-center">
-                                  {classAtTiming.levels?.map((level, i) => {
-                                    const match = level.match(/\(([^)]+)\)/);
-                                    const shortName = match ? match[1] : level.split(' ')[0];
-                                    return (
-                                      <Badge 
-                                        key={i} 
-                                        variant={completed ? "default" : "secondary"} 
-                                        className={`text-xs ${completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                                      >
-                                        {shortName}
-                                      </Badge>
-                                    );
-                                  })}
-                                </div>
-                                
-                                {/* Courses */}
-                                {classAtTiming.courses?.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 justify-center">
-                                    {classAtTiming.courses.map((course, i) => {
-                                      const shortCourse = course.split(' ')[0];
-                                      return (
-                                        <span key={i} className="text-xs text-muted-foreground">
-                                          {shortCourse}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-
-                                {/* Completion indicator */}
-                                {completed && (
-                                  <Check className="w-4 h-4 text-green-600 mt-1" />
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
         </Card>
 
         {/* Empty State */}
