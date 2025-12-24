@@ -19,8 +19,10 @@ interface PartialPaymentStepProps {
   onAmountChange: (amount: number) => void;
   onNextPaymentDateChange: (date: Date | undefined) => void;
   onPaymentDateChange?: (date: Date | undefined) => void;
+  onPaymentDeadlineChange?: (date: Date | undefined) => void;
   initialPayment?: number;
   initialNextPaymentDate?: Date;
+  showPaymentDeadlineEditor?: boolean;
 }
 
 export const PartialPaymentStep = ({
@@ -32,17 +34,27 @@ export const PartialPaymentStep = ({
   onAmountChange,
   onNextPaymentDateChange,
   onPaymentDateChange,
+  onPaymentDeadlineChange,
   initialPayment = 0,
   initialNextPaymentDate,
+  showPaymentDeadlineEditor = false,
 }: PartialPaymentStepProps) => {
   const [amountToPay, setAmountToPay] = useState<number>(initialPayment);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>(initialNextPaymentDate);
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
+  const [editableDeadline, setEditableDeadline] = useState<Date>(new Date(paymentDeadline));
   const remainingBalance = feeAfterDiscount - amountToPay;
 
   const handleNextPaymentDateChange = (date: Date | undefined) => {
     setNextPaymentDate(date);
     onNextPaymentDateChange(date);
+  };
+
+  const handleDeadlineChange = (date: Date | undefined) => {
+    if (date) {
+      setEditableDeadline(date);
+      onPaymentDeadlineChange?.(date);
+    }
   };
 
   const handleAmountChange = (value: string) => {
@@ -186,21 +198,50 @@ export const PartialPaymentStep = ({
         </div>
       </Card>
 
-      {/* Payment Deadline Info - Auto-generated */}
+      {/* Payment Deadline Info - Editable for admin */}
       {remainingBalance > 0 && (
         <Alert>
           <CalendarIcon className="h-4 w-4" />
           <AlertDescription>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="font-semibold">Payment Deadline</p>
-              <p className="text-sm">
-                Remaining balance must be paid by{" "}
-                <span className="font-semibold text-primary">
-                  {format(new Date(paymentDeadline), "MMMM dd, yyyy")}
-                </span>
-              </p>
+              {showPaymentDeadlineEditor ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !editableDeadline && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editableDeadline ? format(editableDeadline, "MMMM dd, yyyy") : <span>Select deadline</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editableDeadline}
+                      onSelect={handleDeadlineChange}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <p className="text-sm">
+                  Remaining balance must be paid by{" "}
+                  <span className="font-semibold text-primary">
+                    {format(new Date(paymentDeadline), "MMMM dd, yyyy")}
+                  </span>
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-2">
-                This deadline is automatically set to 1 month from registration date.
+                {showPaymentDeadlineEditor 
+                  ? "Click to change the payment deadline date."
+                  : "This deadline is automatically set to 1 month from registration date."}
               </p>
             </div>
           </AlertDescription>

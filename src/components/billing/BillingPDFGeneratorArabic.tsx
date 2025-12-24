@@ -41,12 +41,12 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     console.warn('Arabic font loading failed, using fallback:', fontError);
   }
 
-  // Helper to render Arabic text (reversed for RTL)
+  // Helper to render Arabic text (no reversal - Amiri font handles RTL correctly)
   const renderArabicText = (text: string, x: number, y: number, options?: { align?: 'left' | 'center' | 'right' }) => {
     if (hasArabicFont && /[\u0600-\u06FF]/.test(text)) {
       doc.setFont('Amiri', 'normal');
-      const reversed = text.split('').reverse().join('');
-      doc.text(reversed, x, y, options);
+      // Display Arabic text as-is without reversal
+      doc.text(text, x, y, options);
       doc.setFont('helvetica', 'normal');
     } else {
       doc.text(text, x, y, options);
