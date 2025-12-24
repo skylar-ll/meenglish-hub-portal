@@ -38,7 +38,12 @@ export const CourseAndLevelSelector = ({
   extractLevelKey,
   normalize,
 }: CourseAndLevelSelectorProps) => {
-  const { getTeacherForLevel, getTeacherForCourse } = useTeacherCourseMapping(selectedBranchId);
+  const {
+    getTeacherForLevel,
+    getTeacherForCourse,
+    getTimingsForLevel,
+    getTimingsForCourse,
+  } = useTeacherCourseMapping(selectedBranchId);
 
   return (
     <>
@@ -64,7 +69,12 @@ export const CourseAndLevelSelector = ({
             {/* English Program Levels */}
             {englishLevelOptions.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold">English Program (Select your starting level)</h3>
+                <div className="grid gap-2 md:grid-cols-2 md:items-end">
+                  <h3 className="text-lg font-semibold">English Program (Select your starting level)</h3>
+                  <span className="hidden md:block text-sm font-medium text-muted-foreground">
+                    Teacher / Timing
+                  </span>
+                </div>
                 <div className="space-y-2">
                   {englishLevelOptions.map((level) => {
                     const key = extractLevelKey(level.config_key) || extractLevelKey(level.config_value);
@@ -79,32 +89,45 @@ export const CourseAndLevelSelector = ({
                       : true;
 
                     const teacherName = getTeacherForLevel(level.config_value);
+                    const timings = isAvailable ? getTimingsForLevel(level.config_value) : [];
 
                     const item = (
                       <div
                         key={level.id}
-                        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                          isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        className={`grid grid-cols-1 gap-2 md:grid-cols-2 md:items-center p-3 rounded-lg transition-colors ${
+                          isAvailable ? "hover:bg-muted/50 cursor-pointer" : "opacity-50 cursor-not-allowed"
                         }`}
                         onClick={() => isAvailable && onLevelToggle(level.config_value)}
                       >
-                        <Checkbox
-                          id={`level-${level.id}`}
-                          checked={formData.selectedLevels?.includes(level.config_value) || false}
-                          onCheckedChange={() => onLevelToggle(level.config_value)}
-                          disabled={!isAvailable}
-                        />
-                        <Label
-                          htmlFor={`level-${level.id}`}
-                          className={`text-sm flex-1 flex items-center gap-2 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                        >
-                          {level.config_value}
-                          {teacherName && isAvailable && (
-                            <Badge variant="secondary" className="text-xs font-normal">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`level-${level.id}`}
+                            checked={formData.selectedLevels?.includes(level.config_value) || false}
+                            onCheckedChange={() => onLevelToggle(level.config_value)}
+                            disabled={!isAvailable}
+                          />
+                          <Label
+                            htmlFor={`level-${level.id}`}
+                            className={`text-sm ${isAvailable ? "cursor-pointer" : "cursor-not-allowed"}`}
+                          >
+                            {level.config_value}
+                          </Label>
+                        </div>
+
+                        <div className={`text-sm ${!isAvailable ? "opacity-50" : ""}`}>
+                          {teacherName && isAvailable ? (
+                            <span className="text-primary font-medium">
                               {teacherName}
-                            </Badge>
+                              {timings.length > 0 && (
+                                <span className="text-muted-foreground font-normal">
+                                  {" · "}({timings.join(", ")})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
                           )}
-                        </Label>
+                        </div>
                       </div>
                     );
 
@@ -135,41 +158,60 @@ export const CourseAndLevelSelector = ({
                 <div className="space-y-2">
                   {coursesInCategory.map((course) => {
                     const isAvailable = selectedBranchId
-                      ? filteredOptions.allowedCourses.some(allowedCourse => {
+                      ? filteredOptions.allowedCourses.some((allowedCourse) => {
                           const normalizedAllowed = normalize(allowedCourse);
                           const normalizedCourse = normalize(course.value);
-                          return normalizedAllowed.includes(normalizedCourse) || 
-                                 normalizedCourse.includes(normalizedAllowed);
+                          return (
+                            normalizedAllowed.includes(normalizedCourse) ||
+                            normalizedCourse.includes(normalizedAllowed)
+                          );
                         })
                       : true;
 
                     const teacherName = getTeacherForCourse(course.value);
+                    const timings = isAvailable
+                      ? getTimingsForCourse(course.value).length
+                        ? getTimingsForCourse(course.value)
+                        : getTimingsForCourse(course.label)
+                      : [];
 
                     const courseItem = (
                       <div
                         key={course.value}
-                        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                          isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        className={`grid grid-cols-1 gap-2 md:grid-cols-2 md:items-center p-3 rounded-lg transition-colors ${
+                          isAvailable ? "hover:bg-muted/50 cursor-pointer" : "opacity-50 cursor-not-allowed"
                         }`}
                         onClick={() => isAvailable && onCourseToggle(course.value)}
                       >
-                        <Checkbox
-                          id={`course-${course.value}`}
-                          checked={formData.courses?.includes(course.value) || false}
-                          onCheckedChange={() => onCourseToggle(course.value)}
-                          disabled={!isAvailable}
-                        />
-                        <Label
-                          htmlFor={`course-${course.value}`}
-                          className={`text-sm flex-1 flex items-center gap-2 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                        >
-                          {course.label}
-                          {teacherName && isAvailable && (
-                            <Badge variant="secondary" className="text-xs font-normal">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`course-${course.value}`}
+                            checked={formData.courses?.includes(course.value) || false}
+                            onCheckedChange={() => onCourseToggle(course.value)}
+                            disabled={!isAvailable}
+                          />
+                          <Label
+                            htmlFor={`course-${course.value}`}
+                            className={`text-sm ${isAvailable ? "cursor-pointer" : "cursor-not-allowed"}`}
+                          >
+                            {course.label}
+                          </Label>
+                        </div>
+
+                        <div className={`text-sm ${!isAvailable ? "opacity-50" : ""}`}>
+                          {teacherName && isAvailable ? (
+                            <span className="text-primary font-medium">
                               {teacherName}
-                            </Badge>
+                              {timings.length > 0 && (
+                                <span className="text-muted-foreground font-normal">
+                                  {" · "}({timings.join(", ")})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
                           )}
-                        </Label>
+                        </div>
                       </div>
                     );
 
