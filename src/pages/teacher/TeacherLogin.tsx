@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, UserCircle } from "lucide-react";
+import { ArrowLeft, UserCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,8 @@ const TeacherLogin = () => {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableCourses = [
@@ -115,6 +117,11 @@ const TeacherLogin = () => {
 
     setLoading(true);
     try {
+      // Clear any stale impersonation flags before logging in
+      localStorage.removeItem('impersonating_teacher');
+      localStorage.removeItem('teacher_name');
+      localStorage.removeItem('admin_session');
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: loginPassword,
@@ -270,14 +277,23 @@ const TeacherLogin = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password">{t('teacher.password')}</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder={t('placeholder.password')}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showLoginPassword ? "text" : "password"}
+                      placeholder={t('placeholder.password')}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <Button
@@ -337,13 +353,22 @@ const TeacherLogin = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">{t('teacher.password')}</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder={t('placeholder.password')}
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? "text" : "password"}
+                      placeholder={t('placeholder.password')}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Min 8 characters
                   </p>

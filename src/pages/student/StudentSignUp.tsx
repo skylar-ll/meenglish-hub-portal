@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ const StudentSignUp = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailCheckStatus, setEmailCheckStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [showPassword, setShowPassword] = useState(false);
   
   const countryCodes = [
     { value: "+966", label: "+966 (Saudi Arabia)" },
@@ -443,13 +444,22 @@ const StudentSignUp = () => {
 
             <div className="space-y-2">
               <Label htmlFor="password">{getFieldLabel('password')} *</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t('placeholder.enterPassword')}
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t('placeholder.enterPassword')}
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
