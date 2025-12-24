@@ -29,7 +29,13 @@ const CourseSelection = () => {
   const [branchId, setBranchId] = useState<string | null>(null);
   const { courses, loading } = useFormConfigurations();
   const { filteredOptions, loading: branchLoading } = useBranchFiltering(branchId);
-  const { getTeacherForLevel, getTeacherForCourse, loading: teacherLoading } = useTeacherCourseMapping(branchId);
+  const {
+    getTeacherForLevel,
+    getTeacherForCourse,
+    getTimingsForLevel,
+    getTimingsForCourse,
+    loading: teacherLoading,
+  } = useTeacherCourseMapping(branchId);
   
   console.log("🔍 CourseSelection - Branch filtering results:", {
     branchId,
@@ -190,76 +196,131 @@ const CourseSelection = () => {
           ) : (
             <div className="space-y-6">
               {/* English Program - Levels */}
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold">English Program (Select your starting level) *</Label>
+              <section className="space-y-4" aria-labelledby="english-program-levels">
+                <div className="grid gap-2 md:grid-cols-2 md:items-end">
+                  <Label id="english-program-levels" className="text-lg font-semibold">
+                    English Program (Select your starting level) *
+                  </Label>
+                  <div className="hidden md:block text-sm font-medium text-muted-foreground">
+                    Teacher name / timing
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   {displayLevels.map((level) => {
                     const available = isLevelAvailable(level.config_value);
                     const teacherName = getTeacherForLevel(level.config_value);
+                    const timings = available ? getTimingsForLevel(level.config_value) : [];
+
                     return (
-                      <div key={level.id} className="flex items-center space-x-3">
-                        <Checkbox
-                          id={level.id}
-                          checked={selectedLevels.includes(level.config_value)}
-                          disabled={!available}
-                          onCheckedChange={() => toggleLevel(level.config_value)}
-                          className={!available ? "opacity-50 cursor-not-allowed" : ""}
-                        />
-                        <Label
-                          htmlFor={level.id}
-                          className={`text-base cursor-pointer flex items-center gap-2 ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                      <div
+                        key={level.id}
+                        className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-center"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={level.id}
+                            checked={selectedLevels.includes(level.config_value)}
+                            disabled={!available}
+                            onCheckedChange={() => toggleLevel(level.config_value)}
+                            className={!available ? "opacity-50 cursor-not-allowed" : ""}
+                          />
+                          <Label
+                            htmlFor={level.id}
+                            className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            {level.config_value}
+                          </Label>
+                        </div>
+
+                        <div
+                          className={`text-sm md:text-base ${!available ? "opacity-50" : ""}`}
                         >
-                          <span>{level.config_value}</span>
-                          {teacherName && available && (
-                            <span className="text-sm text-primary font-medium">– {teacherName}</span>
+                          {teacherName && available ? (
+                            <span className="text-primary font-medium">
+                              {teacherName}
+                              {timings.length > 0 ? (
+                                <span className="text-muted-foreground font-normal">
+                                  {" · "}({timings.join(", ")})
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
                           )}
-                        </Label>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
+
                 {branchId && filteredOptions.allowedTimings.length > 0 && (
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      Available timings for your branch: {filteredOptions.allowedTimings.join(', ')}
+                      Available timings for your branch: {filteredOptions.allowedTimings.join(", ")}
                     </p>
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* Courses */}
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Your Courses (Optional)</Label>
+              <section className="space-y-4" aria-labelledby="optional-courses">
+                <Label id="optional-courses" className="text-lg font-semibold">
+                  Select Your Courses (Optional)
+                </Label>
                 {Object.entries(coursesByCategory).map(([category, coursesInCategory]) => (
                   <div key={category} className="space-y-3">
                     <h3 className="font-semibold text-muted-foreground">{category}</h3>
                     {coursesInCategory.map((course) => {
                       const available = isCourseAvailable(course.value, course.label);
                       const teacherName = getTeacherForCourse(course.value) || getTeacherForCourse(course.label);
+                      const timings = available
+                        ? getTimingsForCourse(course.value).length
+                          ? getTimingsForCourse(course.value)
+                          : getTimingsForCourse(course.label)
+                        : [];
+
                       return (
-                        <div key={course.id} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={course.id}
-                            checked={selectedCourses.includes(course.value)}
-                            disabled={!available}
-                            onCheckedChange={() => toggleCourse(course.value)}
-                            className={!available ? "opacity-50 cursor-not-allowed" : ""}
-                          />
-                          <Label
-                            htmlFor={course.id}
-                            className={`text-base cursor-pointer flex items-center gap-2 ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
-                          >
-                            <span>{course.label}</span>
-                            {teacherName && available && (
-                              <span className="text-sm text-primary font-medium">– {teacherName}</span>
+                        <div
+                          key={course.id}
+                          className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-center"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id={course.id}
+                              checked={selectedCourses.includes(course.value)}
+                              disabled={!available}
+                              onCheckedChange={() => toggleCourse(course.value)}
+                              className={!available ? "opacity-50 cursor-not-allowed" : ""}
+                            />
+                            <Label
+                              htmlFor={course.id}
+                              className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                              {course.label}
+                            </Label>
+                          </div>
+
+                          <div className={`text-sm md:text-base ${!available ? "opacity-50" : ""}`}>
+                            {teacherName && available ? (
+                              <span className="text-primary font-medium">
+                                {teacherName}
+                                {timings.length > 0 ? (
+                                  <span className="text-muted-foreground font-normal">
+                                    {" · "}({timings.join(", ")})
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
                             )}
-                          </Label>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 ))}
-              </div>
+              </section>
 
               <div className="pt-4 space-y-4">
                 <div className="p-4 bg-muted/50 rounded-lg">
