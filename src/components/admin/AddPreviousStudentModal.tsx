@@ -19,6 +19,7 @@ import { InlineEditableField } from "./InlineEditableField";
 import { AddNewFieldButton } from "./AddNewFieldButton";
 import { BillingFormStep } from "./shared/BillingFormStep";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
+import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { FloatingNavigationButton } from "../shared/FloatingNavigationButton";
@@ -63,6 +64,37 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+
+  const startEditPrice = (id: string, current: number | null | undefined) => {
+    setPriceValues((prev) => ({ ...prev, [id]: String(current ?? 0) }));
+    setPriceEditing((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const cancelEditPrice = (id: string) => {
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const savePrice = async (id: string) => {
+    const raw = priceValues[id];
+    const numeric = parseFloat(raw);
+    if (isNaN(numeric)) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    const { error } = await supabase
+      .from("form_configurations")
+      .update({ price: numeric })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to update price");
+      return;
+    }
+    toast.success("Price updated");
+    setPriceEditing((prev) => ({ ...prev, [id]: false }));
+    refetch();
+  };
 
   useEffect(() => {
     const fetchAutoTranslationSetting = async () => {
@@ -650,26 +682,48 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       if (billingError) throw billingError;
 
       try {
-        const pdfBlob = await generateBillingPDF({
-          student_id: authData.user.id,
-          student_name_en: validatedData.fullNameEn,
-          student_name_ar: validatedData.fullNameAr,
-          phone: validatedData.phone1,
-          course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
-          time_slot: timingString,
-          registration_date: billingRecord.registration_date,
-          course_start_date: billingRecord.course_start_date,
-          level_count: durationMonths,
-          total_fee: totalFee,
-          discount_percentage: discountPercent,
-          fee_after_discount: feeAfterDiscount,
-          amount_paid: partialPaymentAmount,
-          amount_remaining: feeAfterDiscount - partialPaymentAmount,
-          first_payment: partialPaymentAmount,
-          second_payment: feeAfterDiscount - partialPaymentAmount,
-          signature_url: signatureFileName,
-          student_id_code: studentData.student_id || undefined,
-        });
+        // Generate Arabic or English PDF based on language setting
+        const pdfBlob = language === 'ar' 
+          ? await generateBillingPDFArabic({
+              student_id: authData.user.id,
+              student_name_en: validatedData.fullNameEn,
+              student_name_ar: validatedData.fullNameAr,
+              phone: validatedData.phone1,
+              course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
+              time_slot: timingString,
+              registration_date: billingRecord.registration_date,
+              course_start_date: billingRecord.course_start_date,
+              level_count: durationMonths,
+              total_fee: totalFee,
+              discount_percentage: discountPercent,
+              fee_after_discount: feeAfterDiscount,
+              amount_paid: partialPaymentAmount,
+              amount_remaining: feeAfterDiscount - partialPaymentAmount,
+              first_payment: partialPaymentAmount,
+              second_payment: feeAfterDiscount - partialPaymentAmount,
+              signature_url: signatureFileName,
+              student_id_code: studentData.student_id || undefined,
+            })
+          : await generateBillingPDF({
+              student_id: authData.user.id,
+              student_name_en: validatedData.fullNameEn,
+              student_name_ar: validatedData.fullNameAr,
+              phone: validatedData.phone1,
+              course_package: [...formData.courses, ...formData.selectedLevels].join(', '),
+              time_slot: timingString,
+              registration_date: billingRecord.registration_date,
+              course_start_date: billingRecord.course_start_date,
+              level_count: durationMonths,
+              total_fee: totalFee,
+              discount_percentage: discountPercent,
+              fee_after_discount: feeAfterDiscount,
+              amount_paid: partialPaymentAmount,
+              amount_remaining: feeAfterDiscount - partialPaymentAmount,
+              first_payment: partialPaymentAmount,
+              second_payment: feeAfterDiscount - partialPaymentAmount,
+              signature_url: signatureFileName,
+              student_id_code: studentData.student_id || undefined,
+            });
 
         const pdfPath = `${authData.user.id}/billing_${billing.id}.pdf`;
         await supabase.storage
@@ -1059,7 +1113,36 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                     <Card key={d.value} className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${formData.courseDuration === d.value && !formData.customDuration ? "border-primary bg-primary/5" : ""}`} onClick={() => {handleInputChange("courseDuration", d.value); handleInputChange("customDuration", "");}}>
                       <div className="flex items-center justify-between">
                         <p className="font-medium">{d.label}</p>
-                        <span className="text-sm font-semibold text-primary">${(d.price ?? 0).toFixed(2)}</span>
+                        {/* Editable price */}
+                        {isEditMode || priceEditing[d.id] ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              type="number"
+                              className="w-24 h-8 text-sm"
+                              value={priceEditing[d.id] ? priceValues[d.id] : String(d.price ?? 0)}
+                              onChange={(e) => {
+                                setPriceValues((prev) => ({ ...prev, [d.id]: e.target.value }));
+                                if (!priceEditing[d.id]) {
+                                  setPriceEditing((prev) => ({ ...prev, [d.id]: true }));
+                                }
+                              }}
+                              onFocus={() => startEditPrice(d.id, d.price)}
+                            />
+                            {priceEditing[d.id] && (
+                              <>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => savePrice(d.id)}>
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => cancelEditPrice(d.id)}>
+                                  <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            )}
+                            <span className="text-xs text-muted-foreground">SAR</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-semibold text-primary">{(d.price ?? 0).toLocaleString()} SAR</span>
+                        )}
                       </div>
                     </Card>
                   ))}
