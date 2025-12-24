@@ -30,9 +30,9 @@ interface ClassData {
   courses: string[];
   start_date: string | null;
   end_date: string | null;
-  branch_id: string;
-  teacher_id: string;
-  status: string;
+  branch_id: string | null;
+  teacher_id: string | null;
+  status: string | null;
   teacher_name: string;
   branch_name: string;
   branch_name_ar: string;
@@ -273,7 +273,7 @@ const TeacherScheduleManagement = () => {
         teachers!classes_teacher_id_fkey (full_name),
         branches!classes_branch_id_fkey (name_en, name_ar)
       `)
-      .not("teacher_id", "is", null)
+      .eq("status", "active")
       .order("timing");
 
     if (error) {
@@ -292,7 +292,7 @@ const TeacherScheduleManagement = () => {
       branch_id: c.branch_id,
       teacher_id: c.teacher_id,
       status: c.status,
-      teacher_name: c.teachers?.full_name || "Unknown",
+      teacher_name: c.teachers?.full_name || "Unassigned",
       branch_name: c.branches?.name_en || "Unknown",
       branch_name_ar: c.branches?.name_ar || "",
     }));
@@ -360,6 +360,19 @@ const TeacherScheduleManagement = () => {
     const branch = branches.find(b => b.id === branchId);
     return branch ? `${branch.name_en} / ${branch.name_ar}` : "Unknown";
   };
+
+  const teacherIds = useMemo(() => {
+    return [...new Set(
+      filteredClasses
+        .map((c) => c.teacher_id)
+        .filter((id): id is string => Boolean(id))
+    )];
+  }, [filteredClasses]);
+
+  const unassignedClasses = useMemo(() => {
+    return filteredClasses.filter((c) => !c.teacher_id);
+  }, [filteredClasses]);
+
 
   // Group filtered classes by branch for display
   const classesByBranch = useMemo(() => {
@@ -431,6 +444,36 @@ const TeacherScheduleManagement = () => {
         <div className="mb-4 text-sm text-muted-foreground">
           Showing {filteredClasses.length} of {classes.length} classes
         </div>
+
+        {unassignedClasses.length > 0 && (
+          <Card className="p-4 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold">Unassigned classes</h2>
+                <p className="text-xs text-muted-foreground">
+                  These are active classes from Class Management that don’t have a teacher yet.
+                </p>
+              </div>
+              <Badge variant="secondary">{unassignedClasses.length}</Badge>
+            </div>
+
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {unassignedClasses.map((c) => (
+                <div key={c.id} className="rounded-md border bg-muted/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{c.class_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {c.branch_name} • {c.timing}
+                      </p>
+                    </div>
+                    <Badge variant="outline">Unassigned</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Pending Notifications */}
         {notifications.length > 0 && (
@@ -546,23 +589,22 @@ const TeacherScheduleManagement = () => {
                       </div>
                     </th>
                     {/* Teacher Start Dates */}
-                    {(() => {
-                      // Get all unique teachers from filtered classes
-                      const allTeacherIds = [...new Set(filteredClasses.map(c => c.teacher_id))];
-                      return allTeacherIds.map((teacherId) => {
-                        const teacherClasses = filteredClasses.filter(c => c.teacher_id === teacherId && c.start_date);
-                        const startDates = teacherClasses.map(c => c.start_date!).sort();
-                        const earliestDate = startDates[0];
-                        return (
-                          <th 
-                            key={teacherId} 
-                            className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
-                          >
-                            {earliestDate ? format(parseDateOnly(earliestDate), "MMM d, yyyy") : "N/A"}
-                          </th>
-                        );
-                      });
-                    })()}
+                    {teacherIds.map((teacherId) => {
+                      const teacherClasses = filteredClasses.filter(
+                        (c) => c.teacher_id === teacherId && c.start_date
+                      );
+                      const startDates = teacherClasses.map((c) => c.start_date!).sort();
+                      const earliestDate = startDates[0];
+                      return (
+                        <th
+                          key={teacherId}
+                          className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
+                        >
+                          {earliestDate ? format(parseDateOnly(earliestDate), "MMM d, yyyy") : "N/A"}
+                        </th>
+                      );
+                    })}
+
                   </tr>
                   {/* Teacher Names Row */}
                   <tr className="border-b bg-muted/30">
