@@ -14,7 +14,7 @@ import {
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parse, isValid, endOfMonth, eachDayOfInterval, parseISO } from "date-fns";
+import { format, parse, isValid, endOfMonth, eachDayOfInterval } from "date-fns";
 
 interface Branch {
   id: string;
@@ -73,6 +73,8 @@ const TeacherScheduleManagement = () => {
   const normalizeTiming = (s: string) =>
     (s || "").toLowerCase().replace(/\s+/g, "").replace(/–/g, "-");
 
+  const parseDateOnly = (value: string) => parse(value, "yyyy-MM-dd", new Date());
+
   const branchFilteredClasses = useMemo(() => {
     if (selectedBranchId === "all") return classes;
     return classes.filter((c) => c.branch_id === selectedBranchId);
@@ -97,8 +99,8 @@ const TeacherScheduleManagement = () => {
     // Filter classes that overlap with the selected month
     return branchFilteredClasses.filter((c) => {
       if (!c.start_date) return false;
-      const startDate = parseISO(c.start_date);
-      const endDate = c.end_date ? parseISO(c.end_date) : startDate;
+      const startDate = parseDateOnly(c.start_date);
+      const endDate = c.end_date ? parseDateOnly(c.end_date) : startDate;
       const monthStart = parse(selectedMonth + "-01", "yyyy-MM-dd", new Date());
       const monthEnd = endOfMonth(monthStart);
       // Class overlaps with month if it starts before month ends AND ends after month starts
@@ -113,9 +115,9 @@ const TeacherScheduleManagement = () => {
     // For each class, add all dates from start_date to end_date
     branchFilteredClasses.forEach((cls) => {
       if (cls.start_date) {
-        const startDate = parseISO(cls.start_date);
-        const endDate = cls.end_date ? parseISO(cls.end_date) : startDate;
-        
+        const startDate = parseDateOnly(cls.start_date);
+        const endDate = cls.end_date ? parseDateOnly(cls.end_date) : startDate;
+
         if (isValid(startDate) && isValid(endDate)) {
           const allDays = eachDayOfInterval({ start: startDate, end: endDate });
           allDays.forEach((day) => {
@@ -133,7 +135,7 @@ const TeacherScheduleManagement = () => {
     return Array.from(uniqueDates)
       .sort()
       .map((dateStr) => {
-        const date = parseISO(dateStr);
+        const date = parseDateOnly(dateStr);
         return {
           value: dateStr,
           label: format(date, "EEEE, MMMM d, yyyy"),
@@ -146,13 +148,13 @@ const TeacherScheduleManagement = () => {
 
     // Filter: classes that are active on the selected date (between start_date and end_date)
     if (selectedDate !== "all") {
-      result = result.filter((c) => {
-        if (!c.start_date) return false;
-        const startDate = parseISO(c.start_date);
-        const endDate = c.end_date ? parseISO(c.end_date) : startDate;
-        const selectedDateObj = parseISO(selectedDate);
-        return selectedDateObj >= startDate && selectedDateObj <= endDate;
-      });
+        result = result.filter((c) => {
+          if (!c.start_date) return false;
+          const startDate = parseDateOnly(c.start_date);
+          const endDate = c.end_date ? parseDateOnly(c.end_date) : startDate;
+          const selectedDateObj = parseDateOnly(selectedDate);
+          return selectedDateObj >= startDate && selectedDateObj <= endDate;
+        });
     }
 
     return result;
@@ -197,22 +199,40 @@ const TeacherScheduleManagement = () => {
 
   useEffect(() => {
     fetchData();
-    
+
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('schedule-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => {
-        fetchClasses();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_class_status' }, () => {
-        fetchDailyStatus();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_removal_notifications' }, () => {
-        fetchNotifications();
-      })
+      .channel("schedule-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "classes" },
+        () => {
+          fetchClasses();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_class_status" },
+        () => {
+          fetchDailyStatus();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "schedule_removal_notifications" },
+        () => {
+          fetchNotifications();
+        }
+      )
       .subscribe();
 
+    // Fallback polling (in case realtime isn't available in the current environment)
+    const poll = window.setInterval(() => {
+      fetchClasses();
+    }, 15000);
+
     return () => {
+      window.clearInterval(poll);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -517,7 +537,7 @@ const TeacherScheduleManagement = () => {
                               <SelectItem value="all">All Dates</SelectItem>
                               {availableDates.map((date) => (
                                 <SelectItem key={date.value} value={date.value}>
-                                  {format(parseISO(date.value), "MMM d, yyyy")}
+                                  {format(parseDateOnly(date.value), "MMM d, yyyy")}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -538,7 +558,7 @@ const TeacherScheduleManagement = () => {
                             key={teacherId} 
                             className="p-2 text-center font-semibold min-w-[150px] border-r text-sm"
                           >
-                            {earliestDate ? format(new Date(earliestDate), "MMM d, yyyy") : "N/A"}
+                            {earliestDate ? format(parseDateOnly(earliestDate), "MMM d, yyyy") : "N/A"}
                           </th>
                         );
                       });
