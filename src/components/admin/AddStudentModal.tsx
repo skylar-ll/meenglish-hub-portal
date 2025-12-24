@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DOMPurify from "dompurify";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1413,7 +1414,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 <Card className="p-4">
                   <ScrollArea className="h-[300px] w-full">
                     <div className="prose prose-sm max-w-none text-foreground">
-                      <div dangerouslySetInnerHTML={{ __html: language === 'ar' ? termsAr : termsEn }} />
+                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(language === 'ar' ? termsAr : termsEn) }} />
                     </div>
                   </ScrollArea>
                 </Card>
