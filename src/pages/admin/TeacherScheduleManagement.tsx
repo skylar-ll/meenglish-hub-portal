@@ -64,7 +64,6 @@ const TeacherScheduleManagement = () => {
   
   // Filter states
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
-  const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [selectedTime, setSelectedTime] = useState<string>("all");
   
@@ -80,10 +79,10 @@ const TeacherScheduleManagement = () => {
     return classes.filter((c) => c.branch_id === selectedBranchId);
   }, [classes, selectedBranchId]);
 
-  // Build a calendar of ONLY the months/dates that actually exist in created classes
+  // Build a list of ONLY the dates that actually exist in created classes
   // (based on class start_date → end_date, respecting the selected branch)
-  const datesByMonth = useMemo(() => {
-    const sets: Record<string, Set<string>> = {};
+  const availableDatesCompact = useMemo(() => {
+    const allDatesSet = new Set<string>();
 
     branchFilteredClasses.forEach((cls) => {
       if (!cls.start_date) return;
@@ -94,68 +93,23 @@ const TeacherScheduleManagement = () => {
 
       const allDays = eachDayOfInterval({ start: startDate, end: endDate });
       allDays.forEach((day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
-        const monthKey = dateStr.slice(0, 7); // yyyy-MM
-        sets[monthKey] ??= new Set<string>();
-        sets[monthKey].add(dateStr);
+        allDatesSet.add(format(day, "yyyy-MM-dd"));
       });
     });
 
-    const out: Record<string, string[]> = {};
-    Object.keys(sets)
-      .sort()
-      .forEach((monthKey) => {
-        out[monthKey] = Array.from(sets[monthKey]).sort();
-      });
+    const sorted = Array.from(allDatesSet).sort();
 
-    return out;
-  }, [branchFilteredClasses]);
-
-  // Months dropdown = only months that have at least 1 class date
-  const availableMonths = useMemo(() => {
-    return Object.keys(datesByMonth).map((monthKey) => {
-      const monthDate = parse(monthKey + "-01", "yyyy-MM-dd", new Date());
-      return {
-        value: monthKey,
-        label: format(monthDate, "MMMM yyyy"),
-      };
-    });
-  }, [datesByMonth]);
-
-  // Dates dropdown = only dates that exist in created classes (optionally within selectedMonth)
-  const availableDates = useMemo(() => {
-    const dateStrs =
-      selectedMonth === "all"
-        ? Object.values(datesByMonth).flat()
-        : datesByMonth[selectedMonth] || [];
-
-    const uniqueSorted = Array.from(new Set(dateStrs)).sort();
-
-    return uniqueSorted.map((dateStr) => {
+    return sorted.map((dateStr) => {
       const date = parseDateOnly(dateStr);
       return {
         value: dateStr,
-        label: format(date, "EEEE, MMMM d, yyyy"),
+        label: format(date, "MMM d"), // e.g., "Jan 12", "Mar 15"
       };
     });
-  }, [datesByMonth, selectedMonth]);
+  }, [branchFilteredClasses]);
 
-  const monthFilteredClasses = useMemo(() => {
-    if (selectedMonth === "all") return branchFilteredClasses;
-    // Filter classes that overlap with the selected month
-    return branchFilteredClasses.filter((c) => {
-      if (!c.start_date) return false;
-      const startDate = parseDateOnly(c.start_date);
-      const endDate = c.end_date ? parseDateOnly(c.end_date) : startDate;
-      const monthStart = parse(selectedMonth + "-01", "yyyy-MM-dd", new Date());
-      const monthEnd = endOfMonth(monthStart);
-      // Class overlaps with month if it starts before month ends AND ends after month starts
-      return startDate <= monthEnd && endDate >= monthStart;
-    });
-  }, [branchFilteredClasses, selectedMonth]);
-
-  const classesAfterBranchMonthDate = useMemo(() => {
-    let result = [...monthFilteredClasses];
+  const classesAfterBranchDate = useMemo(() => {
+    let result = [...branchFilteredClasses];
 
     // Filter: classes that are active on the selected date (between start_date and end_date)
     if (selectedDate !== "all") {
@@ -169,19 +123,19 @@ const TeacherScheduleManagement = () => {
     }
 
     return result;
-  }, [monthFilteredClasses, selectedDate]);
+  }, [branchFilteredClasses, selectedDate]);
 
   const availableTimes = useMemo(() => {
     const times = new Set<string>();
-    classesAfterBranchMonthDate.forEach((c) => {
+    classesAfterBranchDate.forEach((c) => {
       if (c.timing) times.add(c.timing);
     });
     return Array.from(times).sort();
-  }, [classesAfterBranchMonthDate]);
+  }, [classesAfterBranchDate]);
 
   // Final filtered classes (includes time filter)
   const filteredClasses = useMemo(() => {
-    let result = [...classesAfterBranchMonthDate];
+    let result = [...classesAfterBranchDate];
 
     if (selectedTime !== "all") {
       const selected = normalizeTiming(selectedTime);
@@ -189,20 +143,14 @@ const TeacherScheduleManagement = () => {
     }
 
     return result;
-  }, [classesAfterBranchMonthDate, selectedTime]);
+  }, [classesAfterBranchDate, selectedTime]);
 
-  // Reset month/date if they no longer exist for the current branch/classes
+  // Reset date if it no longer exists for the current branch/classes
   useEffect(() => {
-    if (selectedMonth !== "all" && !availableMonths.some((m) => m.value === selectedMonth)) {
-      setSelectedMonth("all");
-    }
-  }, [availableMonths, selectedMonth]);
-
-  useEffect(() => {
-    if (selectedDate !== "all" && !availableDates.some((d) => d.value === selectedDate)) {
+    if (selectedDate !== "all" && !availableDatesCompact.some((d) => d.value === selectedDate)) {
       setSelectedDate("all");
     }
-  }, [availableDates, selectedDate]);
+  }, [availableDatesCompact, selectedDate]);
 
   // Reset time if it no longer exists for the current branch/month/date selection
   useEffect(() => {
@@ -415,14 +363,12 @@ const TeacherScheduleManagement = () => {
 
   const clearFilters = () => {
     setSelectedBranchId("all");
-    setSelectedMonth("all");
     setSelectedDate("all");
     setSelectedTime("all");
   };
 
   const shouldGroupByBranch =
     selectedBranchId === "all" &&
-    selectedMonth === "all" &&
     selectedDate === "all" &&
     selectedTime === "all";
 
@@ -717,33 +663,21 @@ const TeacherScheduleManagement = () => {
                 </Button>
               </div>
 
-              {/* Month + Date dropdowns moved into the blue area (as requested) */}
+              {/* Combined Date dropdown (Jan 12, Mar 15 format) */}
               <div className="flex items-center gap-2 flex-wrap justify-center">
-                <span className="text-xs text-primary-foreground/80">Start Date</span>
-
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="h-9 w-[170px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
-                    <SelectValue placeholder="Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
-                    {availableMonths.map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <span className="text-xs text-primary-foreground/80">Date</span>
 
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="h-9 w-[170px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
-                    <SelectValue placeholder="Date" />
+                  <SelectTrigger className="h-9 w-[160px] bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+                    <SelectValue placeholder="Select Date">
+                      {selectedDate === "all" ? "All Dates" : availableDatesCompact.find(d => d.value === selectedDate)?.label || "All Dates"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
                     <SelectItem value="all">All Dates</SelectItem>
-                    {availableDates.map((date) => (
+                    {availableDatesCompact.map((date) => (
                       <SelectItem key={date.value} value={date.value}>
-                        {format(parseDateOnly(date.value), "MMM d, yyyy")}
+                        {date.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
