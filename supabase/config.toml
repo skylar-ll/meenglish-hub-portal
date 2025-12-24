@@ -4,10 +4,16 @@ project_id = "knztycdtgqgoncjhgawq"
 verify_jwt = false
 
 [functions.translate-name]
-verify_jwt = false
+verify_jwt = true
+
+[functions.translate-text]
+verify_jwt = true
 
 [functions.create-teacher]
 verify_jwt = true
 
 [functions.admin-impersonate-teacher]
+verify_jwt = true
+
+[functions.check-course-expiry]
 verify_jwt = true
