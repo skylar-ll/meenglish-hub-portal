@@ -167,14 +167,14 @@ const TimingSelection = () => {
       return;
     }
 
-    if (hasMultipleSelections && allowedTimings.length > 1) {
+    // Allow multi-select whenever multiple timings are available
+    if (allowedTimings.length > 1) {
       // Multi-select mode: toggle selection
-      setSelectedTimings(prev => {
+      setSelectedTimings((prev) => {
         if (isTimingSelected(timingValue)) {
-          return prev.filter(t => !timingsMatch(t, timingValue));
-        } else {
-          return [...prev, timingValue];
+          return prev.filter((t) => !timingsMatch(t, timingValue));
         }
+        return [...prev, timingValue];
       });
     } else {
       // Single-select mode
@@ -223,13 +223,13 @@ const TimingSelection = () => {
             Select Your Timing
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {hasMultipleSelections && allowedTimings.length > 1 
-              ? "You can select multiple time slots for your different levels"
+            {allowedTimings.length > 1
+              ? "You can select multiple time slots"
               : "Choose your preferred class time"}
           </p>
-          {hasMultipleSelections && allowedTimings.length > 1 && (
+          {allowedTimings.length > 1 && (
             <p className="text-xs text-primary mt-1">
-              ✨ Multiple selection enabled - tap to select/deselect
+              Multiple selection enabled — tap to select/deselect
             </p>
           )}
         </div>

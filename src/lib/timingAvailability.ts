@@ -65,9 +65,9 @@ const matchCourse = (classCourse: string, selectedCourse: string): boolean => {
 
 /**
  * Computes allowed timings from classes based on selected levels and courses.
- * 
+ *
  * Rules:
- * - If both levels and courses are selected, a class is included if it matches at least one selected level OR at least one selected course (union)
+ * - If both levels and courses are selected, a class is included only if it matches at least one selected level AND at least one selected course (intersection)
  * - If only levels are selected, match any class that has a matching level
  * - If only courses are selected, match any class that has a matching course
  * - If neither is selected, return all timings
@@ -102,16 +102,16 @@ export function computeAllowedTimingsForSelections(
       ? selectedLevels.some((selectedLevel) =>
           classLevels.some((classLevel) => matchLevel(classLevel, selectedLevel))
         )
-      : false;
+      : true;
 
     const courseMatches = hasCourseSelection
       ? selectedCourses.some((selectedCourse) =>
           classCourses.some((classCourse) => matchCourse(classCourse, selectedCourse))
         )
-      : false;
+      : true;
 
-    // Union when both are selected (matches user expectation for multi-level + multi-course selections)
-    if (hasLevelSelection && hasCourseSelection) return levelMatches || courseMatches;
+    // Intersection when both are selected
+    if (hasLevelSelection && hasCourseSelection) return levelMatches && courseMatches;
     if (hasLevelSelection) return levelMatches;
     if (hasCourseSelection) return courseMatches;
     return true;

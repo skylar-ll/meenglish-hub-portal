@@ -123,12 +123,10 @@ export const autoEnrollStudent = async (studentData: StudentData): Promise<AutoE
           })()
         : false;
 
-      // IMPORTANT: If both were selected by the student, treat as union (course OR level)
-      if (hasCourseSelection && hasLevelSelection) return courseMatches || levelMatches;
+      // IMPORTANT: If both were selected by the student, require BOTH (course AND level)
+      if (hasCourseSelection && hasLevelSelection) return courseMatches && levelMatches;
       if (hasCourseSelection) return courseMatches;
       if (hasLevelSelection) return levelMatches;
-
-      // If neither specified, enroll in all timings (shouldn't happen in normal flows)
       return true;
     });
 
