@@ -120,6 +120,7 @@ const Payment = () => {
       });
 
       const studentPayload: any = {
+        id: authData.user.id, // Link to auth user
         full_name_ar: registration.fullNameAr,
         full_name_en: registration.fullNameEn,
         phone1: registration.phone1,
@@ -129,6 +130,7 @@ const Payment = () => {
         program: selectedCourses.join(', '),
         class_type: selectedCourses.join(', '),
         branch: registration.branch,
+        branch_id: registration.branchId || registration.branch_id || null,
         payment_method: selectedMethod,
         subscription_status: 'active',
         next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -136,6 +138,8 @@ const Payment = () => {
         total_course_fee: 0,
         amount_paid: 0,
         discount_percentage: 0,
+        course_level: registration.courseLevel || null,
+        timing: registration.timing || null,
       };
 
       const { data: studentData, error: studentError } = await supabase

@@ -88,14 +88,31 @@ export const useTeacherCourseMapping = (branchId: string | null) => {
       return mapping.levelTeachers[levelValue];
     }
     
-    // Try normalized match
+    // Try normalized match - extract just the level number for flexible matching
     const normalizedSearch = levelValue.toLowerCase().trim();
+    
+    // Extract level number from input (e.g., "level-1" -> "1", "level-2" -> "2")
+    const levelMatch = normalizedSearch.match(/level[\s\-_]?(\d+)/i);
+    const levelNumber = levelMatch ? levelMatch[1] : null;
+    
     for (const [key, teacher] of Object.entries(mapping.levelTeachers)) {
-      if (key.toLowerCase().trim() === normalizedSearch) {
+      const keyLower = key.toLowerCase().trim();
+      
+      // Exact match
+      if (keyLower === normalizedSearch) {
         return teacher;
       }
-      // Also check if search is contained
-      if (key.toLowerCase().includes(normalizedSearch) || normalizedSearch.includes(key.toLowerCase())) {
+      
+      // If we have a level number, check if the key contains that level number
+      if (levelNumber) {
+        const keyLevelMatch = keyLower.match(/level[\s\-_]?(\d+)/i);
+        if (keyLevelMatch && keyLevelMatch[1] === levelNumber) {
+          return teacher;
+        }
+      }
+      
+      // Fallback: check if search is contained
+      if (keyLower.includes(normalizedSearch) || normalizedSearch.includes(keyLower)) {
         return teacher;
       }
     }
