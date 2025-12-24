@@ -17,26 +17,8 @@ const StudentLogin = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Check if already logged in
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Verify student role
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "student")
-          .maybeSingle();
-
-        if (roleData) {
-          navigate("/student/course");
-        }
-      }
-    };
-    checkSession();
-  }, [navigate]);
+  // Note: Removed auto-redirect on session check - users must explicitly login
+  // This prevents auto-login after registration redirecting them back here
 
   const handleLogin = async () => {
     if (!email || !password) {
