@@ -48,6 +48,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | undefined>();
+  const [paymentDeadlineDate, setPaymentDeadlineDate] = useState<Date | undefined>(addDays(new Date(), 30));
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [levelOptions, setLevelOptions] = useState<Array<{ id: string; config_key: string; config_value: string; display_order: number }>>([]);
   const { courses, branches, paymentMethods, fieldLabels, courseDurations, timings, loading: configLoading, refetch } = useFormConfigurations();
@@ -114,6 +115,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   
   const [priceEditing, setPriceEditing] = useState<Record<string, boolean>>({});
   const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+  const [nameEditing, setNameEditing] = useState<Record<string, boolean>>({});
+  const [nameValues, setNameValues] = useState<Record<string, string>>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -143,6 +146,34 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
     }
     toast.success("Price updated");
     setPriceEditing((prev) => ({ ...prev, [id]: false }));
+    refetch();
+  };
+
+  const startEditName = (id: string, current: string) => {
+    setNameValues((prev) => ({ ...prev, [id]: current }));
+    setNameEditing((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const cancelEditName = (id: string) => {
+    setNameEditing((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const saveName = async (id: string, configKey: string) => {
+    const newName = nameValues[id]?.trim();
+    if (!newName) {
+      toast.error("Enter a valid name");
+      return;
+    }
+    const { error } = await supabase
+      .from("form_configurations")
+      .update({ config_value: newName })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to update name");
+      return;
+    }
+    toast.success("Name updated");
+    setNameEditing((prev) => ({ ...prev, [id]: false }));
     refetch();
   };
   
@@ -537,9 +568,10 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       const ksaDate = toZonedTime(now, ksaTimezone);
       const registrationDate = format(ksaDate, "yyyy-MM-dd");
       
-      // Auto-generate payment deadline: registration date + 1 month
-      const autoDeadline = addDays(ksaDate, 30);
-      const paymentDeadline = format(autoDeadline, "yyyy-MM-dd");
+      // Use editable payment deadline or auto-generate from registration date + 1 month
+      const paymentDeadline = paymentDeadlineDate 
+        ? format(paymentDeadlineDate, "yyyy-MM-dd") 
+        : format(addDays(ksaDate, 30), "yyyy-MM-dd");
 
       const signatureBlob = await fetch(signature).then(r => r.blob());
       const signatureFileName = `${authData.user.id}/signature_${Date.now()}.png`;
@@ -1444,10 +1476,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                   })()}
                   discountPercentage={0}
                   courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
-                  paymentDeadline={format(addDays(new Date(), 30), "yyyy-MM-dd")}
+                  paymentDeadline={paymentDeadlineDate ? format(paymentDeadlineDate, "yyyy-MM-dd") : format(addDays(new Date(), 30), "yyyy-MM-dd")}
                   onAmountChange={setPartialPaymentAmount}
                   onNextPaymentDateChange={() => {}}
+                  onPaymentDeadlineChange={setPaymentDeadlineDate}
                   initialPayment={partialPaymentAmount}
+                  showPaymentDeadlineEditor={true}
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(4)} className="flex-1">

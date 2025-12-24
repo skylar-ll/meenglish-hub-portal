@@ -123,9 +123,8 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   const hasArabicText = billingData.student_name_ar && /[\u0600-\u06FF]/.test(billingData.student_name_ar);
   if (hasArabicFont && hasArabicText) {
     doc.setFont('Amiri', 'normal');
-    // Reverse Arabic text for RTL display in jsPDF
-    const reversedArabic = billingData.student_name_ar.split('').reverse().join('');
-    doc.text(reversedArabic, rightCol + 150, yPos + 18, { align: 'right' });
+    // Display Arabic name as-is (no reversal - the font handles RTL correctly)
+    doc.text(billingData.student_name_ar, rightCol + 150, yPos + 18, { align: 'right' });
     doc.setFont('helvetica', 'bold'); // Reset to default font
   } else {
     doc.setFont('helvetica', 'bold');
