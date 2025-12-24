@@ -639,20 +639,23 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       }
 
       try {
-        const result = await autoEnrollStudent({
-          id: studentData.id,
-          branch_id: actualBranchId || undefined,
-          program: formData.courses[0] || undefined,
-          courses: [...formData.courses],
-          course_level: formData.selectedLevels.join(', '),
-          timing: timingString,
-        });
-        
-        if (result?.count) {
-          console.log(`✅ Auto-enrolled in ${result.count} class(es)`);
+        // Enroll once per selected timing (prevents comma-joined timing from matching incorrectly)
+        for (const timing of selectedTimings) {
+          const result = await autoEnrollStudent({
+            id: studentData.id,
+            branch_id: actualBranchId || undefined,
+            program: formData.courses[0] || undefined,
+            courses: [...formData.courses],
+            course_level: formData.selectedLevels.join(", "),
+            timing: timing.trim() || undefined,
+          });
+
+          if (result?.count) {
+            console.log(`✅ Auto-enrolled in ${result.count} class(es) for timing: ${timing}`);
+          }
         }
       } catch (enrollErr) {
-        console.error('❌ Auto-enrollment failed:', enrollErr);
+        console.error("❌ Auto-enrollment failed:", enrollErr);
       }
 
       const billingRecord = {
