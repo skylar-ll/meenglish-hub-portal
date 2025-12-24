@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
+import { useTeacherCourseMapping } from "@/hooks/useTeacherCourseMapping";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,6 +29,7 @@ const CourseSelection = () => {
   const [branchId, setBranchId] = useState<string | null>(null);
   const { courses, loading } = useFormConfigurations();
   const { filteredOptions, loading: branchLoading } = useBranchFiltering(branchId);
+  const { getTeacherForLevel, getTeacherForCourse, loading: teacherLoading } = useTeacherCourseMapping(branchId);
   
   console.log("🔍 CourseSelection - Branch filtering results:", {
     branchId,
@@ -175,7 +177,7 @@ const CourseSelection = () => {
 
         {/* Course Selection Form */}
         <Card className="p-8 animate-slide-up">
-          {loading || branchLoading ? (
+          {loading || branchLoading || teacherLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
               <p className="text-muted-foreground">
@@ -193,6 +195,7 @@ const CourseSelection = () => {
                 <div className="space-y-3">
                   {displayLevels.map((level) => {
                     const available = isLevelAvailable(level.config_value);
+                    const teacherName = getTeacherForLevel(level.config_value);
                     return (
                       <div key={level.id} className="flex items-center space-x-3">
                         <Checkbox
@@ -204,9 +207,12 @@ const CourseSelection = () => {
                         />
                         <Label
                           htmlFor={level.id}
-                          className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`text-base cursor-pointer flex items-center gap-2 ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          {level.config_value}
+                          <span>{level.config_value}</span>
+                          {teacherName && available && (
+                            <span className="text-sm text-primary font-medium">– {teacherName}</span>
+                          )}
                         </Label>
                       </div>
                     );
@@ -229,6 +235,7 @@ const CourseSelection = () => {
                     <h3 className="font-semibold text-muted-foreground">{category}</h3>
                     {coursesInCategory.map((course) => {
                       const available = isCourseAvailable(course.value, course.label);
+                      const teacherName = getTeacherForCourse(course.value) || getTeacherForCourse(course.label);
                       return (
                         <div key={course.id} className="flex items-center space-x-3">
                           <Checkbox
@@ -240,9 +247,12 @@ const CourseSelection = () => {
                           />
                           <Label
                             htmlFor={course.id}
-                            className={`text-base cursor-pointer ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className={`text-base cursor-pointer flex items-center gap-2 ${!available ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
-                            {course.label}
+                            <span>{course.label}</span>
+                            {teacherName && available && (
+                              <span className="text-sm text-primary font-medium">– {teacherName}</span>
+                            )}
                           </Label>
                         </div>
                       );
