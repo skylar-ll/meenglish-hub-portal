@@ -31,13 +31,21 @@ const TeacherDashboard = () => {
   const [impersonatedTeacherName, setImpersonatedTeacherName] = useState("");
 
   useEffect(() => {
-    // Check if admin is impersonating
+    // Check if admin is impersonating - verify there's actually an admin session stored
     const impersonating = localStorage.getItem('impersonating_teacher');
     const teacherNameStored = localStorage.getItem('teacher_name');
+    const adminSession = localStorage.getItem('admin_session');
     
-    if (impersonating === 'true') {
+    // Only show impersonation banner if all flags are present
+    // This prevents showing the banner when a teacher logs in directly
+    if (impersonating === 'true' && adminSession) {
       setIsImpersonating(true);
       setImpersonatedTeacherName(teacherNameStored || '');
+    } else {
+      // Clear stale impersonation flags if no admin session
+      localStorage.removeItem('impersonating_teacher');
+      localStorage.removeItem('teacher_name');
+      setIsImpersonating(false);
     }
   }, []);
 

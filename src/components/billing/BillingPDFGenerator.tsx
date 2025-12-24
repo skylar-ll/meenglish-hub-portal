@@ -210,9 +210,9 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
 
   // Financial Table
   const tableData = [
-    { left: 'Level Count', leftValue: billingData.level_count.toString(), right: 'Total Fee', rightValue: `${billingData.total_fee.toLocaleString()} SR` },
-    { left: 'Discount', leftValue: `${billingData.discount_percentage}%`, right: 'Fee After Discount', rightValue: `${billingData.fee_after_discount.toLocaleString()} SR` },
-    { left: 'Amount Paid', leftValue: `${billingData.amount_paid.toLocaleString()} SR`, right: 'Amount Remaining', rightValue: `${billingData.amount_remaining.toLocaleString()} SR` },
+    { left: 'Level Count', leftValue: billingData.level_count.toString(), right: 'Total Fee', rightValue: `${billingData.total_fee.toLocaleString()} SAR` },
+    { left: 'Discount', leftValue: `${billingData.discount_percentage}%`, right: 'Fee After Discount', rightValue: `${billingData.fee_after_discount.toLocaleString()} SAR` },
+    { left: 'Amount Paid', leftValue: `${billingData.amount_paid.toLocaleString()} SAR`, right: 'Amount Remaining', rightValue: `${billingData.amount_remaining.toLocaleString()} SAR` },
   ];
 
   doc.setFontSize(11);
@@ -260,7 +260,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.text('First Payment (50%)', leftCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(59, 130, 246);
-  doc.text(`${billingData.first_payment.toLocaleString()} SR`, pageWidth - margin - 120, yPos);
+  doc.text(`${billingData.first_payment.toLocaleString()} SAR`, pageWidth - margin - 120, yPos);
   
   yPos += 20;
   doc.setFontSize(9);
@@ -277,7 +277,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.text('Second Payment (50%)', leftCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(239, 68, 68);
-  doc.text(`${billingData.second_payment.toLocaleString()} SR`, pageWidth - margin - 120, yPos);
+  doc.text(`${billingData.second_payment.toLocaleString()} SAR`, pageWidth - margin - 120, yPos);
   
   yPos += 20;
   doc.setFontSize(9);

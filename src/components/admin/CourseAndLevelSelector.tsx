@@ -2,7 +2,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTeacherCourseMapping } from "@/hooks/useTeacherCourseMapping";
 
 interface CourseAndLevelSelectorProps {
   selectedBranchId: string | null;
@@ -36,6 +38,8 @@ export const CourseAndLevelSelector = ({
   extractLevelKey,
   normalize,
 }: CourseAndLevelSelectorProps) => {
+  const { getTeacherForLevel, getTeacherForCourse } = useTeacherCourseMapping(selectedBranchId);
+
   return (
     <>
       {/* Show selected branch info */}
@@ -74,6 +78,8 @@ export const CourseAndLevelSelector = ({
                             }))
                       : true;
 
+                    const teacherName = getTeacherForLevel(level.config_value);
+
                     const item = (
                       <div
                         key={level.id}
@@ -90,9 +96,14 @@ export const CourseAndLevelSelector = ({
                         />
                         <Label
                           htmlFor={`level-${level.id}`}
-                          className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                          className={`text-sm flex-1 flex items-center gap-2 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                         >
                           {level.config_value}
+                          {teacherName && isAvailable && (
+                            <Badge variant="secondary" className="text-xs font-normal">
+                              {teacherName}
+                            </Badge>
+                          )}
                         </Label>
                       </div>
                     );
@@ -132,6 +143,8 @@ export const CourseAndLevelSelector = ({
                         })
                       : true;
 
+                    const teacherName = getTeacherForCourse(course.value);
+
                     const courseItem = (
                       <div
                         key={course.value}
@@ -148,9 +161,14 @@ export const CourseAndLevelSelector = ({
                         />
                         <Label
                           htmlFor={`course-${course.value}`}
-                          className={`text-sm flex-1 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                          className={`text-sm flex-1 flex items-center gap-2 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                         >
                           {course.label}
+                          {teacherName && isAvailable && (
+                            <Badge variant="secondary" className="text-xs font-normal">
+                              {teacherName}
+                            </Badge>
+                          )}
                         </Label>
                       </div>
                     );

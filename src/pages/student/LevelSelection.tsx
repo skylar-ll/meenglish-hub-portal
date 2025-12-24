@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { useFormConfigurations } from "@/hooks/useFormConfigurations";
+import { useTeacherCourseMapping } from "@/hooks/useTeacherCourseMapping";
 import {
   Select,
   SelectContent,
@@ -37,6 +38,7 @@ const LevelSelection = () => {
   const [branchId, setBranchId] = useState<string | null>(null);
   const { filteredOptions } = useBranchFiltering(branchId);
   const { courses } = useFormConfigurations();
+  const { getTeacherForLevel, getTeacherForCourse } = useTeacherCourseMapping(branchId);
 
   useEffect(() => {
     const registration = JSON.parse(sessionStorage.getItem("studentRegistration") || "{}");
@@ -140,11 +142,14 @@ const LevelSelection = () => {
                       const key = extractLevelKey(lvl.config_key);
                       return key ? filteredOptions.allowedLevelKeys.includes(key) : false;
                     })
-                    .map((lvl) => (
-                      <SelectItem key={lvl.id} value={lvl.config_value}>
-                        {lvl.config_value}
-                      </SelectItem>
-                    ))}
+                    .map((lvl) => {
+                      const teacherName = getTeacherForLevel(lvl.config_value);
+                      return (
+                        <SelectItem key={lvl.id} value={lvl.config_value}>
+                          {lvl.config_value}{teacherName ? ` — ${teacherName}` : ''}
+                        </SelectItem>
+                      );
+                    })}
                 </SelectGroup>
 
                 <SelectSeparator />
@@ -186,9 +191,10 @@ const LevelSelection = () => {
                         const a = normalize(ac); const b = normalize(c.value);
                         return a.includes(b) || b.includes(a);
                       }) : false;
+                      const teacherName = !disabled ? getTeacherForCourse(c.value) : null;
                       return (
                         <SelectItem key={c.id} value={c.label} disabled={disabled}>
-                          {c.label}
+                          {c.label}{teacherName ? ` — ${teacherName}` : ''}
                         </SelectItem>
                       );
                     })}
