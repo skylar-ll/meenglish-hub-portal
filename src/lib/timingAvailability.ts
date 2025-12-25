@@ -114,18 +114,14 @@ export function computeAllowedTimingsForSelections(
   }
 
   const timingIsAllowed = (groupClasses: ClassTimingSource[]): boolean => {
-    // Levels: if multiple selected, require ALL selected levels to be covered by at least one class at this timing.
+    // Levels: allow timing if ANY selected level is covered by at least one class
     const levelOk = !hasLevelSelection
       ? true
-      : selectedLevels.length <= 1
-        ? selectedLevels.some((sel) =>
-            groupClasses.some((cls) => (cls.levels ?? []).some((lvl) => matchLevel(lvl, sel)))
-          )
-        : selectedLevels.every((sel) =>
-            groupClasses.some((cls) => (cls.levels ?? []).some((lvl) => matchLevel(lvl, sel)))
-          );
+      : selectedLevels.some((sel) =>
+          groupClasses.some((cls) => (cls.levels ?? []).some((lvl) => matchLevel(lvl, sel)))
+        );
 
-    // Courses: keep "ANY selected course" behavior (less strict) to avoid over-filtering.
+    // Courses: allow timing if ANY selected course is covered by at least one class
     const courseOk = !hasCourseSelection
       ? true
       : selectedCourses.some((sel) =>
