@@ -712,11 +712,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
         amount_paid: partialPaymentAmount,
         amount_remaining: feeAfterDiscount - partialPaymentAmount,
         signature_url: signatureFileName,
-        language: 'en',
+        language: billLanguage,
         first_payment: partialPaymentAmount,
         second_payment: feeAfterDiscount - partialPaymentAmount,
         payment_deadline: paymentDeadline, // Auto-generated deadline
       };
+
 
       const { data: billing, error: billingError } = await supabase
         .from('billing')
@@ -727,8 +728,8 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       if (billingError) throw billingError;
 
       try {
-        // Generate Arabic or English PDF based on language setting
-        const pdfBlob = language === 'ar' 
+        // Generate Arabic or English PDF based on BILL language selector
+        const pdfBlob = billLanguage === 'ar'
           ? await generateBillingPDFArabic({
               student_id: authData.user.id,
               student_name_en: validatedData.fullNameEn,
@@ -770,18 +771,19 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
               student_id_code: studentData.student_id || undefined,
             });
 
-        const pdfPath = `${authData.user.id}/billing_${billing.id}.pdf`;
+        const pdfPath = `${authData.user.id}/billing_${billing.id}_${billLanguage}.pdf`;
         await supabase.storage
           .from('billing-pdfs')
           .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
 
         await supabase
           .from('billing')
-          .update({ signed_pdf_url: pdfPath })
+          .update({ signed_pdf_url: pdfPath, language: billLanguage })
           .eq('id', billing.id);
       } catch (pdfErr) {
         console.error('PDF error:', pdfErr);
       }
+
 
       await supabase
         .from("profiles")
@@ -1538,21 +1540,35 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
             {/* Step 8: Billing & Signature */}
             {step === 8 && (
               <div className="space-y-4">
-                <BillingFormStep 
-                  formData={formData} 
-                  onSignatureSave={handleSignatureSave} 
-                  signature={signature} 
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-lg font-semibold">Billing Language</Label>
+                  <Select value={billLanguage} onValueChange={(v: "en" | "ar") => setBillLanguage(v)}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="ar">العربية</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <BillingFormStep
+                  formData={formData}
+                  onSignatureSave={handleSignatureSave}
+                  signature={signature}
                   courseDurations={courseDurations}
                   partialPaymentAmount={partialPaymentAmount}
+                  billLanguage={billLanguage}
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleSubmit} 
-                    className="flex-1 bg-gradient-to-r from-primary to-secondary" 
+                  <Button
+                    onClick={handleSubmit}
+                    className="flex-1 bg-gradient-to-r from-primary to-secondary"
                     disabled={loading || !signature}
                   >
                     {loading ? (
@@ -1567,6 +1583,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
                 </div>
               </div>
             )}
+
 
           </div>
         )}

@@ -367,10 +367,8 @@ const TeacherScheduleManagement = () => {
     setSelectedTime("all");
   };
 
-  const shouldGroupByBranch =
-    selectedBranchId === "all" &&
-    selectedDate === "all" &&
-    selectedTime === "all";
+  const shouldGroupByBranch = selectedBranchId === "all";
+
 
   const renderScheduleGrid = (tableClasses: ClassData[], opts?: { showTimeFilter?: boolean; showBranchColumn?: boolean }) => {
     const teacherIdsLocal = Array.from(

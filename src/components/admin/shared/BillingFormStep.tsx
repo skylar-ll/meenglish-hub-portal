@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SignatureCanvas } from "@/components/billing/SignatureCanvas";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
+import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
 import { downloadPdfBlob } from "@/lib/pdfDownload";
 import { Download, FileText } from "lucide-react";
 import { format, addDays } from "date-fns";
@@ -14,19 +15,27 @@ interface BillingFormStepProps {
   signature: string | null;
   courseDurations: any[];
   partialPaymentAmount?: number;
+  billLanguage?: "en" | "ar";
 }
 
-export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDurations, partialPaymentAmount = 0 }: BillingFormStepProps) => {
+export const BillingFormStep = ({
+  formData,
+  onSignatureSave,
+  signature,
+  courseDurations,
+  partialPaymentAmount = 0,
+  billLanguage = "en",
+}: BillingFormStepProps) => {
   const [downloading, setDownloading] = useState(false);
   const ksaTimezone = "Asia/Riyadh";
 
   // Calculate billing details
-  const durationMonths = formData.customDuration 
-    ? parseInt(formData.customDuration) 
+  const durationMonths = formData.customDuration
+    ? parseInt(formData.customDuration)
     : parseInt(formData.courseDuration || "1");
 
-  const pricing = courseDurations.find(d => d.value === formData.courseDuration);
-  const totalFee = pricing?.price || (durationMonths * 500);
+  const pricing = courseDurations.find((d) => d.value === formData.courseDuration);
+  const totalFee = pricing?.price || durationMonths * 500;
   const discountPercent = formData.discountPercent || 0; // Use discount from form data (from offers)
   const feeAfterDiscount = totalFee * (1 - discountPercent / 100);
   const amountPaid = partialPaymentAmount;
@@ -38,14 +47,14 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
   const courseStartDate = format(addDays(ksaDate, 1), "dd MMMM yyyy");
 
   const handleDownloadPDF = async () => {
-    if (!signature) {
-      return;
-    }
+    if (!signature) return;
 
     try {
       setDownloading(true);
-      
-      const pdfBlob = await generateBillingPDF({
+
+      const generator = billLanguage === "ar" ? generateBillingPDFArabic : generateBillingPDF;
+
+      const pdfBlob = await generator({
         student_id: "preview",
         student_name_en: formData.fullNameEn,
         student_name_ar: formData.fullNameAr,
@@ -65,7 +74,7 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
         signature_url: signature,
       });
 
-      const fileName = `billing_${formData.fullNameEn}_${Date.now()}.pdf`;
+      const fileName = `billing_${formData.fullNameEn}_${billLanguage}_${Date.now()}.pdf`;
       downloadPdfBlob(pdfBlob, fileName);
     } catch (error) {
       console.error("Error downloading PDF:", error);
@@ -99,7 +108,10 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
             </div>
             <div>
               <p className="font-semibold">Phone:</p>
-              <p className="text-muted-foreground">{formData.countryCode1}{formData.phone1}</p>
+              <p className="text-muted-foreground">
+                {formData.countryCode1}
+                {formData.phone1}
+              </p>
             </div>
             <div>
               <p className="font-semibold">Email:</p>
@@ -145,7 +157,9 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
                 </thead>
                 <tbody>
                   <tr className="border-b">
-                    <td className="p-2">{Array.isArray(formData.courses) ? formData.courses.join(", ") : formData.courses}</td>
+                    <td className="p-2">
+                      {Array.isArray(formData.courses) ? formData.courses.join(", ") : formData.courses}
+                    </td>
                     <td className="p-2">{formData.timing || "Not selected"}</td>
                     <td className="p-2 text-right">{durationMonths}</td>
                     <td className="p-2 text-right">{totalFee.toFixed(2)}</td>
@@ -192,13 +206,11 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
                   <span>Remaining Balance:</span>
                   <span className="font-semibold text-orange-600">{remainingBalance.toFixed(2)} SAR</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  * Remaining balance must be paid by the end of the first month
-                </p>
+                <p className="text-xs text-muted-foreground mt-2">* Remaining balance must be paid by the end of the first month</p>
               </div>
             </div>
           )}
-          
+
           {remainingBalance === 0 && (
             <div className="border-t pt-4 bg-green-50 dark:bg-green-950 p-4 rounded-lg">
               <p className="text-sm font-semibold text-green-600 text-center">
@@ -222,16 +234,11 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
       </Card>
 
       {/* Signature Section */}
-      <SignatureCanvas onSave={onSignatureSave} language="en" />
+      <SignatureCanvas onSave={onSignatureSave} language={billLanguage} />
 
       {/* Download Button */}
       {signature && (
-        <Button
-          onClick={handleDownloadPDF}
-          disabled={downloading}
-          className="w-full"
-          size="lg"
-        >
+        <Button onClick={handleDownloadPDF} disabled={downloading} className="w-full" size="lg">
           <Download className="w-4 h-4 mr-2" />
           {downloading ? "Generating PDF..." : "Download Signed Billing Form"}
         </Button>
@@ -239,3 +246,4 @@ export const BillingFormStep = ({ formData, onSignatureSave, signature, courseDu
     </div>
   );
 };
+
