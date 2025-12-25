@@ -547,7 +547,12 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
       });
 
       if (authError || !authData.user) {
-        toast.error(`Authentication error: ${authError?.message}`);
+        // Better error message for existing email
+        if (authError?.message?.includes('already been registered') || authError?.message?.includes('already exists')) {
+          toast.error(`A user with email "${validatedData.email}" already exists in the system. Please use a different email.`);
+        } else {
+          toast.error(`Authentication error: ${authError?.message || 'Unknown error'}`);
+        }
         return;
       }
 
