@@ -2,6 +2,8 @@ import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { loadArabicFont } from "@/lib/arabicFontLoader";
+import { formatPdfNumber } from "@/lib/pdfFormat";
+
 
 interface BillingData {
   student_id: string;
@@ -195,7 +197,7 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   const levelText = hasArabicFont ? `عدد المستويات ${billingData.level_count}` : `Levels: ${billingData.level_count}`;
-  const totalFeeText = hasArabicFont ? `إجمالي الرسوم ${billingData.total_fee.toLocaleString()} SAR` : `Total Fee: ${billingData.total_fee.toLocaleString()} SAR`;
+  const totalFeeText = hasArabicFont ? `إجمالي الرسوم ${formatPdfNumber(billingData.total_fee)} SAR` : `Total Fee: ${formatPdfNumber(billingData.total_fee)} SAR`;
   if (hasArabicFont) {
     doc.setFont('Amiri', 'normal');
     renderArabicText(levelText + '  |  ' + totalFeeText, pageWidth - margin, yPos, { align: 'right' });
@@ -206,7 +208,7 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
 
   // Discount + Fee after discount row
   const discountText = hasArabicFont ? `قيمة الخصم ${billingData.discount_percentage}%` : `Discount: ${billingData.discount_percentage}%`;
-  const afterDiscountText = hasArabicFont ? `الرسوم بعد الخصم ${billingData.fee_after_discount.toLocaleString()} SAR` : `After Discount: ${billingData.fee_after_discount.toLocaleString()} SAR`;
+  const afterDiscountText = hasArabicFont ? `الرسوم بعد الخصم ${formatPdfNumber(billingData.fee_after_discount)} SAR` : `After Discount: ${formatPdfNumber(billingData.fee_after_discount)} SAR`;
   if (hasArabicFont) {
     doc.setFont('Amiri', 'normal');
     renderArabicText(discountText + '  |  ' + afterDiscountText, pageWidth - margin, yPos, { align: 'right' });
@@ -216,8 +218,8 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   yPos += 20;
 
   // Amount paid + Remaining row
-  const paidText = hasArabicFont ? `المبلغ المدفوع ${billingData.amount_paid.toLocaleString()} SAR` : `Paid: ${billingData.amount_paid.toLocaleString()} SAR`;
-  const remainingText = hasArabicFont ? `المبلغ المتبقي ${billingData.amount_remaining.toLocaleString()} SAR` : `Remaining: ${billingData.amount_remaining.toLocaleString()} SAR`;
+  const paidText = hasArabicFont ? `المبلغ المدفوع ${formatPdfNumber(billingData.amount_paid)} SAR` : `Paid: ${formatPdfNumber(billingData.amount_paid)} SAR`;
+  const remainingText = hasArabicFont ? `المبلغ المتبقي ${formatPdfNumber(billingData.amount_remaining)} SAR` : `Remaining: ${formatPdfNumber(billingData.amount_remaining)} SAR`;
   if (hasArabicFont) {
     doc.setFont('Amiri', 'normal');
     renderArabicText(paidText + '  |  ' + remainingText, pageWidth - margin, yPos, { align: 'right' });
@@ -225,6 +227,7 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     doc.text(paidText + '  |  ' + remainingText, pageWidth - margin, yPos, { align: 'right' });
   }
   yPos += 30;
+
 
   // Payment Schedule Section
   doc.setFontSize(14);
@@ -251,7 +254,8 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   doc.setFontSize(14);
   doc.setTextColor(34, 139, 34);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${billingData.first_payment.toLocaleString()} SAR`, pageWidth - margin, yPos, { align: 'right' });
+  doc.text(`${formatPdfNumber(billingData.first_payment)} SAR`, pageWidth - margin, yPos, { align: 'right' });
+
   yPos += 15;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
@@ -280,7 +284,8 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   doc.setFontSize(14);
   doc.setTextColor(220, 53, 69);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${billingData.second_payment.toLocaleString()} SAR`, pageWidth - margin, yPos, { align: 'right' });
+  doc.text(`${formatPdfNumber(billingData.second_payment)} SAR`, pageWidth - margin, yPos, { align: 'right' });
+
   yPos += 15;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
