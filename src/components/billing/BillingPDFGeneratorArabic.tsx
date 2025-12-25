@@ -92,226 +92,243 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
     }
   };
 
-  // Header - Institute Name (English for better compatibility)
-  doc.setFontSize(24);
+  // Header - Institute Name in Arabic
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Modern Education Institute of Language', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 25;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText('معهد التعليم الحديث لتعليم اللغات', pageWidth / 2, yPos, { align: 'center' });
+  } else {
+    doc.text('Modern Education Institute of Language', pageWidth / 2, yPos, { align: 'center' });
+  }
+  yPos += 20;
 
-  // License and Registration Numbers
+  // License and Registration Numbers in Arabic
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('Training License No.: 5300751', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 15;
-  doc.text('Commercial Registration No.: 2050122590', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 40;
-
-  doc.setTextColor(0, 0, 0);
-
-  // Student Information - Two Columns (Arabic/English mix for compatibility)
-  const leftCol = margin;
-  const rightCol = pageWidth / 2 + 10;
-  const lineHeight = 45;
-
-  // Arabic Name (Right) - using Arabic font
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Student Name (Arabic)', rightCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  renderArabicText(billingData.student_name_ar, rightCol + 150, yPos + 18, { align: 'right' });
-
-  // English Name (Left)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Student Name (English)', leftCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(billingData.student_name_en, leftCol, yPos + 18);
-
-  yPos += lineHeight;
-
-  // Student ID (Right)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('رقم الطالب', rightCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(billingData.student_id_code || 'N/A', rightCol, yPos + 18);
-
-  // Contact Number (Left)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('رقم الاتصال', leftCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(billingData.phone, leftCol, yPos + 18);
-
-  yPos += lineHeight;
-
-  // Course Package (Right)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('اسم الدورة او الباقة', rightCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(billingData.course_package, rightCol, yPos + 18);
-
-  // Time Slot (Left)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('الفترة الزمنية', leftCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(billingData.time_slot || 'سيتم تحديده', leftCol, yPos + 18);
-
-  yPos += lineHeight;
-
-  // Registration Date (Right)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('تاريخ التسجيل', rightCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(format(new Date(billingData.registration_date), 'dd/MM/yyyy'), rightCol, yPos + 18);
-
-  // Course Start Date (Left)
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('تاريخ بدء الدورة', leftCol, yPos);
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text(format(new Date(billingData.course_start_date), 'dd/MM/yyyy'), leftCol, yPos + 18);
-
-  yPos += 60;
-
-  // Financial Details Section (Arabic)
-  doc.setFontSize(16);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text('التفاصيل المالية', rightCol, yPos);
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText('رقم ترخيص التدريب: 5300751', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+    renderArabicText('رقم السجل التجاري: 2050122590', pageWidth / 2, yPos, { align: 'center' });
+  } else {
+    doc.text('Training License No.: 5300751', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+    doc.text('Commercial Registration: 2050122590', pageWidth / 2, yPos, { align: 'center' });
+  }
   yPos += 30;
 
-  // Financial Table (RTL)
-  const tableData = [
-    { right: 'عدد المستويات', rightValue: billingData.level_count.toString(), left: 'إجمالي الرسوم', leftValue: `${billingData.total_fee.toLocaleString()} ريال` },
-    { right: 'الخصم', rightValue: `${billingData.discount_percentage}%`, left: 'الرسوم بعد الخصم', leftValue: `${billingData.fee_after_discount.toLocaleString()} ريال` },
-    { right: 'المبلغ المدفوع', rightValue: `${billingData.amount_paid.toLocaleString()} ريال`, left: 'المبلغ المتبقي', leftValue: `${billingData.amount_remaining.toLocaleString()} ريال` },
-  ];
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
 
-  doc.setFontSize(11);
-  tableData.forEach((row) => {
-    // Right column
+  // Helper for label + value rows
+  const addLabelValue = (label: string, value: string, isArabicLabel: boolean = true) => {
+    doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text(row.right, rightCol, yPos);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    if (row.right === 'Discount') {
-      doc.setTextColor(34, 197, 94); // Green color
+    if (isArabicLabel && hasArabicFont) {
+      doc.setFont('Amiri', 'normal');
+      renderArabicText(label, pageWidth - margin, yPos, { align: 'right' });
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.text(label, pageWidth - margin, yPos, { align: 'right' });
     }
-    doc.text(row.rightValue, rightCol + 130, yPos);
-
-    // Left column
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text(row.left, leftCol, yPos);
-    
+    yPos += 15;
+    doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    if (row.left === 'Amount Remaining') {
-      doc.setTextColor(239, 68, 68); // Red color
-    }
-    doc.text(row.leftValue, leftCol + 100, yPos);
-
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, pageWidth - margin, yPos, { align: 'right' });
     yPos += 25;
-  });
+  };
 
+  // Student Name English
+  addLabelValue('اسم الطالب (باللغة الإنجليزية)', billingData.student_name_en);
+
+  // Student Name Arabic
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText('اسم الطالب (باللغة العربية)', pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 15;
+  doc.setFontSize(12);
+  doc.setTextColor(0, 0, 0);
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(billingData.student_name_ar, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(billingData.student_name_ar, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 25;
+
+  // Student ID
+  addLabelValue('رقم هوية الطالب', billingData.student_id_code || billingData.student_id || 'N/A');
+
+  // Contact Number
+  addLabelValue('رقم التواصل', billingData.phone);
+
+  // Time Slot
+  addLabelValue('موعد الحصة ضمن باقة الدورة', billingData.time_slot || 'غير محدد');
+
+  // Registration Date
+  addLabelValue('تاريخ التسجيل', format(new Date(billingData.registration_date), 'MM/dd/yyyy'));
+
+  // Course Start Date
+  addLabelValue('تاريخ بدء الدورة', format(new Date(billingData.course_start_date), 'MM/dd/yyyy'));
+
+  yPos += 10;
+
+  // Financial Details Header
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText('التفاصيل المالية', pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text('Financial Details', pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 25;
+
+  // Level count + Total Fee row
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  const levelText = hasArabicFont ? `عدد المستويات ${billingData.level_count}` : `Levels: ${billingData.level_count}`;
+  const totalFeeText = hasArabicFont ? `إجمالي الرسوم ${billingData.total_fee.toLocaleString()} SAR` : `Total Fee: ${billingData.total_fee.toLocaleString()} SAR`;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(levelText + '  |  ' + totalFeeText, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(levelText + '  |  ' + totalFeeText, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 20;
+
+  // Discount + Fee after discount row
+  const discountText = hasArabicFont ? `قيمة الخصم ${billingData.discount_percentage}%` : `Discount: ${billingData.discount_percentage}%`;
+  const afterDiscountText = hasArabicFont ? `الرسوم بعد الخصم ${billingData.fee_after_discount.toLocaleString()} SAR` : `After Discount: ${billingData.fee_after_discount.toLocaleString()} SAR`;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(discountText + '  |  ' + afterDiscountText, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(discountText + '  |  ' + afterDiscountText, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 20;
+
+  // Amount paid + Remaining row
+  const paidText = hasArabicFont ? `المبلغ المدفوع ${billingData.amount_paid.toLocaleString()} SAR` : `Paid: ${billingData.amount_paid.toLocaleString()} SAR`;
+  const remainingText = hasArabicFont ? `المبلغ المتبقي ${billingData.amount_remaining.toLocaleString()} SAR` : `Remaining: ${billingData.amount_remaining.toLocaleString()} SAR`;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(paidText + '  |  ' + remainingText, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(paidText + '  |  ' + remainingText, pageWidth - margin, yPos, { align: 'right' });
+  }
   yPos += 30;
 
   // Payment Schedule Section
-  doc.setFillColor(240, 249, 255);
-  doc.rect(margin - 10, yPos - 10, pageWidth - 2 * margin + 20, 90, 'F');
-  
   doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('Payment Schedule', rightCol, yPos + 10);
-  yPos += 35;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText('جدول السداد', pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text('Payment Schedule', pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 25;
 
   // First Payment
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('First Payment (50%)', rightCol + 10, yPos);
-  doc.setFontSize(20);
-  doc.setTextColor(59, 130, 246);
-  doc.text(`${billingData.first_payment.toLocaleString()} SR`, leftCol + 50, yPos);
-  
-  yPos += 20;
+  const firstPayLabel = hasArabicFont ? 'الدفعة الأولى (50%)' : 'First Payment (50%)';
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(firstPayLabel, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(firstPayLabel, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 15;
+  doc.setFontSize(14);
+  doc.setTextColor(34, 139, 34);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${billingData.first_payment.toLocaleString()} SAR`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 15;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('Due at enrollment', rightCol + 10, yPos);
-
-  yPos += 30;
+  const dueAtReg = hasArabicFont ? 'مستحقة عند التسجيل' : 'Due at Registration';
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(dueAtReg, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(dueAtReg, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 25;
 
   // Second Payment
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('Second Payment (50%)', rightCol + 10, yPos);
-  doc.setFontSize(20);
-  doc.setTextColor(239, 68, 68);
-  doc.text(`${billingData.second_payment.toLocaleString()} SR`, leftCol + 50, yPos);
-  
-  yPos += 20;
+  const secondPayLabel = hasArabicFont ? 'الدفعة الثانية (50%)' : 'Second Payment (50%)';
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(secondPayLabel, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(secondPayLabel, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 15;
+  doc.setFontSize(14);
+  doc.setTextColor(220, 53, 69);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${billingData.second_payment.toLocaleString()} SAR`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 15;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
   const secondPaymentDate = new Date(billingData.course_start_date);
   secondPaymentDate.setMonth(secondPaymentDate.getMonth() + 1);
-  doc.text(`Deadline: ${format(secondPaymentDate, 'dd/MM/yyyy')}`, rightCol + 10, yPos);
-
-  yPos += 40;
+  const dueDateLabel = hasArabicFont ? `تاريخ الاستحقاق: ${format(secondPaymentDate, 'MM/dd/yyyy')}` : `Due Date: ${format(secondPaymentDate, 'MM/dd/yyyy')}`;
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(dueDateLabel, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(dueDateLabel, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 35;
 
   // Student Signature Section
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.text('Student Signature', rightCol, yPos);
-  yPos += 5;
-
-  doc.setFontSize(10);
+  const sigTitle = hasArabicFont ? 'توقيع الطالب' : 'Student Signature';
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(sigTitle, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(sigTitle, pageWidth - margin, yPos, { align: 'right' });
+  }
+  yPos += 15;
+  
+  doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('Please sign below to agree to the terms and conditions', rightCol, yPos);
+  const sigNote = hasArabicFont ? 'يرجى التوقيع أدناه إقرارًا بالموافقة على الشروط والأحكام' : 'Please sign below to agree to the terms and conditions';
+  if (hasArabicFont) {
+    doc.setFont('Amiri', 'normal');
+    renderArabicText(sigNote, pageWidth - margin, yPos, { align: 'right' });
+  } else {
+    doc.text(sigNote, pageWidth - margin, yPos, { align: 'right' });
+  }
   yPos += 20;
 
   // Signature box with dashed border
-  const sigBoxX = leftCol;
+  const sigBoxX = margin;
   const sigBoxY = yPos;
   const sigBoxWidth = pageWidth - 2 * margin;
-  const sigBoxHeight = 120;
+  const sigBoxHeight = 100;
 
   doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(2);
+  doc.setLineWidth(1);
   doc.rect(sigBoxX, sigBoxY, sigBoxWidth, sigBoxHeight);
 
   // Load and embed signature
