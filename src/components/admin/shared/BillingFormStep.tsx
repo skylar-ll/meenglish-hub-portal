@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SignatureCanvas } from "@/components/billing/SignatureCanvas";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
 import { downloadPdfBlob } from "@/lib/pdfDownload";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface BillingFormStepProps {
@@ -52,6 +51,13 @@ type UiText = {
   downloadSigned: string;
   generatingPdf: string;
   notSelected: string;
+  dueAtRegistration: string;
+  dueDate: string;
+  studentSignature: string;
+  signatureNote: string;
+  levelCount: string;
+  financialDetails: string;
+  sarCurrency: string;
 };
 
 const EN_UI: UiText = {
@@ -59,33 +65,81 @@ const EN_UI: UiText = {
   trainingLicense: "Training License No.: 5300751",
   commercialRegistration: "Commercial Registration: 2050122590",
   studentInfoTitle: "Student Information",
-  studentNameEn: "Student Name (English):",
-  studentNameAr: "Student Name (Arabic):",
-  phone: "Phone:",
-  email: "Email:",
-  nationalId: "National ID:",
-  branch: "Branch:",
-  registrationDate: "Registration Date:",
-  courseStartDate: "Course Start Date:",
+  studentNameEn: "Student Name (English)",
+  studentNameAr: "Student Name (Arabic)",
+  phone: "Contact Number",
+  email: "Email",
+  nationalId: "Student ID",
+  branch: "Branch",
+  registrationDate: "Registration Date",
+  courseStartDate: "Course Start Date",
   billingDetails: "Billing Details",
   coursePackage: "Course Package",
-  timeSlot: "Time Slot",
+  timeSlot: "Class Time Slot",
   durationMonths: "Duration (Months)",
   totalFeeSar: "Total Fee (SAR)",
-  totalFeeLabel: "Total Fee:",
+  totalFeeLabel: "Total Fee",
   discountLabel: "Discount",
-  feeAfterDiscount: "Fee After Discount:",
-  amountPaidNow: "Amount Paid Now:",
-  amountRemaining: "Amount Remaining:",
+  feeAfterDiscount: "Fee After Discount",
+  amountPaidNow: "Amount Paid",
+  amountRemaining: "Amount Remaining",
   paymentSchedule: "Payment Schedule",
-  initialPayment: "Initial Payment:",
-  remainingBalance: "Remaining Balance:",
+  initialPayment: "First Payment (50%)",
+  remainingBalance: "Second Payment (50%)",
   remainingNote: "* Remaining balance must be paid by the end of the first month",
   fullPaymentReceived: "✓ Full payment received - No remaining balance",
   termsAndConditions: "Terms and Conditions",
   downloadSigned: "Download Signed Billing Form",
   generatingPdf: "Generating PDF...",
   notSelected: "Not selected",
+  dueAtRegistration: "Due at Registration",
+  dueDate: "Due Date",
+  studentSignature: "Student Signature",
+  signatureNote: "Please sign below to agree to the terms and conditions",
+  levelCount: "Number of Levels",
+  financialDetails: "Financial Details",
+  sarCurrency: "SAR",
+};
+
+const AR_UI: UiText = {
+  instituteName: "معهد التعليم الحديث لتعليم اللغات",
+  trainingLicense: "رقم ترخيص التدريب: 5300751",
+  commercialRegistration: "رقم السجل التجاري: 2050122590",
+  studentInfoTitle: "معلومات الطالب",
+  studentNameEn: "اسم الطالب (باللغة الإنجليزية)",
+  studentNameAr: "اسم الطالب (باللغة العربية)",
+  phone: "رقم التواصل",
+  email: "البريد الإلكتروني",
+  nationalId: "رقم هوية الطالب",
+  branch: "الفرع",
+  registrationDate: "تاريخ التسجيل",
+  courseStartDate: "تاريخ بدء الدورة",
+  billingDetails: "تفاصيل الفاتورة",
+  coursePackage: "الباقة",
+  timeSlot: "موعد الحصة ضمن باقة الدورة",
+  durationMonths: "المدة (أشهر)",
+  totalFeeSar: "إجمالي الرسوم",
+  totalFeeLabel: "إجمالي الرسوم",
+  discountLabel: "قيمة الخصم",
+  feeAfterDiscount: "الرسوم بعد الخصم",
+  amountPaidNow: "المبلغ المدفوع",
+  amountRemaining: "المبلغ المتبقي",
+  paymentSchedule: "جدول السداد",
+  initialPayment: "الدفعة الأولى (50%)",
+  remainingBalance: "الدفعة الثانية (50%)",
+  remainingNote: "* يجب دفع الرصيد المتبقي بنهاية الشهر الأول",
+  fullPaymentReceived: "✓ تم استلام الدفعة الكاملة - لا يوجد رصيد متبقي",
+  termsAndConditions: "الشروط والأحكام",
+  downloadSigned: "تحميل نموذج الفاتورة الموقع",
+  generatingPdf: "جارٍ إنشاء ملف PDF...",
+  notSelected: "غير محدد",
+  dueAtRegistration: "مستحقة عند التسجيل",
+  dueDate: "تاريخ الاستحقاق",
+  studentSignature: "توقيع الطالب",
+  signatureNote: "يرجى التوقيع أدناه إقرارًا بالموافقة على الشروط والأحكام",
+  levelCount: "عدد المستويات",
+  financialDetails: "التفاصيل المالية",
+  sarCurrency: "ريال سعودي",
 };
 
 const EN_TERMS = [
@@ -94,6 +148,14 @@ const EN_TERMS = [
   "Course materials are provided by the institute",
   "Student must maintain 80% attendance",
   "Certificate will be issued upon course completion",
+];
+
+const AR_TERMS = [
+  "جميع الرسوم غير قابلة للاسترداد ما لم ينص على خلاف ذلك",
+  "يجب اتباع جدول الدفع المتفق عليه",
+  "يوفر المعهد المواد التعليمية",
+  "يجب على الطالب الحفاظ على نسبة حضور 80%",
+  "ستصدر الشهادة عند إتمام الدورة",
 ];
 
 export const BillingFormStep = ({
@@ -105,7 +167,6 @@ export const BillingFormStep = ({
   billLanguage = "en",
 }: BillingFormStepProps) => {
   const [downloading, setDownloading] = useState(false);
-  const [isTranslatingUi, setIsTranslatingUi] = useState(false);
   const [ui, setUi] = useState<UiText>(EN_UI);
   const [terms, setTerms] = useState<string[]>(EN_TERMS);
   const [dynamic, setDynamic] = useState<{ branch: string; timeSlot: string; coursePackage: string }>({
@@ -113,10 +174,6 @@ export const BillingFormStep = ({
     timeSlot: "",
     coursePackage: "",
   });
-
-  const arUiCacheRef = useRef<UiText | null>(null);
-  const arTermsCacheRef = useRef<string[] | null>(null);
-  const arDynamicCacheRef = useRef<Record<string, string>>({});
 
   const ksaTimezone = "Asia/Riyadh";
 
@@ -150,95 +207,19 @@ export const BillingFormStep = ({
     return String(formData.branch || "");
   }, [formData.branch]);
 
-  const translateBatchToArabic = async (texts: string[]) => {
-    const { data, error } = await supabase.functions.invoke("translate-text", {
-      body: { texts, targetLanguage: "ar" },
-    });
-    if (error) throw error;
-    return (data?.translations as string[] | undefined) || texts;
-  };
-
-  const translateOneToArabicCached = async (text: string) => {
-    const clean = String(text || "").trim();
-    if (!clean) return clean;
-
-    // If it already contains Arabic, keep as-is.
-    if (/[\u0600-\u06FF]/.test(clean)) return clean;
-
-    // If no latin letters, translation isn't helpful (numbers/symbols).
-    if (!/[A-Za-z]/.test(clean)) return clean;
-
-    if (arDynamicCacheRef.current[clean]) return arDynamicCacheRef.current[clean];
-
-    const translated = (await translateBatchToArabic([clean]))[0] || clean;
-    arDynamicCacheRef.current[clean] = translated;
-    return translated;
-  };
-
-  // Translate static UI + terms when switching to Arabic
+  // Switch UI + terms when switching to Arabic (use hardcoded Arabic, no API translation needed)
   useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (billLanguage === "en") {
-        setUi(EN_UI);
-        setTerms(EN_TERMS);
-        setDynamic({ branch: rawBranch, timeSlot: rawTimeSlot, coursePackage: rawCoursePackage });
-        return;
-      }
-
-      try {
-        setIsTranslatingUi(true);
-
-        const nextUi = arUiCacheRef.current
-          ? arUiCacheRef.current
-          : (() => {
-              // placeholder; will be overwritten after translation
-              return EN_UI;
-            })();
-
-        const nextTerms = arTermsCacheRef.current ? arTermsCacheRef.current : EN_TERMS;
-
-        if (!arUiCacheRef.current) {
-          const keys = Object.keys(EN_UI) as Array<keyof UiText>;
-          const enVals = keys.map((k) => EN_UI[k]);
-          const arVals = await translateBatchToArabic(enVals);
-          const mapped = keys.reduce((acc, k, idx) => {
-            acc[k] = arVals[idx] || EN_UI[k];
-            return acc;
-          }, {} as UiText);
-          arUiCacheRef.current = mapped;
-        }
-
-        if (!arTermsCacheRef.current) {
-          const arTerms = await translateBatchToArabic(EN_TERMS);
-          arTermsCacheRef.current = arTerms;
-        }
-
-        // Dynamic values
-        const [branchAr, timeAr, pkgAr] = await Promise.all([
-          translateOneToArabicCached(rawBranch),
-          translateOneToArabicCached(rawTimeSlot),
-          translateOneToArabicCached(rawCoursePackage),
-        ]);
-
-        if (cancelled) return;
-
-        setUi(arUiCacheRef.current ?? nextUi);
-        setTerms(arTermsCacheRef.current ?? nextTerms);
-        setDynamic({ branch: branchAr, timeSlot: timeAr, coursePackage: pkgAr });
-      } catch (e: any) {
-        console.error("Billing translation failed:", e);
-        toast.error("Failed to translate billing form to Arabic");
-      } finally {
-        if (!cancelled) setIsTranslatingUi(false);
-      }
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
+    if (billLanguage === "en") {
+      setUi(EN_UI);
+      setTerms(EN_TERMS);
+      setDynamic({ branch: rawBranch, timeSlot: rawTimeSlot, coursePackage: rawCoursePackage });
+    } else {
+      // Use hardcoded Arabic translations instantly - no API call needed
+      setUi(AR_UI);
+      setTerms(AR_TERMS);
+      // Keep dynamic values as-is (they don't need translation, they're typically times/names)
+      setDynamic({ branch: rawBranch, timeSlot: rawTimeSlot, coursePackage: rawCoursePackage });
+    }
   }, [billLanguage, rawBranch, rawTimeSlot, rawCoursePackage]);
 
   const displayCoursePackage = billLanguage === "ar" ? dynamic.coursePackage : rawCoursePackage;
@@ -285,6 +266,9 @@ export const BillingFormStep = ({
 
   const isArabic = billLanguage === "ar";
 
+  // Calculate second payment due date
+  const secondPaymentDueDate = format(addDays(ksaDate, 30), "MM/dd/yyyy");
+
   return (
     <div className="space-y-6" dir={isArabic ? "rtl" : "ltr"}>
       <Card className="p-8">
@@ -298,125 +282,76 @@ export const BillingFormStep = ({
             </div>
           </div>
 
-          {/* Student Information */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          {/* Student Information - Simple label/value pairs */}
+          <div className="space-y-4 text-sm">
             <div>
-              <p className="font-semibold">{ui.studentNameEn}</p>
-              <p className="text-muted-foreground">{formData.fullNameEn}</p>
+              <p className="font-semibold text-muted-foreground">{ui.studentNameEn}</p>
+              <p className="text-lg">{formData.fullNameEn}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.studentNameAr}</p>
-              <p className="text-muted-foreground">{formData.fullNameAr}</p>
+              <p className="font-semibold text-muted-foreground">{ui.studentNameAr}</p>
+              <p className="text-lg">{formData.fullNameAr}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.phone}</p>
-              <p className="text-muted-foreground">
-                {formData.countryCode1}
-                {formData.phone1}
-              </p>
+              <p className="font-semibold text-muted-foreground">{ui.nationalId}</p>
+              <p className="text-lg">{formData.id}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.email}</p>
-              <p className="text-muted-foreground">{formData.email}</p>
+              <p className="font-semibold text-muted-foreground">{ui.phone}</p>
+              <p className="text-lg">{formData.countryCode1}{formData.phone1}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.nationalId}</p>
-              <p className="text-muted-foreground">{formData.id}</p>
+              <p className="font-semibold text-muted-foreground">{ui.timeSlot}</p>
+              <p className="text-lg">{displayTimeSlot}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.branch}</p>
-              <p className="text-muted-foreground">{displayBranch}</p>
-            </div>
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-            <div>
-              <p className="font-semibold flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                {ui.registrationDate}
-              </p>
-              <p className="text-muted-foreground">{registrationDate}</p>
+              <p className="font-semibold text-muted-foreground">{ui.registrationDate}</p>
+              <p className="text-lg">{registrationDate}</p>
             </div>
             <div>
-              <p className="font-semibold">{ui.courseStartDate}</p>
-              <p className="text-muted-foreground">{courseStartDate}</p>
+              <p className="font-semibold text-muted-foreground">{ui.courseStartDate}</p>
+              <p className="text-lg">{courseStartDate}</p>
             </div>
           </div>
 
-          {/* Billing Table */}
+          {/* Financial Details */}
           <div className="border-t pt-4">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="font-semibold">{ui.billingDetails}</h3>
-              {isTranslatingUi && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Translating...
-                </div>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className={`p-2 ${isArabic ? "text-right" : "text-left"}`}>{ui.coursePackage}</th>
-                    <th className={`p-2 ${isArabic ? "text-right" : "text-left"}`}>{ui.timeSlot}</th>
-                    <th className={`p-2 ${isArabic ? "text-left" : "text-right"}`}>{ui.durationMonths}</th>
-                    <th className={`p-2 ${isArabic ? "text-left" : "text-right"}`}>{ui.totalFeeSar}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className={`p-2 ${isArabic ? "text-right" : "text-left"}`}>{displayCoursePackage}</td>
-                    <td className={`p-2 ${isArabic ? "text-right" : "text-left"}`}>{displayTimeSlot}</td>
-                    <td className={`p-2 ${isArabic ? "text-left" : "text-right"}`}>{durationMonths}</td>
-                    <td className={`p-2 ${isArabic ? "text-left" : "text-right"}`}>{totalFee.toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Payment Summary */}
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>{ui.totalFeeLabel}</span>
-              <span className="font-semibold">{totalFee.toFixed(2)} SAR</span>
-            </div>
-            <div className="flex justify-between text-sm text-green-600">
-              <span>
-                {ui.discountLabel} ({discountPercent}%)
-              </span>
-              <span className="font-semibold">-{(totalFee - feeAfterDiscount).toFixed(2)} SAR</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
-              <span>{ui.feeAfterDiscount}</span>
-              <span>{feeAfterDiscount.toFixed(2)} SAR</span>
-            </div>
-            <div className="flex justify-between text-sm mt-4">
-              <span>{ui.amountPaidNow}</span>
-              <span className="font-semibold text-green-600">{amountPaid.toFixed(2)} SAR</span>
-            </div>
-            <div className="flex justify-between text-sm font-semibold text-orange-600">
-              <span>{ui.amountRemaining}</span>
-              <span>{remainingBalance.toFixed(2)} SAR</span>
+            <h3 className="font-semibold mb-4">{ui.financialDetails}</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>{ui.levelCount} {durationMonths}</span>
+                <span>{ui.totalFeeLabel} {totalFee.toLocaleString()} SAR</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{ui.discountLabel}</span>
+                <span>{discountPercent}% {ui.feeAfterDiscount} {feeAfterDiscount.toLocaleString()} SAR</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>{ui.amountPaidNow}</span>
+                <span className="text-green-600">{amountPaid.toLocaleString()} SAR</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>{ui.amountRemaining}</span>
+                <span className="text-orange-600">{remainingBalance.toLocaleString()} SAR</span>
+              </div>
             </div>
           </div>
 
           {/* Payment Schedule */}
           {remainingBalance > 0 && (
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">{ui.paymentSchedule}</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>{ui.initialPayment}</span>
-                  <span className="font-semibold text-green-600">{amountPaid.toFixed(2)} SAR</span>
+              <h3 className="font-semibold mb-4">{ui.paymentSchedule}</h3>
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-lg">
+                  <p className="font-semibold">{ui.initialPayment}</p>
+                  <p className="text-xl font-bold text-green-600">{amountPaid.toLocaleString()} SAR</p>
+                  <p className="text-xs text-muted-foreground">{ui.dueAtRegistration}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span>{ui.remainingBalance}</span>
-                  <span className="font-semibold text-orange-600">{remainingBalance.toFixed(2)} SAR</span>
+                <div className="bg-orange-50 dark:bg-orange-950/50 p-4 rounded-lg">
+                  <p className="font-semibold">{ui.remainingBalance}</p>
+                  <p className="text-xl font-bold text-orange-600">{remainingBalance.toLocaleString()} SAR</p>
+                  <p className="text-xs text-muted-foreground">{ui.dueDate}: {secondPaymentDueDate}</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">{ui.remainingNote}</p>
               </div>
             </div>
           )}
@@ -427,25 +362,21 @@ export const BillingFormStep = ({
             </div>
           )}
 
-          {/* Terms and Conditions */}
-          <div className="border-t pt-4 text-xs text-muted-foreground space-y-2">
-            <h3 className="font-semibold text-foreground mb-2">{ui.termsAndConditions}</h3>
-            <ul className="list-disc list-inside space-y-1">
-              {terms.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
+          {/* Student Signature Section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-1">{ui.studentSignature}</h3>
+            <p className="text-xs text-muted-foreground mb-4">{ui.signatureNote}</p>
           </div>
         </div>
       </Card>
 
-      {/* Signature Section */}
+      {/* Signature Canvas */}
       <SignatureCanvas onSave={onSignatureSave} language={billLanguage} />
 
       {/* Download Button */}
       {signature && (
         <Button onClick={handleDownloadPDF} disabled={downloading} className="w-full" size="lg">
-          <Download className="w-4 h-4 mr-2" />
+          <Download className={`w-4 h-4 ${isArabic ? "ml-2" : "mr-2"}`} />
           {downloading ? ui.generatingPdf : ui.downloadSigned}
         </Button>
       )}
