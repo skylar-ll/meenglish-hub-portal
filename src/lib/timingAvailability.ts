@@ -91,42 +91,57 @@ export function computeAllowedTimingsForSelections(
 
   // If nothing is selected, return all timings
   if (!hasLevelSelection && !hasCourseSelection) {
-    return [...new Set(classes.map((c) => c.timing).filter(Boolean))];
+    const byNorm = new Map<string, string>();
+    for (const c of classes) {
+      if (!c?.timing) continue;
+      const key = normalizeTimingForComparison(c.timing);
+      if (!byNorm.has(key)) byNorm.set(key, c.timing);
+    }
+    return [...byNorm.values()];
   }
 
-  const matchedClasses = classes.filter((cls) => {
-    const classLevels = cls.levels ?? [];
-    const classCourses = cls.courses ?? [];
+  // Group classes by normalized timing to avoid duplicate formats.
+  const groups = new Map<string, { display: string; classes: ClassTimingSource[] }>();
+  for (const cls of classes) {
+    if (!cls?.timing) continue;
+    const key = normalizeTimingForComparison(cls.timing);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.classes.push(cls);
+    } else {
+      groups.set(key, { display: cls.timing, classes: [cls] });
+    }
+  }
 
-    const levelMatches = hasLevelSelection
-      ? selectedLevels.some((selectedLevel) =>
-          classLevels.some((classLevel) => matchLevel(classLevel, selectedLevel))
-        )
-      : true;
+  const timingIsAllowed = (groupClasses: ClassTimingSource[]): boolean => {
+    // Levels: if multiple selected, require ALL selected levels to be covered by at least one class at this timing.
+    const levelOk = !hasLevelSelection
+      ? true
+      : selectedLevels.length <= 1
+        ? selectedLevels.some((sel) =>
+            groupClasses.some((cls) => (cls.levels ?? []).some((lvl) => matchLevel(lvl, sel)))
+          )
+        : selectedLevels.every((sel) =>
+            groupClasses.some((cls) => (cls.levels ?? []).some((lvl) => matchLevel(lvl, sel)))
+          );
 
-    const courseMatches = hasCourseSelection
-      ? selectedCourses.some((selectedCourse) =>
-          classCourses.some((classCourse) => matchCourse(classCourse, selectedCourse))
-        )
-      : true;
+    // Courses: keep "ANY selected course" behavior (less strict) to avoid over-filtering.
+    const courseOk = !hasCourseSelection
+      ? true
+      : selectedCourses.some((sel) =>
+          groupClasses.some((cls) => (cls.courses ?? []).some((c) => matchCourse(c, sel)))
+        );
 
-    // Intersection when both are selected
-    if (hasLevelSelection && hasCourseSelection) return levelMatches && courseMatches;
-    if (hasLevelSelection) return levelMatches;
-    if (hasCourseSelection) return courseMatches;
+    if (hasLevelSelection && hasCourseSelection) return levelOk && courseOk;
+    if (hasLevelSelection) return levelOk;
+    if (hasCourseSelection) return courseOk;
     return true;
-  });
+  };
 
-  // Extract unique timings from matched classes
-  const timings = [...new Set(matchedClasses.map(c => c.timing).filter(Boolean))];
-  
-  console.log("🔍 computeAllowedTimingsForSelections:", {
-    selectedLevels,
-    selectedCourses,
-    totalClasses: classes.length,
-    matchedClasses: matchedClasses.length,
-    allowedTimings: timings
-  });
-  
-  return timings;
+  const allowed: string[] = [];
+  for (const g of groups.values()) {
+    if (timingIsAllowed(g.classes)) allowed.push(g.display);
+  }
+
+  return allowed;
 }
