@@ -6,12 +6,15 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SignatureCanvas } from "@/components/billing/SignatureCanvas";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
+import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { ArrowLeft, FileText, Calendar, Download } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, Download, Languages } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BillingForm = () => {
   const navigate = useNavigate();
@@ -19,6 +22,8 @@ const BillingForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [billData, setBillData] = useState<any>(null);
+  const [billLanguage, setBillLanguage] = useState<"en" | "ar">("en");
+  const { language } = useLanguage();
   const ksaTimezone = "Asia/Riyadh";
 
   useEffect(() => {
@@ -344,11 +349,10 @@ const BillingForm = () => {
 
       // Generate and upload signed PDF of the billing form
       try {
-        const language = registration.language || 'en';
+        // Use the user-selected billLanguage from the form
         let pdfBlob: Blob;
         
-        if (language === 'ar') {
-          const { generateBillingPDFArabic } = await import('@/components/billing/BillingPDFGeneratorArabic');
+        if (billLanguage === 'ar') {
           pdfBlob = await generateBillingPDFArabic({
             student_id: user.id,
             student_name_en: billData.clientName,
@@ -390,7 +394,7 @@ const BillingForm = () => {
           });
         }
 
-        const pdfPath = `${user.id}/billing_${billing.id}_${language}.pdf`;
+        const pdfPath = `${user.id}/billing_${billing.id}_${billLanguage}.pdf`;
         const { error: pdfUploadError } = await supabase.storage
           .from('billing-pdfs')
           .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
@@ -399,7 +403,7 @@ const BillingForm = () => {
         // Save storage path to the billing record
         await supabase
           .from('billing')
-          .update({ signed_pdf_url: pdfPath, language: language })
+          .update({ signed_pdf_url: pdfPath, language: billLanguage })
           .eq('id', billing.id);
       } catch (pdfErr) {
         console.error('PDF generation/upload failed:', pdfErr);
@@ -578,6 +582,21 @@ const BillingForm = () => {
           <p className="text-sm text-muted-foreground mt-2">
             Review your information and sign to complete registration
           </p>
+          
+          {/* Language Selector for Bill */}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <Languages className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Bill Language:</span>
+            <Select value={billLanguage} onValueChange={(v: "en" | "ar") => setBillLanguage(v)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">🇺🇸 English</SelectItem>
+                <SelectItem value="ar">🇸🇦 العربية</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Card className="p-8 mb-6">

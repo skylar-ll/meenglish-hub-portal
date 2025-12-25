@@ -372,7 +372,7 @@ const TeacherScheduleManagement = () => {
     selectedDate === "all" &&
     selectedTime === "all";
 
-  const renderScheduleGrid = (tableClasses: ClassData[], opts?: { showTimeFilter?: boolean }) => {
+  const renderScheduleGrid = (tableClasses: ClassData[], opts?: { showTimeFilter?: boolean; showBranchColumn?: boolean }) => {
     const teacherIdsLocal = Array.from(
       new Set(
         tableClasses
@@ -391,6 +391,11 @@ const TeacherScheduleManagement = () => {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b bg-muted/50">
+              {opts?.showBranchColumn && (
+                <th className="p-2 text-left font-medium min-w-[100px] border-r bg-primary/10">
+                  <span className="text-muted-foreground text-xs">Branch</span>
+                </th>
+              )}
               <th className="p-2 text-left font-medium min-w-[120px] border-r">
                 <span className="text-muted-foreground text-xs">Start Date</span>
               </th>
@@ -409,6 +414,11 @@ const TeacherScheduleManagement = () => {
             </tr>
 
             <tr className="border-b bg-muted/30">
+              {opts?.showBranchColumn && (
+                <th className="p-3 text-left font-semibold min-w-[100px] border-r bg-primary/10">
+                  <span className="text-muted-foreground text-xs">فرع</span>
+                </th>
+              )}
               <th className="p-3 text-left font-semibold min-w-[140px] border-r">
                 <div className="flex flex-col gap-2">
                   <span className="text-muted-foreground text-xs">Time</span>
@@ -453,6 +463,21 @@ const TeacherScheduleManagement = () => {
           <tbody>
             {timingsLocal.map((timing) => (
               <tr key={timing} className="border-b hover:bg-muted/20">
+                {opts?.showBranchColumn && (
+                  <td className="p-3 font-medium border-r bg-primary/5 text-xs">
+                    {(() => {
+                      const classAtTiming = tableClasses.find(
+                        (c) => normalizeTiming(c.timing) === normalizeTiming(timing)
+                      );
+                      return classAtTiming ? (
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{classAtTiming.branch_name}</span>
+                          <span className="text-muted-foreground">{classAtTiming.branch_name_ar}</span>
+                        </div>
+                      ) : "-";
+                    })()}
+                  </td>
+                )}
                 <td className="p-3 font-medium border-r bg-muted/10">{timing}</td>
 
                 {teacherIdsLocal.map((teacherId) => {
@@ -711,13 +736,13 @@ const TeacherScheduleManagement = () => {
                         </p>
                       </div>
 
-                      {renderScheduleGrid(branchClasses, { showTimeFilter: false })}
+                      {renderScheduleGrid(branchClasses, { showTimeFilter: false, showBranchColumn: false })}
                     </section>
                   );
                 })}
               </div>
             ) : (
-              renderScheduleGrid(filteredClasses, { showTimeFilter: true })
+              renderScheduleGrid(filteredClasses, { showTimeFilter: true, showBranchColumn: selectedBranchId === "all" })
             )}
 
         </Card>
