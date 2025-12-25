@@ -17,6 +17,7 @@ import { useFormConfigurations } from "@/hooks/useFormConfigurations";
 import { useBranchFiltering } from "@/hooks/useBranchFiltering";
 import { InlineEditableField } from "./InlineEditableField";
 import { AddNewFieldButton } from "./AddNewFieldButton";
+import { CourseAndLevelSelector } from "./CourseAndLevelSelector";
 import { BillingFormStep } from "./shared/BillingFormStep";
 import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
@@ -434,7 +435,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   };
 
   const handleNext = () => {
-    if (step < 7) {
+    if (step < 8) {
       setStep(step + 1);
     }
   };
@@ -865,7 +866,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Add Previous Student - Step {step} of 7</DialogTitle>
+            <DialogTitle>Add Previous Student - Step {step} of 8</DialogTitle>
             <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
               {isEditMode ? "Done Editing" : "Edit Form"}
             </Button>
@@ -992,163 +993,251 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
               </div>
             )}
 
-            {/* Step 2: Class Selection */}
+            {/* Step 2: Course & Level Selection */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Timing *</Label>
-                
-                {/* Show selected branch info */}
-                {formData.branch && (
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">Selected Branch: {formData.branch}</p>
-                  </div>
-                )}
+                <Label className="text-lg font-semibold">Select Courses and Levels *</Label>
 
-                {!selectedBranchId ? (
-                  <Card className="p-4 text-sm text-muted-foreground">
-                    Loading branch information...
-                  </Card>
-                ) : loadingClasses ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
-                  </div>
-                ) : branchClasses.length === 0 ? (
-                  <Card className="p-4 text-sm text-muted-foreground">
-                    No active classes found for this branch.
-                  </Card>
-                ) : (
-                  <>
-                    {/* Timing Selection */}
-                    <div className="space-y-3">
-                      <div className="space-y-3">
-                        <Label className="text-lg font-semibold flex items-center gap-2">
-                          <Clock className="w-5 h-5" />
-                          Available Time Slots
-                        </Label>
-                        
-                        <div className="grid gap-4">
-                          {timings.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No timings configured.</p>
-                          ) : (
-                            timings.map((t: any) => {
-                              const value = t.label ?? t.config_value ?? t.value;
-                              const isAvailable = computedAllowedTimings.some(
-                                (opt) => String(opt).trim().toLowerCase() === String(value).trim().toLowerCase(),
-                              );
-                              const isSelected = selectedTimings.some(
-                                (sel) => String(sel).trim().toLowerCase() === String(value).trim().toLowerCase()
-                              );
-                              const timingCard = (
-                                <Card
-                                  key={t.id || value}
-                                  className={`p-6 transition-all ${
-                                    isSelected
-                                      ? "border-primary border-2 bg-primary/5 shadow-lg"
-                                      : isAvailable
-                                        ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
-                                        : "opacity-50 cursor-not-allowed"
-                                  }`}
-                                  onClick={() => {
-                                    if (!isAvailable || isEditMode) return;
-                                    // Toggle selection for multi-select
-                                    setSelectedTimings(prev => {
-                                      if (isSelected) {
-                                        return prev.filter(sel => sel.toLowerCase().trim() !== String(value).toLowerCase().trim());
-                                      } else {
-                                        return [...prev, String(value)];
-                                      }
-                                    });
-                                  }}
-                                >
-                                  <p className="font-medium text-lg text-center">
-                                    {isEditMode ? (
-                                      <InlineEditableField
-                                        id={t.id}
-                                        value={String(value)}
-                                        configType="timing"
-                                        configKey={t.value || t.config_key}
-                                        isEditMode={isEditMode}
-                                        onUpdate={refetch}
-                                        onDelete={refetch}
-                                      />
-                                    ) : (
-                                      String(value)
-                                    )}
-                                  </p>
-                                  {isSelected && (
-                                    <p className="text-xs text-primary text-center mt-1">✓ Selected</p>
-                                  )}
-                                </Card>
-                              );
-                              return isAvailable ? (
-                                timingCard
-                              ) : (
-                                <TooltipProvider key={t.id || value}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
-                                    <TooltipContent>
-                                      This timing isn't available for the selected levels/courses.
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })
-                          )}
-                        </div>
-                        {selectedTimings.length > 0 && (
-                          <p className="text-sm text-primary">
-                            Selected: {selectedTimings.join(", ")}
-                          </p>
-                        )}
-                        {computedAllowedTimings.length > 1 && (
-                          <p className="text-xs text-muted-foreground">
-                            ✨ Multiple selection enabled - tap to select/deselect
-                          </p>
-                        )}
-                        {isEditMode && (
-                          <AddNewFieldButton configType="timing" onAdd={refetch} />
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
+                <CourseAndLevelSelector
+                  selectedBranchId={selectedBranchId}
+                  formData={formData}
+                  englishLevelOptions={englishLevelOptions}
+                  coursesByCategory={coursesByCategory}
+                  filteredOptions={filteredOptions}
+                  onCourseToggle={(courseValue) => {
+                    const current = formData.courses || [];
+                    const updated = current.includes(courseValue)
+                      ? current.filter((c) => c !== courseValue)
+                      : [...current, courseValue];
+                    handleInputChange("courses", updated);
+                  }}
+                  onLevelToggle={(levelValue) => {
+                    const current = formData.selectedLevels || [];
+                    const updated = current.includes(levelValue)
+                      ? current.filter((l) => l !== levelValue)
+                      : [...current, levelValue];
+                    handleInputChange("selectedLevels", updated);
+                  }}
+                  extractLevelKey={extractLevelKey}
+                  normalize={normalize}
+                />
+
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && selectedTimings.length === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1"
+                    disabled={
+                      !isEditMode &&
+                      ((!formData.courses || formData.courses.length === 0) &&
+                        (!formData.selectedLevels || formData.selectedLevels.length === 0))
+                    }
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 3: Payment Method */}
-            {step === 3 && (
+            {/* Step 3: Timing Selection */}
+            {step === 3 && loadingClasses && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading classes...</span>
+              </div>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length === 0 && (
+              <Card className="p-4 text-sm text-muted-foreground">No active classes found for this branch.</Card>
+            )}
+            {step === 3 && !loadingClasses && branchClasses.length > 0 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Timing *</Label>
+
+                {/* Timing Selection */}
+                <div className="space-y-3">
+                  <div className="space-y-3">
+                    <Label className="text-lg font-semibold flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
+                      Available Time Slots
+                    </Label>
+
+                    <div className="grid gap-4">
+                      {timings.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No timings configured.</p>
+                      ) : (
+                        timings.map((t: any) => {
+                          const value = t.label ?? t.config_value ?? t.value;
+                          const isAvailable = computedAllowedTimings.some(
+                            (opt) =>
+                              normalizeTimingForComparison(String(opt)) ===
+                              normalizeTimingForComparison(String(value))
+                          );
+                          const isSelected = selectedTimings.some(
+                            (sel) =>
+                              normalizeTimingForComparison(String(sel)) ===
+                              normalizeTimingForComparison(String(value))
+                          );
+
+                          const timingCard = (
+                            <Card
+                              key={t.id || value}
+                              className={`p-6 transition-all ${
+                                isSelected
+                                  ? "border-primary border-2 bg-primary/5 shadow-lg"
+                                  : isAvailable
+                                    ? "hover:bg-muted/50 hover:shadow-md cursor-pointer"
+                                    : "opacity-50 cursor-not-allowed"
+                              }`}
+                              onClick={() => {
+                                if (!isAvailable || isEditMode) return;
+                                setSelectedTimings((prev) => {
+                                  if (isSelected) {
+                                    return prev.filter(
+                                      (sel) =>
+                                        normalizeTimingForComparison(sel) !==
+                                        normalizeTimingForComparison(String(value))
+                                    );
+                                  }
+                                  return [...prev, String(value)];
+                                });
+                              }}
+                            >
+                              <p className="font-medium text-lg text-center">
+                                {isEditMode ? (
+                                  <InlineEditableField
+                                    id={t.id}
+                                    value={String(value)}
+                                    configType="timing"
+                                    configKey={t.value || t.config_key}
+                                    isEditMode={isEditMode}
+                                    onUpdate={refetch}
+                                    onDelete={refetch}
+                                  />
+                                ) : (
+                                  String(value)
+                                )}
+                              </p>
+                              {isSelected && (
+                                <p className="text-xs text-primary text-center mt-1">✓ Selected</p>
+                              )}
+                            </Card>
+                          );
+
+                          return isAvailable ? (
+                            timingCard
+                          ) : (
+                            <TooltipProvider key={t.id || value}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>{timingCard}</TooltipTrigger>
+                                <TooltipContent>
+                                  This timing isn't available for the selected levels/courses.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {selectedTimings.length > 0 && (
+                      <p className="text-sm text-primary">Selected: {selectedTimings.join(", ")}</p>
+                    )}
+                    {computedAllowedTimings.length > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        ✨ Multiple selection enabled - tap to select/deselect
+                      </p>
+                    )}
+                    {isEditMode && <AddNewFieldButton configType="timing" onAdd={refetch} />}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1"
+                    disabled={!isEditMode && selectedTimings.length === 0}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Payment Method */}
+            {step === 4 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Payment Method *</Label>
                 <div className="grid gap-3">
-                  {paymentMethods.map((m) => (
-                    <Card key={m.value} className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${formData.paymentMethod === m.value ? "border-primary bg-primary/5" : ""}`} onClick={() => handleInputChange("paymentMethod", m.value)}>
-                      <p>{m.label}</p>
+                  {paymentMethods.map((method) => (
+                    <Card
+                      key={method.value}
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.paymentMethod === method.value ? "border-primary bg-primary/5" : ""
+                      }`}
+                      onClick={() => handleInputChange("paymentMethod", method.value)}
+                    >
+                      <p className="font-medium">
+                        <InlineEditableField
+                          id={method.id}
+                          value={method.label}
+                          configType="payment_method"
+                          configKey={method.value}
+                          isEditMode={isEditMode}
+                          onUpdate={refetch}
+                          onDelete={refetch}
+                        />
+                      </p>
                     </Card>
                   ))}
                 </div>
-                {isEditMode && (<AddNewFieldButton configType="payment_method" onAdd={refetch} />)}
+                {isEditMode && <AddNewFieldButton configType="payment_method" onAdd={refetch} />}
+
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !formData.paymentMethod}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1"
+                    disabled={!isEditMode && !formData.paymentMethod}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 4: Course Duration */}
-            {step === 4 && (
+            {/* Step 5: Course Duration */}
+            {step === 5 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Course Duration *</Label>
                 <div className="grid gap-3">
                   {courseDurations.map((d) => (
-                    <Card key={d.value} className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${formData.courseDuration === d.value && !formData.customDuration ? "border-primary bg-primary/5" : ""}`} onClick={() => {handleInputChange("courseDuration", d.value); handleInputChange("customDuration", "");}}>
+                    <Card
+                      key={d.value}
+                      className={`p-4 transition-all hover:bg-muted/50 cursor-pointer ${
+                        formData.courseDuration === d.value && !formData.customDuration
+                          ? "border-primary bg-primary/5"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        handleInputChange("courseDuration", d.value);
+                        handleInputChange("customDuration", "");
+                      }}
+                    >
                       <div className="flex items-center justify-between">
                         <p className="font-medium">{d.label}</p>
-                        {/* Editable price */}
                         {isEditMode || priceEditing[d.id] ? (
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             <Input
@@ -1182,40 +1271,76 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                     </Card>
                   ))}
                 </div>
-                {isEditMode && (<AddNewFieldButton configType="course_duration" onAdd={refetch} />)}
+
+                {isEditMode && <AddNewFieldButton configType="course_duration" onAdd={refetch} />}
+
                 <div className="space-y-2">
                   <Label>Or Enter Custom Duration</Label>
                   <div className="flex gap-2">
-                    <Input type="number" min="1" placeholder="Enter number" className="flex-1" value={formData.customDuration} onChange={(e) => {handleInputChange("customDuration", e.target.value); handleInputChange("courseDuration", "");}} />
-                    <Select value={formData.customDurationUnit} onValueChange={(v) => handleInputChange("customDurationUnit", v)}>
-                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="months">Months</SelectItem><SelectItem value="weeks">Weeks</SelectItem><SelectItem value="days">Days</SelectItem></SelectContent>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter number"
+                      className="flex-1"
+                      value={formData.customDuration}
+                      onChange={(e) => {
+                        handleInputChange("customDuration", e.target.value);
+                        handleInputChange("courseDuration", "");
+                      }}
+                    />
+                    <Select
+                      value={formData.customDurationUnit}
+                      onValueChange={(v) => handleInputChange("customDurationUnit", v)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="weeks">Weeks</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
+
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && (!formData.courseDuration && !formData.customDuration)}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1"
+                    disabled={!isEditMode && (!formData.courseDuration && !formData.customDuration)}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 5: Partial Payment */}
-            {step === 5 && (
+            {/* Step 6: Partial Payment */}
+            {step === 6 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Partial Payment</Label>
                 <PartialPaymentStep
                   totalFee={(() => {
-                    const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+                    const pricing = courseDurations.find((d) => d.value === formData.courseDuration);
                     return pricing?.price || 0;
                   })()}
                   feeAfterDiscount={(() => {
-                    const pricing = courseDurations.find(d => d.value === formData.courseDuration);
+                    const pricing = courseDurations.find((d) => d.value === formData.courseDuration);
                     return pricing?.price || 0;
                   })()}
                   discountPercentage={0}
                   courseStartDate={format(addDays(new Date(), 1), "yyyy-MM-dd")}
-                  paymentDeadline={paymentDeadlineDate ? format(paymentDeadlineDate, "yyyy-MM-dd") : format(addDays(new Date(), 30), "yyyy-MM-dd")}
+                  paymentDeadline={
+                    paymentDeadlineDate
+                      ? format(paymentDeadlineDate, "yyyy-MM-dd")
+                      : format(addDays(new Date(), 30), "yyyy-MM-dd")
+                  }
                   onAmountChange={setPartialPaymentAmount}
                   onNextPaymentDateChange={() => {}}
                   onPaymentDeadlineChange={setPaymentDeadlineDate}
@@ -1223,36 +1348,62 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   showPaymentDeadlineEditor={true}
                 />
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && partialPaymentAmount === 0}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1"
+                    disabled={!isEditMode && partialPaymentAmount === 0}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 6: Terms and Conditions */}
-            {step === 6 && (
+            {/* Step 7: Terms and Conditions */}
+            {step === 7 && (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Terms and Conditions</Label>
                 <Card className="p-4">
                   <ScrollArea className="h-[300px] w-full">
                     <div className="prose prose-sm max-w-none text-foreground">
-                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(language === 'ar' ? termsAr : termsEn) }} />
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(language === "ar" ? termsAr : termsEn),
+                        }}
+                      />
                     </div>
                   </ScrollArea>
                 </Card>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="terms-agree-prev" checked={termsAgreed} onCheckedChange={(checked) => setTermsAgreed(checked === true)} />
-                  <Label htmlFor="terms-agree-prev" className="text-sm cursor-pointer">I agree to the terms and conditions</Label>
+                  <Checkbox
+                    id="terms-agree-prev"
+                    checked={termsAgreed}
+                    onCheckedChange={(checked) => setTermsAgreed(checked === true)}
+                  />
+                  <Label htmlFor="terms-agree-prev" className="text-sm cursor-pointer">
+                    I agree to the terms and conditions
+                  </Label>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !termsAgreed}>Next <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1" disabled={!isEditMode && !termsAgreed}>
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 7: Billing & Signature */}
-            {step === 7 && (
+            {/* Step 8: Billing & Signature */}
+            {step === 8 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <Label className="text-lg font-semibold">Billing Language</Label>
@@ -1275,28 +1426,52 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                   partialPaymentAmount={partialPaymentAmount}
                   billLanguage={billLanguage}
                 />
+
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                  <Button onClick={handleSubmit} className="flex-1 bg-gradient-to-r from-primary to-secondary" disabled={loading || !signature}>
-                    {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</>) : ("Create Student")}
+                  <Button variant="outline" onClick={() => setStep(7)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    className="flex-1 bg-gradient-to-r from-primary to-secondary"
+                    disabled={loading || !signature}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Student"
+                    )}
                   </Button>
                 </div>
               </div>
             )}
 
-
           </div>
         )}
       </DialogContent>
-      
+
       {open && !configLoading && (
         <FloatingNavigationButton
-          onNext={step === 7 ? handleSubmit : handleNext}
+          onNext={step === 8 ? handleSubmit : handleNext}
           onBack={step > 1 ? () => setStep(step - 1) : undefined}
-          nextLabel={step === 7 ? "Create Student" : "Next"}
+          nextLabel={step === 8 ? "Create Student" : "Next"}
           backLabel="Back"
           loading={loading}
-          disabled={(!isEditMode && ((step === 2 && selectedTimings.length === 0) || (step === 5 && partialPaymentAmount === 0) || (step === 6 && !termsAgreed))) || (step === 7 && !signature)}
+          disabled={
+            (!isEditMode &&
+              ((step === 2 &&
+                (!formData.courses?.length && !formData.selectedLevels?.length)) ||
+                (step === 3 && selectedTimings.length === 0) ||
+                (step === 4 && !formData.paymentMethod) ||
+                (step === 5 && !formData.courseDuration && !formData.customDuration) ||
+                (step === 6 && partialPaymentAmount === 0) ||
+                (step === 7 && !termsAgreed))) ||
+            (step === 8 && !signature)
+          }
           showBack={step > 1}
           showNext={true}
         />
