@@ -191,8 +191,8 @@ export const BillingFormStep = ({
 
   const now = new Date();
   const ksaDate = toZonedTime(now, ksaTimezone);
-  const registrationDate = format(ksaDate, "dd MMMM yyyy");
-  const courseStartDate = format(addDays(ksaDate, 1), "dd MMMM yyyy");
+  const registrationDate = format(ksaDate, "MM/dd/yyyy");
+  const courseStartDate = format(addDays(ksaDate, 1), "MM/dd/yyyy");
 
   const rawCoursePackage = useMemo(() => {
     const value = Array.isArray(formData.courses) ? formData.courses.join(", ") : formData.courses;

@@ -9,12 +9,13 @@ import { generateBillingPDF } from "@/components/billing/BillingPDFGenerator";
 import { generateBillingPDFArabic } from "@/components/billing/BillingPDFGeneratorArabic";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { ArrowLeft, FileText, Calendar, Download, Languages } from "lucide-react";
+import { ArrowLeft, Languages } from "lucide-react";
 import { studentSignupSchema } from "@/lib/validations";
 import { autoEnrollStudent } from "@/utils/autoEnrollment";
 import { FloatingNavigationButton } from "@/components/shared/FloatingNavigationButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { BillingFormStep } from "@/components/admin/shared/BillingFormStep";
 
 const BillingForm = () => {
   const navigate = useNavigate();
@@ -29,6 +30,11 @@ const BillingForm = () => {
   useEffect(() => {
     prepareBillingData();
   }, []);
+
+  // If the user switches the app language, reflect it immediately in the billing form.
+  useEffect(() => {
+    setBillLanguage(language === "ar" ? "ar" : "en");
+  }, [language]);
 
   const prepareBillingData = async () => {
     try {
@@ -599,290 +605,35 @@ const BillingForm = () => {
           </div>
         </div>
 
-        <Card className="p-8 mb-6">
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="text-center border-b pb-4">
-              <h2 className="text-2xl font-bold mb-2">Modern Education Institute of Language</h2>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>Training License No.: 5300751</p>
-                <p>Commercial Registration No.: 2050122590</p>
-              </div>
-            </div>
-
-            {/* Student Info */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Client Name</p>
-                <p className="font-semibold">{billData.clientName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Contact Number</p>
-                <p className="font-semibold">{billData.contactNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Course or Package Name</p>
-                <p className="font-semibold">{billData.courseName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Time Slot</p>
-                <p className="font-semibold">{billData.timeSlot}</p>
-              </div>
-            </div>
-
-            {/* Teacher Details */}
-            {billData.teachers && billData.teachers.length > 0 && (
-              <div className="mt-4 p-4 bg-muted/20 rounded-lg">
-                <h4 className="font-semibold mb-3">Assigned Teachers</h4>
-                <div className="space-y-3">
-                  {billData.teachers.map((teacher: any) => (
-                    <div key={teacher.id} className="grid md:grid-cols-3 gap-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Teacher Name</p>
-                        <p className="font-medium">{teacher.full_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Email</p>
-                        <p className="font-medium">{teacher.email || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Courses</p>
-                        <p className="font-medium">{teacher.courses_assigned || "N/A"}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dates */}
-            <div className="grid md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Bill Date (Registration Date)</p>
-                  <p className="font-semibold">{billData.billDate}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Course Start Date</p>
-                  <p className="font-semibold">{billData.courseStartDate}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Billing Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="border p-2 text-sm">#</th>
-                    <th className="border p-2 text-sm">Description</th>
-                    <th className="border p-2 text-sm">Units</th>
-                    <th className="border p-2 text-sm">Level Count</th>
-                    <th className="border p-2 text-sm">Fee (SAR)</th>
-                    <th className="border p-2 text-sm">Discount %</th>
-                    <th className="border p-2 text-sm">Fee After Discount (SAR)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border p-2 text-center">1</td>
-                    <td className="border p-2">{billData.courseName}</td>
-                    <td className="border p-2 text-center">—</td>
-                    <td className="border p-2 text-center">{billData.levelCount}</td>
-                    <td className="border p-2 text-center">{billData.totalFee.toLocaleString()}</td>
-                    <td className="border p-2 text-center">{billData.discountPercent}%</td>
-                    <td className="border p-2 text-center font-bold">{billData.feeAfterDiscount.toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Payment Summary */}
-            <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
-              {billData.activeOffer && (
-                <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                    <span className="text-lg">🎉</span>
-                    <div>
-                      <p className="font-semibold">{billData.activeOffer.offer_name}</p>
-                      <p className="text-sm">{billData.activeOffer.offer_description}</p>
-                      <p className="text-xs mt-1">Special {billData.activeOffer.discount_percentage}% discount applied!</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Subtotal:</span>
-                <span className="font-bold text-lg">{billData.totalFee.toLocaleString()} SAR</span>
-              </div>
-              <div className="flex justify-between items-center text-green-600">
-                <span className="font-semibold">Extra Discount{billData.activeOffer ? ` (${billData.activeOffer.offer_name})` : ''}:</span>
-                <span className="font-bold">-{(billData.totalFee - billData.feeAfterDiscount).toLocaleString()} SAR</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="font-semibold text-lg">Total Amount:</span>
-                <span className="font-bold text-2xl text-primary">{billData.feeAfterDiscount.toLocaleString()} SAR</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Amount Paid:</span>
-                <span className="font-semibold">{billData.amountPaid.toLocaleString()} SAR</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Amount Remaining:</span>
-                <span className="font-semibold text-orange-600">{billData.amountRemaining.toLocaleString()} SAR</span>
-              </div>
-              <div className="grid md:grid-cols-2 gap-3 pt-2">
-                <div className="flex justify-between items-center p-2 bg-background rounded">
-                  <span className="text-sm">First Payment:</span>
-                  <span className="font-semibold">{billData.firstPayment.toLocaleString()} SAR</span>
-                </div>
-                <div className="flex justify-between items-center p-2 bg-background rounded">
-                  <span className="text-sm">Second Payment:</span>
-                  <span className="font-semibold">{billData.secondPayment.toLocaleString()} SAR</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Terms */}
-            <div className="p-4 bg-muted/30 rounded-lg text-sm space-y-3">
-              <h3 className="font-bold text-lg mb-3">Program Terms and Conditions</h3>
-              
-              <div className="space-y-2">
-                <h4 className="font-semibold">Attendance and Postponement</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>Additional classes, workshops, and learning activities are free or discounted for institute members during their subscription period.</li>
-                  <li>Fees include registration, placement test, textbooks, and VAT for Saudi citizens.</li>
-                  <li>Students must attend on time as per the schedule.</li>
-                  <li>A perfect-attendance certificate is granted for 100% attendance.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Discount Rewards</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>A discount coupon is granted for high achievement (+A grade or specified IELTS score).</li>
-                  <li>Coupons apply only to private courses and cannot be combined.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Re-Study</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>If a student fails to reach the required passing grade, they must re-study that level (re-enrollment is paid).</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Absence Policy</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>Absence beyond the allowed percentage cancels eligibility for a completion certificate.</li>
-                  <li>Missed classes cannot be compensated financially.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Postponement Rules</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>Postponement allowed up to 3 months; contact the institute one week before start date.</li>
-                  <li>If the institute delays a course beyond 3 months, the student may request a refund for remaining paid levels.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Payment and Cancellation</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>Fees must be paid on time; late payment may result in cancellation.</li>
-                  <li>Abusive behavior (verbal / physical) results in immediate termination without refund and may be reported to authorities.</li>
-                  <li>No refund of paid fees under any circumstance.</li>
-                  <li>Cancellation cannot transfer the course to another person.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">Mode Change</h4>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                  <li>Students may switch between on-site and online study as per institute policy.</li>
-                  <li>When converted to online, remaining months transfer as is; any fee difference is settled.</li>
-                  <li>Transfer between branches is not allowed if outstanding payments exist.</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2 mt-4 pt-4 border-t">
-                <h4 className="font-semibold">General</h4>
-                <p className="text-muted-foreground">To confirm agreement, student must sign and send this document by email or the registration WhatsApp number with proof of payment.</p>
-                
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <p className="text-sm font-medium mb-1">Email:</p>
-                    <p className="font-semibold">{billData.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-1">Phone:</p>
-                    <p className="font-semibold">{billData.contactNumber}</p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <p className="text-sm font-medium mb-1">Date (Student):</p>
-                    <p className="font-semibold">{billData.billDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-1">Date (Institute):</p>
-                    <p className="font-semibold">{billData.billDate}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Signatures Section */}
-        <Card className="p-6 mb-6">
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold mb-4">Student Signature</h3>
-              {signature ? (
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white p-4 flex items-center justify-center min-h-[200px]">
-                    <img 
-                      src={signature} 
-                      alt="Student Signature" 
-                      className="max-w-full max-h-[180px] object-contain"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setSignature(null)}
-                    className="w-full"
-                  >
-                    Clear and Re-sign
-                  </Button>
-                </div>
-              ) : (
-                <SignatureCanvas onSave={handleSignatureSave} language="en" />
-              )}
-            </div>
-            
-            <div className="pt-6 border-t">
-              <h3 className="font-semibold mb-2">Institute Signature</h3>
-              <p className="text-sm text-muted-foreground">To be signed by institute representative after processing</p>
-            </div>
-          </div>
-        </Card>
+        <BillingFormStep
+          formData={{
+            fullNameEn: billData.clientName,
+            fullNameAr: billData.clientNameAr,
+            email: billData.email,
+            id: billData.nationalId,
+            countryCode1: billData.countryCode1 || "",
+            phone1: billData.phone1 || billData.contactNumber,
+            timing: billData.timeSlot,
+            branch: billData.branch,
+            courses: billData.courses,
+            selectedLevels: [],
+            courseDuration: String(billData.levelCount || 1),
+            discountPercent: billData.discountPercent,
+          }}
+          onSignatureSave={handleSignatureSave}
+          signature={signature}
+          courseDurations={[{ value: String(billData.levelCount || 1), price: billData.totalFee }]}
+          partialPaymentAmount={billData.amountPaid}
+          billLanguage={billLanguage}
+        />
 
         {/* Single submission control: use floating navigation only to avoid duplicate triggers on mobile */}
-        
-        {/* Floating Navigation Button */}
+
         <FloatingNavigationButton
           onNext={handleSubmit}
           onBack={() => navigate("/student/partial-payment-selection")}
-          nextLabel="Sign & Complete Registration"
-          backLabel="Back"
+          nextLabel={billLanguage === "ar" ? "توقيع وإكمال التسجيل" : "Sign & Complete Registration"}
+          backLabel={billLanguage === "ar" ? "رجوع" : "Back"}
           loading={submitting}
           disabled={!signature}
           showBack={true}
