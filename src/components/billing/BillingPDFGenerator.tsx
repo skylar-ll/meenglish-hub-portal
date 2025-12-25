@@ -2,6 +2,8 @@ import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { loadArabicFont } from "@/lib/arabicFontLoader";
+import { formatPdfNumber } from "@/lib/pdfFormat";
+
 
 interface BillingData {
   student_id: string;
@@ -209,10 +211,11 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
 
   // Financial Table
   const tableData = [
-    { left: 'Level Count', leftValue: billingData.level_count.toString(), right: 'Total Fee', rightValue: `${billingData.total_fee.toLocaleString()} SAR` },
-    { left: 'Discount', leftValue: `${billingData.discount_percentage}%`, right: 'Fee After Discount', rightValue: `${billingData.fee_after_discount.toLocaleString()} SAR` },
-    { left: 'Amount Paid', leftValue: `${billingData.amount_paid.toLocaleString()} SAR`, right: 'Amount Remaining', rightValue: `${billingData.amount_remaining.toLocaleString()} SAR` },
+    { left: 'Level Count', leftValue: billingData.level_count.toString(), right: 'Total Fee', rightValue: `${formatPdfNumber(billingData.total_fee)} SAR` },
+    { left: 'Discount', leftValue: `${billingData.discount_percentage}%`, right: 'Fee After Discount', rightValue: `${formatPdfNumber(billingData.fee_after_discount)} SAR` },
+    { left: 'Amount Paid', leftValue: `${formatPdfNumber(billingData.amount_paid)} SAR`, right: 'Amount Remaining', rightValue: `${formatPdfNumber(billingData.amount_remaining)} SAR` },
   ];
+
 
   doc.setFontSize(11);
   tableData.forEach((row) => {
@@ -259,7 +262,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.text('First Payment (50%)', leftCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(59, 130, 246);
-  doc.text(`${billingData.first_payment.toLocaleString()} SAR`, pageWidth - margin - 120, yPos);
+  doc.text(`${formatPdfNumber(billingData.first_payment)} SAR`, pageWidth - margin - 120, yPos);
   
   yPos += 20;
   doc.setFontSize(9);
@@ -276,7 +279,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.text('Second Payment (50%)', leftCol + 10, yPos);
   doc.setFontSize(20);
   doc.setTextColor(239, 68, 68);
-  doc.text(`${billingData.second_payment.toLocaleString()} SAR`, pageWidth - margin - 120, yPos);
+  doc.text(`${formatPdfNumber(billingData.second_payment)} SAR`, pageWidth - margin - 120, yPos);
   
   yPos += 20;
   doc.setFontSize(9);
@@ -285,6 +288,7 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   const secondPaymentDate = new Date(billingData.course_start_date);
   secondPaymentDate.setMonth(secondPaymentDate.getMonth() + 1);
   doc.text(`Due: ${format(secondPaymentDate, 'MM/dd/yyyy')}`, leftCol + 10, yPos);
+
 
   yPos += 40;
 
