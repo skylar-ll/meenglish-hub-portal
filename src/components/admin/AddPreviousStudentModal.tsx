@@ -62,6 +62,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
   const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
   const [computedAllowedTimings, setComputedAllowedTimings] = useState<string[]>([]);
+  const [billLanguage, setBillLanguage] = useState<'en' | 'ar'>('en');
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
