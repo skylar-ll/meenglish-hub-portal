@@ -64,6 +64,7 @@ export const AddStudentModal = ({ open, onOpenChange, onStudentAdded }: AddStude
   const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
   const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
   const [computedAllowedTimings, setComputedAllowedTimings] = useState<string[]>([]);
+  const [billLanguage, setBillLanguage] = useState<'en' | 'ar'>('en');
   
   // Fetch auto-translation setting, levels, and terms
   useEffect(() => {
