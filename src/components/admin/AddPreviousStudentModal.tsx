@@ -64,6 +64,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
   const [classCourseFilter, setClassCourseFilter] = useState<string>("all");
   const [computedAllowedTimings, setComputedAllowedTimings] = useState<string[]>([]);
   const [billLanguage, setBillLanguage] = useState<'en' | 'ar'>('en');
+  const [registeredByEmployee, setRegisteredByEmployee] = useState<string>("");
   
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -647,6 +648,7 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           course_duration_months: durationMonths,
           registration_date: registrationDate,
           next_payment_date: paymentDeadline, // Auto-generated deadline
+          registered_by_employee: registeredByEmployee || null,
         })
         .select()
         .single();
@@ -902,6 +904,17 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
             {/* Step 1: Personal Information - Same as AddStudentModal */}
             {step === 1 && (
               <div className="space-y-4">
+                {/* Registered By Employee */}
+                <div className="space-y-2">
+                  <Label htmlFor="registeredByEmployee">Registered By (Employee) *</Label>
+                  <Input
+                    id="registeredByEmployee"
+                    placeholder="Enter your name"
+                    value={registeredByEmployee}
+                    onChange={(e) => setRegisteredByEmployee(e.target.value)}
+                  />
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label><InlineEditableField id={getFieldLabel("full_name_ar").id} value={getFieldLabel("full_name_ar").label} configType="field_label" configKey="full_name_ar" isEditMode={isEditMode} onUpdate={refetch} isLabel={true} /> *</Label>
