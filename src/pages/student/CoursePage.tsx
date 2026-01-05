@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck, FileText, NotebookPen, Award, TrendingUp } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Calendar, CreditCard, UserCheck, FileText, NotebookPen, Award, TrendingUp, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -108,7 +108,20 @@ const CoursePage = () => {
     const load = async () => {
       const registration = sessionStorage.getItem("studentRegistration");
       if (registration) {
-        setCourseData(JSON.parse(registration));
+        const data = JSON.parse(registration);
+        setCourseData(data);
+        
+        // Check membership expiration
+        if (data.expirationDate) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const expDate = new Date(data.expirationDate);
+          expDate.setHours(0, 0, 0, 0);
+          if (today > expDate) {
+            navigate("/student/membership-expired");
+            return;
+          }
+        }
       } else {
         const { data: { session } } = await supabase.auth.getSession();
         const email = session?.user?.email;
@@ -119,6 +132,18 @@ const CoursePage = () => {
             .eq("email", email)
             .maybeSingle();
           if (student) {
+            // Check membership expiration from database
+            if (student.expiration_date) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const expDate = new Date(student.expiration_date);
+              expDate.setHours(0, 0, 0, 0);
+              if (today > expDate) {
+                navigate("/student/membership-expired");
+                return;
+              }
+            }
+            
             const registrationData = {
               fullNameEn: student.full_name_en,
               fullNameAr: student.full_name_ar,
@@ -128,6 +153,7 @@ const CoursePage = () => {
               branch: student.branch,
               courseLevel: student.course_level,
               studentId: student.student_id,
+              expirationDate: student.expiration_date,
             };
             sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
             setCourseData(registrationData);
@@ -259,6 +285,15 @@ const CoursePage = () => {
             >
               <CreditCard className="w-4 h-4 mr-2" />
               Payments
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => navigate("/student/performance")}
+              size="sm"
+              className="bg-gradient-to-r from-amber-500 to-orange-600"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Report
             </Button>
           </div>
         </div>

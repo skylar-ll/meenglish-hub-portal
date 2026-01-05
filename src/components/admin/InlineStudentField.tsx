@@ -7,7 +7,7 @@ import { Check, X, Edit } from "lucide-react";
 interface InlineStudentFieldProps {
   value: string | number;
   onSave: (value: string) => void;
-  type?: "text" | "number" | "select";
+  type?: "text" | "number" | "select" | "date";
   options?: { value: string; label: string }[];
   isMulti?: boolean;
   selectedValues?: string[];
@@ -124,7 +124,7 @@ export const InlineStudentField = ({
       <Input
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
-        type={type === "number" ? "text" : type}
+        type={type === "date" ? "date" : type === "number" ? "text" : type}
         className="h-8 w-full"
         autoFocus
       />

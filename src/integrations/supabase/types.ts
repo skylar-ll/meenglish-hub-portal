@@ -1162,6 +1162,7 @@ export type Database = {
           phone1: string
           phone2: string | null
           program: string
+          registered_by_employee: string | null
           registration_date: string | null
           stop_postpone_dates: string[] | null
           student_id: string | null
@@ -1195,6 +1196,7 @@ export type Database = {
           phone1: string
           phone2?: string | null
           program: string
+          registered_by_employee?: string | null
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
           student_id?: string | null
@@ -1228,6 +1230,7 @@ export type Database = {
           phone1?: string
           phone2?: string | null
           program?: string
+          registered_by_employee?: string | null
           registration_date?: string | null
           stop_postpone_dates?: string[] | null
           student_id?: string | null

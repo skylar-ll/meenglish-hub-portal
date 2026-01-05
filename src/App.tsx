@@ -58,6 +58,9 @@ import TeacherScheduleManagement from "./pages/admin/TeacherScheduleManagement";
 // Student Reports
 import StudentReports from "./pages/student/StudentReports";
 import StudentPayments from "./pages/student/StudentPayments";
+import MembershipExpired from "./pages/student/MembershipExpired";
+import RenewMembership from "./pages/student/RenewMembership";
+import StudentPerformance from "./pages/student/StudentPerformance";
 
 // Teacher Features
 import AssignedStudents from "./pages/teacher/AssignedStudents";
@@ -134,6 +137,9 @@ const App = () => (
           <Route path="/student/grades" element={<StudentGrades />} />
           <Route path="/student/certificates" element={<StudentCertificates />} />
           <Route path="/student/weekly-reports" element={<StudentWeeklyReportsView />} />
+          <Route path="/student/membership-expired" element={<MembershipExpired />} />
+          <Route path="/student/renew" element={<RenewMembership />} />
+          <Route path="/student/performance" element={<StudentPerformance />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

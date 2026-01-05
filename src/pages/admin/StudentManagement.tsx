@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InlineStudentField } from "@/components/admin/InlineStudentField";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { format } from "date-fns";
 
 interface Teacher {
   id: string;
@@ -33,6 +34,8 @@ interface Student {
   amount_remaining: number;
   discount_percentage: number;
   program: string;
+  expiration_date: string | null;
+  registered_by_employee: string | null;
   teachers?: Teacher[];
   billing?: Billing;
 }
@@ -280,6 +283,8 @@ const StudentManagement = () => {
                     <th className="text-left p-3 font-semibold">Student ID</th>
                     <th className="text-left p-3 font-semibold">Name</th>
                     <th className="text-left p-3 font-semibold">Email</th>
+                    <th className="text-left p-3 font-semibold">Registered By</th>
+                    <th className="text-left p-3 font-semibold">Membership End</th>
                     <th className="text-left p-3 font-semibold">Courses</th>
                     <th className="text-left p-3 font-semibold">Teachers</th>
                     <th className="text-left p-3 font-semibold">Duration</th>
@@ -308,6 +313,20 @@ const StudentManagement = () => {
                           value={student.email}
                           onSave={(value) => handleFieldUpdate(student.id, "email", value)}
                           type="text"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <InlineStudentField
+                          value={student.registered_by_employee || "N/A"}
+                          onSave={(value) => handleFieldUpdate(student.id, "registered_by_employee", value)}
+                          type="text"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <InlineStudentField
+                          value={student.expiration_date ? format(new Date(student.expiration_date), 'yyyy-MM-dd') : "Not Set"}
+                          onSave={(value) => handleFieldUpdate(student.id, "expiration_date", value)}
+                          type="date"
                         />
                       </td>
                       <td className="p-3">
