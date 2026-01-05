@@ -8,6 +8,7 @@ import { downloadPdfBlob } from "@/lib/pdfDownload";
 import { Download } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { useTermsAndConditions } from "@/hooks/useTermsAndConditions";
 import { toast } from "sonner";
 
 interface BillingFormStepProps {
@@ -58,6 +59,8 @@ type UiText = {
   levelCount: string;
   financialDetails: string;
   sarCurrency: string;
+  coursesLabel: string;
+  levelsLabel: string;
 };
 
 const EN_UI: UiText = {
@@ -99,6 +102,8 @@ const EN_UI: UiText = {
   levelCount: "Number of Levels",
   financialDetails: "Financial Details",
   sarCurrency: "SAR",
+  coursesLabel: "Courses",
+  levelsLabel: "Levels",
 };
 
 const AR_UI: UiText = {
@@ -140,6 +145,8 @@ const AR_UI: UiText = {
   levelCount: "عدد المستويات",
   financialDetails: "التفاصيل المالية",
   sarCurrency: "ريال سعودي",
+  coursesLabel: "الدورات",
+  levelsLabel: "المستويات",
 };
 
 const EN_TERMS = [
@@ -168,7 +175,7 @@ export const BillingFormStep = ({
 }: BillingFormStepProps) => {
   const [downloading, setDownloading] = useState(false);
   const [ui, setUi] = useState<UiText>(EN_UI);
-  const [terms, setTerms] = useState<string[]>(EN_TERMS);
+  const { terms: dbTerms, loading: termsLoading } = useTermsAndConditions();
   const [dynamic, setDynamic] = useState<{ branch: string; timeSlot: string; coursePackage: string }>({
     branch: "",
     timeSlot: "",
@@ -207,20 +214,22 @@ export const BillingFormStep = ({
     return String(formData.branch || "");
   }, [formData.branch]);
 
-  // Switch UI + terms when switching to Arabic (use hardcoded Arabic, no API translation needed)
+  // Switch UI when switching language
   useEffect(() => {
     if (billLanguage === "en") {
       setUi(EN_UI);
-      setTerms(EN_TERMS);
       setDynamic({ branch: rawBranch, timeSlot: rawTimeSlot, coursePackage: rawCoursePackage });
     } else {
-      // Use hardcoded Arabic translations instantly - no API call needed
       setUi(AR_UI);
-      setTerms(AR_TERMS);
-      // Keep dynamic values as-is (they don't need translation, they're typically times/names)
       setDynamic({ branch: rawBranch, timeSlot: rawTimeSlot, coursePackage: rawCoursePackage });
     }
   }, [billLanguage, rawBranch, rawTimeSlot, rawCoursePackage]);
+
+  // Parse terms from database (split by newlines)
+  const termsToDisplay = useMemo(() => {
+    if (!dbTerms) return billLanguage === "ar" ? AR_TERMS : EN_TERMS;
+    return dbTerms.split('\n').filter(line => line.trim());
+  }, [dbTerms, billLanguage]);
 
   const displayCoursePackage = billLanguage === "ar" ? dynamic.coursePackage : rawCoursePackage;
   const displayTimeSlot = billLanguage === "ar" ? dynamic.timeSlot : rawTimeSlot;
@@ -312,6 +321,20 @@ export const BillingFormStep = ({
               <p className="font-semibold text-muted-foreground">{ui.courseStartDate}</p>
               <p className="text-lg">{courseStartDate}</p>
             </div>
+            {/* Courses */}
+            {displayCoursePackage && (
+              <div>
+                <p className="font-semibold text-muted-foreground">{ui.coursesLabel}</p>
+                <p className="text-lg">{displayCoursePackage}</p>
+              </div>
+            )}
+            {/* Levels */}
+            {formData.selectedLevels && formData.selectedLevels.length > 0 && (
+              <div>
+                <p className="font-semibold text-muted-foreground">{ui.levelsLabel}</p>
+                <p className="text-lg">{formData.selectedLevels.join(", ")}</p>
+              </div>
+            )}
           </div>
 
           {/* Financial Details */}
@@ -361,6 +384,23 @@ export const BillingFormStep = ({
               <p className="text-sm font-semibold text-green-600 text-center">{ui.fullPaymentReceived}</p>
             </div>
           )}
+
+          {/* Terms and Conditions */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-3">{ui.termsAndConditions}</h3>
+            <div className="text-sm space-y-2 text-muted-foreground bg-muted/50 p-4 rounded-lg max-h-48 overflow-y-auto">
+              {termsLoading ? (
+                <p>{billLanguage === "ar" ? "جارٍ تحميل الشروط..." : "Loading terms..."}</p>
+              ) : (
+                termsToDisplay.map((term, idx) => (
+                  <p key={idx} className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>{term}</span>
+                  </p>
+                ))
+              )}
+            </div>
+          </div>
 
           {/* Student Signature Section */}
           <div className="border-t pt-4">

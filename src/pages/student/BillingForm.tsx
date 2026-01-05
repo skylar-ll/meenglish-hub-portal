@@ -615,8 +615,8 @@ const BillingForm = () => {
             phone1: billData.phone1 || billData.contactNumber,
             timing: billData.timeSlot,
             branch: billData.branch,
-            courses: billData.courses,
-            selectedLevels: [],
+            courses: billData.courseName,
+            selectedLevels: JSON.parse(sessionStorage.getItem("studentRegistration") || "{}").selectedLevels || [],
             courseDuration: String(billData.levelCount || 1),
             discountPercent: billData.discountPercent,
           }}
