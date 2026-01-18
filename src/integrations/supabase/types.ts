@@ -1500,6 +1500,56 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          level: string
+          teacher_id: string
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          level: string
+          teacher_id: string
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          level?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_videos_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           branch_id: string | null
