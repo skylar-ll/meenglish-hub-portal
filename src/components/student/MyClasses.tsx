@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, BookOpen, User, Calendar, MapPin, Play, Video, ChevronDown, ChevronUp, X, Check, CheckCircle2 } from "lucide-react";
+import { Clock, BookOpen, User, Calendar, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ClassInfo {
   id: string;
@@ -19,80 +16,34 @@ interface ClassInfo {
   branch_name?: string;
 }
 
-interface VideoInfo {
-  id: string;
-  title: string;
-  description: string | null;
-  video_url: string;
-  created_at: string;
-  teacher_name: string;
-  watched: boolean;
-}
-
 export const MyClasses = () => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [classVideos, setClassVideos] = useState<Record<string, VideoInfo[]>>({});
   const [loading, setLoading] = useState(true);
-  const [expandedClasses, setExpandedClasses] = useState<string[]>([]);
-  const [playingVideo, setPlayingVideo] = useState<{ url: string; title: string; id: string } | null>(null);
-  const [studentId, setStudentId] = useState<string | null>(null);
-  const [markingWatched, setMarkingWatched] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMyClasses();
     
-    // Set up realtime subscription for class updates
     const classesChannel = supabase
       .channel('classes-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'classes'
-        },
-        () => {
-          fetchMyClasses();
-        }
+        { event: '*', schema: 'public', table: 'classes' },
+        () => fetchMyClasses()
       )
       .subscribe();
 
-    // Set up realtime subscription for enrollment updates
     const enrollmentsChannel = supabase
       .channel('enrollments-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'enrollments'
-        },
-        () => {
-          fetchMyClasses();
-        }
-      )
-      .subscribe();
-
-    // Set up realtime subscription for video updates
-    const videosChannel = supabase
-      .channel('videos-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'teacher_videos'
-        },
-        () => {
-          fetchMyClasses();
-        }
+        { event: '*', schema: 'public', table: 'enrollments' },
+        () => fetchMyClasses()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(classesChannel);
       supabase.removeChannel(enrollmentsChannel);
-      supabase.removeChannel(videosChannel);
     };
   }, []);
 
@@ -108,9 +59,7 @@ export const MyClasses = () => {
         .maybeSingle();
 
       if (!student) return;
-      setStudentId(student.id);
 
-      // Get student's classes
       const { data: enrollments, error: enrollmentsError } = await supabase
         .from("enrollments")
         .select("class_id")
@@ -123,7 +72,6 @@ export const MyClasses = () => {
         return;
       }
 
-      // Get class details
       const classIds = enrollments.map((e) => e.class_id);
       const { data: classesData, error: classesError } = await supabase
         .from("classes")
@@ -133,10 +81,8 @@ export const MyClasses = () => {
           timing,
           courses,
           levels,
-          teacher_id,
           start_date,
-          branch_id,
-          branches (name_en, name_ar),
+          branches (name_en),
           teachers (full_name)
         `)
         .in("id", classIds);
@@ -155,130 +101,12 @@ export const MyClasses = () => {
       })) || [];
 
       setClasses(formattedClasses);
-
-      // Fetch videos for all enrolled classes
-      const { data: videosData } = await supabase
-        .from("teacher_videos")
-        .select(`
-          id,
-          title,
-          description,
-          video_url,
-          created_at,
-          class_id,
-          teacher:teachers(full_name)
-        `)
-        .in("class_id", classIds)
-        .order("created_at", { ascending: true });
-
-      // Fetch watched videos
-      const { data: watchedData } = await supabase
-        .from("student_video_progress")
-        .select("video_id")
-        .eq("student_id", student.id);
-
-      const watchedVideoIds = new Set(watchedData?.map(w => w.video_id) || []);
-
-      // Group videos by class_id
-      const videosByClass: Record<string, VideoInfo[]> = {};
-      videosData?.forEach((video: any) => {
-        if (!videosByClass[video.class_id]) {
-          videosByClass[video.class_id] = [];
-        }
-        videosByClass[video.class_id].push({
-          id: video.id,
-          title: video.title,
-          description: video.description,
-          video_url: video.video_url,
-          created_at: video.created_at,
-          teacher_name: video.teacher?.full_name || "Unknown",
-          watched: watchedVideoIds.has(video.id),
-        });
-      });
-
-      setClassVideos(videosByClass);
     } catch (error) {
       console.error("Error fetching classes:", error);
       toast.error("Failed to load your classes");
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleClassExpanded = (classId: string) => {
-    setExpandedClasses(prev => 
-      prev.includes(classId) 
-        ? prev.filter(id => id !== classId)
-        : [...prev, classId]
-    );
-  };
-
-  const handlePlayVideo = (video: VideoInfo) => {
-    setPlayingVideo({ url: video.video_url, title: video.title, id: video.id });
-  };
-
-  const handleMarkWatched = async (videoId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!studentId || markingWatched) return;
-
-    setMarkingWatched(videoId);
-    try {
-      // Check if already watched
-      const isWatched = Object.values(classVideos)
-        .flat()
-        .find(v => v.id === videoId)?.watched;
-
-      if (isWatched) {
-        // Remove watched status
-        await supabase
-          .from("student_video_progress")
-          .delete()
-          .eq("student_id", studentId)
-          .eq("video_id", videoId);
-        
-        toast.success("Marked as unwatched");
-      } else {
-        // Add watched status
-        await supabase
-          .from("student_video_progress")
-          .insert({
-            student_id: studentId,
-            video_id: videoId,
-          });
-        
-        toast.success("Marked as watched!");
-      }
-
-      // Update local state
-      setClassVideos(prev => {
-        const updated = { ...prev };
-        for (const classId in updated) {
-          updated[classId] = updated[classId].map(v => 
-            v.id === videoId ? { ...v, watched: !isWatched } : v
-          );
-        }
-        return updated;
-      });
-    } catch (error) {
-      console.error("Error updating watch status:", error);
-      toast.error("Failed to update watch status");
-    } finally {
-      setMarkingWatched(null);
-    }
-  };
-
-  const getClassProgress = (classId: string) => {
-    const videos = classVideos[classId] || [];
-    const watched = videos.filter(v => v.watched).length;
-    return { watched, total: videos.length };
-  };
-
-  const getClassStatus = (classId: string) => {
-    const { watched, total } = getClassProgress(classId);
-    if (total === 0) return "no-lessons";
-    if (watched === total) return "completed";
-    if (watched > 0) return "in-progress";
-    return "not-started";
   };
 
   if (loading) {
@@ -300,202 +128,60 @@ export const MyClasses = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h3 className="text-xl font-semibold">My Classes</h3>
+      <div className="grid gap-4">
+        {classes.map((classInfo) => (
+          <Card key={classInfo.id} className="p-4 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-lg text-primary">{classInfo.class_name}</h4>
+                <Badge variant="secondary">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {classInfo.timing}
+                </Badge>
+              </div>
 
-      {/* Video Player Modal */}
-      {playingVideo && (
-        <Card className="mb-4 overflow-hidden border-2 border-primary/30">
-          <div className="flex justify-between items-center p-3 bg-muted">
-            <h4 className="font-medium text-sm">{playingVideo.title}</h4>
-            <div className="flex items-center gap-2">
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={(e) => handleMarkWatched(playingVideo.id, e)}
-                disabled={markingWatched === playingVideo.id}
-                className="text-xs"
-              >
-                <Check className="w-3 h-3 mr-1" />
-                Mark as Watched
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setPlayingVideo(null)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          <video 
-            src={playingVideo.url} 
-            controls 
-            autoPlay 
-            className="w-full max-h-[500px] bg-black"
-            controlsList="nodownload"
-          >
-            Your browser does not support the video tag.
-          </video>
-        </Card>
-      )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Course:</span>
+                  <span className="font-medium">{classInfo.course_name}</span>
+                </div>
 
-      {/* Course Curriculum Section */}
-      <div className="space-y-2">
-        <h4 className="text-lg font-semibold mb-4">Course Curriculum</h4>
-        
-        {classes.map((classInfo, classIndex) => {
-          const videos = classVideos[classInfo.id] || [];
-          const isExpanded = expandedClasses.includes(classInfo.id);
-          const { watched, total } = getClassProgress(classInfo.id);
-          const status = getClassStatus(classInfo.id);
-
-          return (
-            <Collapsible 
-              key={classInfo.id} 
-              open={isExpanded} 
-              onOpenChange={() => toggleClassExpanded(classInfo.id)}
-            >
-              <Card 
-                className={`overflow-hidden transition-colors ${
-                  status === 'completed' 
-                    ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
-                    : status === 'in-progress'
-                    ? 'bg-background border-primary/30'
-                    : 'bg-muted/30 border-muted'
-                }`}
-              >
-                <CollapsibleTrigger className="w-full">
-                  <div className="p-4 flex items-center gap-4">
-                    {/* Status Circle */}
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      status === 'completed' 
-                        ? 'bg-green-500 text-white' 
-                        : status === 'in-progress'
-                        ? 'bg-primary/20 text-primary border-2 border-primary'
-                        : 'bg-muted text-muted-foreground border-2 border-muted-foreground/30'
-                    }`}>
-                      {status === 'completed' ? (
-                        <CheckCircle2 className="w-6 h-6" />
-                      ) : (
-                        <span className="font-semibold">{classIndex + 1}</span>
-                      )}
-                    </div>
-
-                    {/* Class Info */}
-                    <div className="flex-1 text-left">
-                      <h5 className={`font-semibold ${status === 'not-started' && total > 0 ? 'text-muted-foreground' : ''}`}>
-                        {classInfo.class_name} - {classInfo.level || classInfo.course_name}
-                      </h5>
-                      <div className="flex items-center gap-2 mt-1">
-                        {status === 'completed' && (
-                          <Badge className="bg-green-500 hover:bg-green-600 text-white">
-                            Completed
-                          </Badge>
-                        )}
-                        {status === 'in-progress' && (
-                          <Badge variant="destructive" className="bg-red-500">
-                            In Progress
-                          </Badge>
-                        )}
-                        {status === 'not-started' && total > 0 && (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            Locked
-                          </Badge>
-                        )}
-                        <span className="text-sm text-muted-foreground">
-                          {watched} / {total} lessons
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Expand Icon */}
-                    {total > 0 && (
-                      <div className="text-muted-foreground">
-                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </div>
-                    )}
+                {classInfo.level && (
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-secondary" />
+                    <span className="text-muted-foreground">Level:</span>
+                    <span className="font-medium">{classInfo.level}</span>
                   </div>
-                </CollapsibleTrigger>
+                )}
 
-                <CollapsibleContent>
-                  {videos.length > 0 && (
-                    <div className="px-4 pb-4 space-y-2">
-                      <div className="border-t pt-3">
-                        {videos.map((video, index) => (
-                          <div 
-                            key={video.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                              video.watched 
-                                ? 'bg-green-100/50 dark:bg-green-900/20' 
-                                : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => handlePlayVideo(video)}
-                          >
-                            {/* Play Button */}
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              video.watched 
-                                ? 'bg-green-500 text-white' 
-                                : 'bg-primary/10 text-primary hover:bg-primary/20'
-                            }`}>
-                              {video.watched ? (
-                                <Check className="w-5 h-5" />
-                              ) : (
-                                <Play className="w-5 h-5" />
-                              )}
-                            </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-accent" />
+                  <span className="text-muted-foreground">Teacher:</span>
+                  <span className="font-medium">{classInfo.teacher_name}</span>
+                </div>
 
-                            {/* Video Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">
-                                  Lesson {index + 1}: {video.title}
-                                </span>
-                                {video.watched && (
-                                  <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
-                                    Watched
-                                  </Badge>
-                                )}
-                              </div>
-                              {video.description && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                  {video.description}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                <User className="w-3 h-3" />
-                                <span>{video.teacher_name}</span>
-                              </div>
-                            </div>
+                {classInfo.branch_name && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">Branch:</span>
+                    <span className="font-medium">{classInfo.branch_name}</span>
+                  </div>
+                )}
 
-                            {/* Mark Watched Button */}
-                            <Button
-                              size="sm"
-                              variant={video.watched ? "outline" : "default"}
-                              onClick={(e) => handleMarkWatched(video.id, e)}
-                              disabled={markingWatched === video.id}
-                              className="flex-shrink-0"
-                            >
-                              {markingWatched === video.id ? (
-                                "..."
-                              ) : video.watched ? (
-                                <>
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Watched
-                                </>
-                              ) : (
-                                <>
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Mark Watched
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
+                {classInfo.start_date && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-secondary" />
+                    <span className="text-muted-foreground">Started:</span>
+                    <span className="font-medium">{new Date(classInfo.start_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   );
