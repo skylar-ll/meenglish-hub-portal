@@ -320,7 +320,7 @@ const AdminDashboard = () => {
               size="lg"
             >
               <Video className="w-5 h-5" />
-              Video Management
+              Course Management
             </Button>
           </div>
         </Card>

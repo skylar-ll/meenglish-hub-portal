@@ -231,7 +231,7 @@ const VideoManagement = () => {
               Back
             </Button>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Teacher & Video Management
+              Course Management
             </h1>
           </div>
           <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
