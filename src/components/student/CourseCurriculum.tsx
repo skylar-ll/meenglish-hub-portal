@@ -26,7 +26,11 @@ interface LessonInfo {
   watched: boolean;
 }
 
-export const CourseCurriculum = () => {
+interface CourseCurriculumProps {
+  onProgressChange?: () => void;
+}
+
+export const CourseCurriculum = ({ onProgressChange }: CourseCurriculumProps) => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [classLessons, setClassLessons] = useState<Record<string, LessonInfo[]>>({});
   const [loading, setLoading] = useState(true);
@@ -191,6 +195,9 @@ export const CourseCurriculum = () => {
         }
         return updated;
       });
+
+      // Notify parent about progress change
+      onProgressChange?.();
     } catch (error) {
       console.error("Error updating watch status:", error);
       toast.error("Failed to update status");
