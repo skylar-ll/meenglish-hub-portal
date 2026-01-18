@@ -67,21 +67,19 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
       setClasses(classesData);
     }
 
-    // Fetch teacher's videos with class info
+    // Fetch teacher's videos
     const { data: videosData } = await supabase
       .from("teacher_videos")
-      .select(`
-        id, title, description, video_url, class_id, file_name, created_at,
-        class:classes(id, class_name, timing, levels, courses)
-      `)
+      .select("id, title, description, video_url, class_id, file_name, created_at")
       .eq("teacher_id", session.user.id)
       .order("created_at", { ascending: false });
 
-    if (videosData) {
-      // Transform the data to flatten the class relationship
+    if (videosData && classesData) {
+      // Map class info to videos
+      const classMap = new Map(classesData.map(c => [c.id, c]));
       const transformed = videosData.map((v: any) => ({
         ...v,
-        class: v.class
+        class: classMap.get(v.class_id) || null
       }));
       setVideos(transformed);
     }
