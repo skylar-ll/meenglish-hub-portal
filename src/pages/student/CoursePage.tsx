@@ -100,10 +100,46 @@ const CoursePage = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [courseData, setCourseData] = useState<any>(null);
-  const [progress, setProgress] = useState(0);
+  const [videoProgress, setVideoProgress] = useState({ watched: 0, total: 0 });
   const [attendedLessons, setAttendedLessons] = useState<number[]>([]);
   const [dailyAttendance, setDailyAttendance] = useState<number[]>([]);
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
+
+  const fetchVideoProgress = async (studentId: string) => {
+    try {
+      // Get enrolled class IDs
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", studentId);
+
+      if (!enrollments || enrollments.length === 0) {
+        setVideoProgress({ watched: 0, total: 0 });
+        return;
+      }
+
+      const classIds = enrollments.map(e => e.class_id);
+
+      // Get total lessons count
+      const { data: lessons, count: totalCount } = await supabase
+        .from("teacher_videos")
+        .select("id", { count: "exact" })
+        .in("class_id", classIds);
+
+      // Get watched count
+      const { data: watched, count: watchedCount } = await supabase
+        .from("student_video_progress")
+        .select("id", { count: "exact" })
+        .eq("student_id", studentId);
+
+      setVideoProgress({
+        watched: watchedCount || 0,
+        total: totalCount || 0
+      });
+    } catch (error) {
+      console.error("Error fetching video progress:", error);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -158,6 +194,9 @@ const CoursePage = () => {
             };
             sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
             setCourseData(registrationData);
+
+            // Fetch actual video progress
+            await fetchVideoProgress(student.id);
           } else {
             navigate("/student/signup");
             return;
@@ -167,12 +206,34 @@ const CoursePage = () => {
           return;
         }
       }
-
-      // Simulate some progress - attended first 8 lessons (2 parts)
-      setProgress(2);
-      setAttendedLessons([1, 2, 3, 4, 5, 6, 7, 8]);
     };
     load();
+
+    // Subscribe to video progress changes
+    const progressChannel = supabase
+      .channel('video-progress-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'student_video_progress' },
+        async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.email) {
+            const { data: student } = await supabase
+              .from("students")
+              .select("id")
+              .eq("email", session.user.email)
+              .maybeSingle();
+            if (student) {
+              await fetchVideoProgress(student.id);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(progressChannel);
+    };
   }, [navigate]);
 
   const markLessonAttendance = (lessonId: number, partNumber: number) => {
@@ -190,8 +251,7 @@ const CoursePage = () => {
       newAttendedLessons.includes(lesson.id)
     );
     
-    if (allLessonsCompleted && partNumber === progress + 1) {
-      setProgress(progress + 1);
+    if (allLessonsCompleted) {
       if (!dailyAttendance.includes(partNumber)) {
         setDailyAttendance([...dailyAttendance, partNumber]);
         toast.success(`🎉 ${t('student.part')} ${partNumber} ${t('student.partCompleted')}`);
@@ -203,7 +263,9 @@ const CoursePage = () => {
     }
   };
 
-  const progressPercentage = (progress / 8) * 100;
+  const progressPercentage = videoProgress.total > 0 
+    ? (videoProgress.watched / videoProgress.total) * 100 
+    : 0;
 
   if (!courseData) {
     return null;
@@ -399,16 +461,18 @@ const CoursePage = () => {
           
           <div className="mb-4">
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium">{t('student.completedParts')}</span>
-              <span className="text-sm font-medium">{progress} / 8</span>
+              <span className="text-sm font-medium">Lessons Completed</span>
+              <span className="text-sm font-medium">{videoProgress.watched} / {videoProgress.total}</span>
             </div>
             <Progress value={progressPercentage} className="h-3" />
           </div>
 
           <p className="text-sm text-muted-foreground">
-            {progress === 8 
-              ? t('student.congratulations')
-              : `${t('student.keepGoing')} ${8 - progress} ${t('student.partsRemaining')}.`}
+            {videoProgress.total === 0 
+              ? "No lessons available yet."
+              : videoProgress.watched === videoProgress.total 
+                ? t('student.congratulations')
+                : `${t('student.keepGoing')} ${videoProgress.total - videoProgress.watched} lessons remaining.`}
           </p>
         </Card>
 
@@ -423,8 +487,8 @@ const CoursePage = () => {
             const isPartCompleted = partLessons.every(lesson => 
               attendedLessons.includes(lesson.id)
             );
-            const isPartCurrent = part.part === progress + 1;
-            const isPartLocked = part.part > progress + 1;
+            const isPartCurrent = !isPartCompleted && completedLessonsInPart > 0;
+            const isPartLocked = !isPartCompleted && completedLessonsInPart === 0;
             const isExpanded = expandedPart === part.part;
             
             return (
