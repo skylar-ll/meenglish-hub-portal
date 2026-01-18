@@ -12,98 +12,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { MyClasses } from "@/components/student/MyClasses";
 import { CourseCurriculum } from "@/components/student/CourseCurriculum";
 
-// Course curriculum data
-const courseLessons = [
-  {
-    part: 1,
-    titleKey: "course.part1.title",
-    lessons: [
-      { id: 1, nameKey: "course.lesson1" },
-      { id: 2, nameKey: "course.lesson2" },
-      { id: 3, nameKey: "course.lesson3" },
-      { id: 4, nameKey: "course.lesson4" },
-    ]
-  },
-  {
-    part: 2,
-    titleKey: "course.part2.title",
-    lessons: [
-      { id: 5, nameKey: "course.lesson5" },
-      { id: 6, nameKey: "course.lesson6" },
-      { id: 7, nameKey: "course.lesson7" },
-      { id: 8, nameKey: "course.lesson8" },
-    ]
-  },
-  {
-    part: 3,
-    titleKey: "course.part3.title",
-    lessons: [
-      { id: 9, nameKey: "course.lesson9" },
-      { id: 10, nameKey: "course.lesson10" },
-      { id: 11, nameKey: "course.lesson11" },
-      { id: 12, nameKey: "course.lesson12" },
-    ]
-  },
-  {
-    part: 4,
-    titleKey: "course.part4.title",
-    lessons: [
-      { id: 13, nameKey: "course.lesson13" },
-      { id: 14, nameKey: "course.lesson14" },
-      { id: 15, nameKey: "course.lesson15" },
-      { id: 16, nameKey: "course.lesson16" },
-    ]
-  },
-  {
-    part: 5,
-    titleKey: "course.part5.title",
-    lessons: [
-      { id: 17, nameKey: "course.lesson17" },
-      { id: 18, nameKey: "course.lesson18" },
-      { id: 19, nameKey: "course.lesson19" },
-      { id: 20, nameKey: "course.lesson20" },
-    ]
-  },
-  {
-    part: 6,
-    titleKey: "course.part6.title",
-    lessons: [
-      { id: 21, nameKey: "course.lesson21" },
-      { id: 22, nameKey: "course.lesson22" },
-      { id: 23, nameKey: "course.lesson23" },
-      { id: 24, nameKey: "course.lesson24" },
-    ]
-  },
-  {
-    part: 7,
-    titleKey: "course.part7.title",
-    lessons: [
-      { id: 25, nameKey: "course.lesson25" },
-      { id: 26, nameKey: "course.lesson26" },
-      { id: 27, nameKey: "course.lesson27" },
-      { id: 28, nameKey: "course.lesson28" },
-    ]
-  },
-  {
-    part: 8,
-    titleKey: "course.part8.title",
-    lessons: [
-      { id: 29, nameKey: "course.lesson29" },
-      { id: 30, nameKey: "course.lesson30" },
-      { id: 31, nameKey: "course.lesson31" },
-      { id: 32, nameKey: "course.lesson32" },
-    ]
-  },
-];
-
 const CoursePage = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [courseData, setCourseData] = useState<any>(null);
   const [videoProgress, setVideoProgress] = useState({ watched: 0, total: 0 });
-  const [attendedLessons, setAttendedLessons] = useState<number[]>([]);
   const [dailyAttendance, setDailyAttendance] = useState<number[]>([]);
-  const [expandedPart, setExpandedPart] = useState<number | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
 
   const fetchVideoProgress = async (studentId: string) => {
     try {
@@ -121,17 +36,18 @@ const CoursePage = () => {
       const classIds = enrollments.map(e => e.class_id);
 
       // Get total lessons count
-      const { data: lessons, count: totalCount } = await supabase
+      const { count: totalCount } = await supabase
         .from("teacher_videos")
-        .select("id", { count: "exact" })
+        .select("id", { count: "exact", head: true })
         .in("class_id", classIds);
 
       // Get watched count
-      const { data: watched, count: watchedCount } = await supabase
+      const { count: watchedCount } = await supabase
         .from("student_video_progress")
-        .select("id", { count: "exact" })
+        .select("id", { count: "exact", head: true })
         .eq("student_id", studentId);
 
+      console.log("Progress update:", { watched: watchedCount, total: totalCount });
       setVideoProgress({
         watched: watchedCount || 0,
         total: totalCount || 0
@@ -143,69 +59,54 @@ const CoursePage = () => {
 
   useEffect(() => {
     const load = async () => {
-      const registration = sessionStorage.getItem("studentRegistration");
-      if (registration) {
-        const data = JSON.parse(registration);
-        setCourseData(data);
-        
-        // Check membership expiration
-        if (data.expirationDate) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const expDate = new Date(data.expirationDate);
-          expDate.setHours(0, 0, 0, 0);
-          if (today > expDate) {
-            navigate("/student/membership-expired");
-            return;
-          }
-        }
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        const email = session?.user?.email;
-        if (email) {
-          const { data: student } = await supabase
-            .from("students")
-            .select("*")
-            .eq("email", email)
-            .maybeSingle();
-          if (student) {
-            // Check membership expiration from database
-            if (student.expiration_date) {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const expDate = new Date(student.expiration_date);
-              expDate.setHours(0, 0, 0, 0);
-              if (today > expDate) {
-                navigate("/student/membership-expired");
-                return;
-              }
-            }
-            
-            const registrationData = {
-              fullNameEn: student.full_name_en,
-              fullNameAr: student.full_name_ar,
-              email: student.email,
-              program: student.program,
-              classType: student.class_type,
-              branch: student.branch,
-              courseLevel: student.course_level,
-              studentId: student.student_id,
-              expirationDate: student.expiration_date,
-            };
-            sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
-            setCourseData(registrationData);
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email;
+      
+      if (!email) {
+        navigate("/student/login");
+        return;
+      }
 
-            // Fetch actual video progress
-            await fetchVideoProgress(student.id);
-          } else {
-            navigate("/student/signup");
-            return;
-          }
-        } else {
-          navigate("/student/login");
+      const { data: student } = await supabase
+        .from("students")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+        
+      if (!student) {
+        navigate("/student/signup");
+        return;
+      }
+
+      // Check membership expiration from database
+      if (student.expiration_date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expDate = new Date(student.expiration_date);
+        expDate.setHours(0, 0, 0, 0);
+        if (today > expDate) {
+          navigate("/student/membership-expired");
           return;
         }
       }
+      
+      const registrationData = {
+        fullNameEn: student.full_name_en,
+        fullNameAr: student.full_name_ar,
+        email: student.email,
+        program: student.program,
+        classType: student.class_type,
+        branch: student.branch,
+        courseLevel: student.course_level,
+        studentId: student.student_id,
+        expirationDate: student.expiration_date,
+      };
+      sessionStorage.setItem("studentRegistration", JSON.stringify(registrationData));
+      setCourseData(registrationData);
+      setCurrentStudentId(student.id);
+
+      // Fetch actual video progress
+      await fetchVideoProgress(student.id);
     };
     load();
 
@@ -216,16 +117,8 @@ const CoursePage = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'student_video_progress' },
         async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user?.email) {
-            const { data: student } = await supabase
-              .from("students")
-              .select("id")
-              .eq("email", session.user.email)
-              .maybeSingle();
-            if (student) {
-              await fetchVideoProgress(student.id);
-            }
+          if (currentStudentId) {
+            await fetchVideoProgress(currentStudentId);
           }
         }
       )
@@ -234,32 +127,12 @@ const CoursePage = () => {
     return () => {
       supabase.removeChannel(progressChannel);
     };
-  }, [navigate]);
+  }, [navigate, currentStudentId]);
 
-  const markLessonAttendance = (lessonId: number, partNumber: number) => {
-    if (attendedLessons.includes(lessonId)) {
-      toast.info(t('student.attendanceAlready'));
-      return;
-    }
-    
-    const newAttendedLessons = [...attendedLessons, lessonId];
-    setAttendedLessons(newAttendedLessons);
-    
-    // Check if all lessons in the part are completed
-    const partLessons = courseLessons[partNumber - 1].lessons;
-    const allLessonsCompleted = partLessons.every(lesson => 
-      newAttendedLessons.includes(lesson.id)
-    );
-    
-    if (allLessonsCompleted) {
-      if (!dailyAttendance.includes(partNumber)) {
-        setDailyAttendance([...dailyAttendance, partNumber]);
-        toast.success(`🎉 ${t('student.part')} ${partNumber} ${t('student.partCompleted')}`);
-      } else {
-        toast.success(`🎉 ${t('student.part')} ${partNumber} ${t('student.completed')}!`);
-      }
-    } else {
-      toast.success(t('student.attendanceMarked'));
+  // Callback for CourseCurriculum to notify progress change
+  const handleProgressChange = async () => {
+    if (currentStudentId) {
+      await fetchVideoProgress(currentStudentId);
     }
   };
 
@@ -449,7 +322,7 @@ const CoursePage = () => {
 
         {/* Course Curriculum - Videos & Lessons */}
         <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "75ms" }}>
-          <CourseCurriculum />
+          <CourseCurriculum onProgressChange={handleProgressChange} />
         </Card>
 
         {/* Progress Card */}
@@ -476,114 +349,14 @@ const CoursePage = () => {
           </p>
         </Card>
 
-        {/* Course Parts & Lessons */}
+        {/* Course Curriculum - Empty for now */}
         <div className="space-y-4">
           <h3 className="text-2xl font-semibold mb-4">{t('student.curriculum')}</h3>
-          {courseLessons.map((part) => {
-            const partLessons = part.lessons;
-            const completedLessonsInPart = partLessons.filter(lesson => 
-              attendedLessons.includes(lesson.id)
-            ).length;
-            const isPartCompleted = partLessons.every(lesson => 
-              attendedLessons.includes(lesson.id)
-            );
-            const isPartCurrent = !isPartCompleted && completedLessonsInPart > 0;
-            const isPartLocked = !isPartCompleted && completedLessonsInPart === 0;
-            const isExpanded = expandedPart === part.part;
-            
-            return (
-              <Card
-                key={part.part}
-                className={`transition-all ${
-                  isPartCompleted
-                    ? "bg-success/10 border-success/30"
-                    : isPartCurrent
-                    ? "bg-primary/5 border-primary/30"
-                    : isPartLocked
-                    ? "opacity-60"
-                    : "hover:bg-muted/50"
-                }`}
-              >
-                <div 
-                  className="p-6 cursor-pointer"
-                  onClick={() => setExpandedPart(isExpanded ? null : part.part)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      {isPartCompleted ? (
-                        <CheckCircle2 className="w-10 h-10 text-success" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center font-bold text-primary">
-                          {part.part}
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold">{t(part.titleKey)}</h4>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant={isPartCompleted ? "default" : isPartCurrent ? "secondary" : "outline"} className="text-xs">
-                            {isPartCompleted ? t('student.completed') : isPartCurrent ? t('student.inProgress') : isPartLocked ? t('student.locked') : t('student.available')}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {completedLessonsInPart} / {partLessons.length} {t('student.lessons')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      {isExpanded ? "−" : "+"}
-                    </Button>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="px-6 pb-6 space-y-2 border-t pt-4">
-                    {partLessons.map((lesson) => {
-                      const isLessonCompleted = attendedLessons.includes(lesson.id);
-                      const canAttend = !isPartLocked && !isLessonCompleted;
-                      
-                      return (
-                        <div
-                          key={lesson.id}
-                          className={`flex items-center justify-between p-4 rounded-lg border ${
-                            isLessonCompleted 
-                              ? "bg-success/5 border-success/20" 
-                              : "bg-muted/30"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isLessonCompleted ? (
-                              <CheckCircle2 className="w-5 h-5 text-success" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
-                            )}
-                            <div>
-                              <p className="font-medium text-sm">{t(lesson.nameKey)}</p>
-                            </div>
-                          </div>
-                          {canAttend && isPartCurrent && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markLessonAttendance(lesson.id, part.part);
-                              }}
-                              className="bg-gradient-to-r from-primary to-secondary"
-                            >
-                              <Calendar className="w-3 h-3 mr-1" />
-                              {t('student.attend')}
-                            </Button>
-                          )}
-                          {isLessonCompleted && (
-                            <span className="text-xs text-success font-medium">{t('student.completedCheck')}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          <Card className="p-6">
+            <p className="text-center text-muted-foreground">
+              Course curriculum will be available soon.
+            </p>
+          </Card>
         </div>
       </div>
     </div>
