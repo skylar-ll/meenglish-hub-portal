@@ -3,21 +3,30 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Video, Play, Loader2, User } from "lucide-react";
+import { ArrowLeft, Video, Play, Loader2, User, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+
+interface ClassInfo {
+  id: string;
+  class_name: string;
+  timing: string;
+  levels: string[] | null;
+  courses: string[] | null;
+}
 
 interface TeacherVideo {
   id: string;
   title: string;
   description: string | null;
   video_url: string;
-  level: string;
+  class_id: string;
   created_at: string;
   teacher?: {
     full_name: string;
   };
+  class?: ClassInfo;
 }
 
 const StudentVideos = () => {
@@ -26,7 +35,7 @@ const StudentVideos = () => {
   const [videos, setVideos] = useState<TeacherVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
-  const [studentLevel, setStudentLevel] = useState<string>("");
+  const [enrolledClasses, setEnrolledClasses] = useState<ClassInfo[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,24 +46,49 @@ const StudentVideos = () => {
         return;
       }
 
-      // Get student's level
+      // Get student record
       const { data: student } = await supabase
         .from("students")
-        .select("course_level")
+        .select("id")
         .eq("email", session.user.email)
         .maybeSingle();
 
-      if (student?.course_level) {
-        setStudentLevel(student.course_level);
+      if (!student) {
+        setLoading(false);
+        return;
       }
 
-      // Fetch videos (RLS will filter by student's level)
+      // Get enrollments
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", student.id);
+
+      const classIds = enrollments?.map(e => e.class_id) || [];
+
+      if (classIds.length === 0) {
+        setVideos([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get class details
+      const { data: classData } = await supabase
+        .from("classes")
+        .select("id, class_name, timing, levels, courses")
+        .in("id", classIds);
+
+      setEnrolledClasses(classData || []);
+
+      // Fetch videos for student's enrolled classes (RLS will also filter)
       const { data: videosData, error } = await supabase
         .from("teacher_videos")
         .select(`
           *,
-          teacher:teachers(full_name)
+          teacher:teachers(full_name),
+          class:classes(id, class_name, timing, levels, courses)
         `)
+        .in("class_id", classIds)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -68,14 +102,18 @@ const StudentVideos = () => {
     fetchData();
   }, [navigate]);
 
-  // Group videos by level
-  const groupedByLevel = videos.reduce((acc, video) => {
-    if (!acc[video.level]) {
-      acc[video.level] = [];
+  // Group videos by class
+  const groupedByClass = videos.reduce((acc, video) => {
+    const className = video.class?.class_name || "Unknown Class";
+    if (!acc[className]) {
+      acc[className] = {
+        class: video.class,
+        videos: []
+      };
     }
-    acc[video.level].push(video);
+    acc[className].videos.push(video);
     return acc;
-  }, {} as Record<string, TeacherVideo[]>);
+  }, {} as Record<string, { class?: ClassInfo; videos: TeacherVideo[] }>);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
@@ -91,11 +129,11 @@ const StudentVideos = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 {language === 'ar' ? 'فيديوهات الدروس' : 'Lesson Videos'}
               </h1>
-              {studentLevel && (
-                <p className="text-sm text-muted-foreground">
-                  {language === 'ar' ? 'مستواك:' : 'Your Level:'} {studentLevel}
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar' 
+                  ? `متابعة الفيديوهات في ${enrolledClasses.length} فصل` 
+                  : `Videos from your ${enrolledClasses.length} enrolled class${enrolledClasses.length !== 1 ? 'es' : ''}`}
+              </p>
             </div>
           </div>
         </div>
@@ -130,22 +168,26 @@ const StudentVideos = () => {
             </h3>
             <p className="text-muted-foreground">
               {language === 'ar' 
-                ? 'لا توجد فيديوهات متاحة لمستواك حالياً'
-                : 'No videos are available for your level yet'}
+                ? 'لم يقم معلمك برفع أي فيديوهات لفصولك بعد'
+                : "Your teachers haven't uploaded any videos for your classes yet"}
             </p>
           </Card>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedByLevel).map(([level, levelVideos]) => (
-              <Card key={level} className="p-6">
+            {Object.entries(groupedByClass).map(([className, { class: classInfo, videos: classVideos }]) => (
+              <Card key={className} className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="default" className="text-sm">{level}</Badge>
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-bold">{className}</h2>
+                  {classInfo?.levels && classInfo.levels.length > 0 && (
+                    <Badge variant="outline">{classInfo.levels.join(", ")}</Badge>
+                  )}
                   <span className="text-sm text-muted-foreground">
-                    {levelVideos.length} {language === 'ar' ? 'فيديو' : 'video'}{levelVideos.length !== 1 ? 's' : ''}
+                    {classVideos.length} {language === 'ar' ? 'فيديو' : 'video'}{classVideos.length !== 1 ? 's' : ''}
                   </span>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {levelVideos.map((video) => (
+                  {classVideos.map((video) => (
                     <Card 
                       key={video.id} 
                       className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"

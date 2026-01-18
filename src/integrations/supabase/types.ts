@@ -1502,45 +1502,52 @@ export type Database = {
       }
       teacher_videos: {
         Row: {
+          class_id: string
           created_at: string
           description: string | null
           duration_seconds: number | null
           file_name: string | null
           file_size: number | null
           id: string
-          level: string
           teacher_id: string
           title: string
           updated_at: string
           video_url: string
         }
         Insert: {
+          class_id: string
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
           file_name?: string | null
           file_size?: number | null
           id?: string
-          level: string
           teacher_id: string
           title: string
           updated_at?: string
           video_url: string
         }
         Update: {
+          class_id?: string
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
           file_name?: string | null
           file_size?: number | null
           id?: string
-          level?: string
           teacher_id?: string
           title?: string
           updated_at?: string
           video_url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "teacher_videos_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teacher_videos_teacher_id_fkey"
             columns: ["teacher_id"]

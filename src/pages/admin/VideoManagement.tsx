@@ -13,29 +13,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+interface ClassInfo {
+  id: string;
+  class_name: string;
+  timing: string;
+  levels: string[] | null;
+  courses: string[] | null;
+  teacher_id: string | null;
+}
+
 interface TeacherVideo {
   id: string;
   teacher_id: string;
+  class_id: string;
   title: string;
   description: string | null;
   video_url: string;
-  level: string;
   file_name: string | null;
   file_size: number | null;
   created_at: string;
   teacher?: {
     full_name: string;
   };
+  class?: ClassInfo;
 }
 
 const VideoManagement = () => {
   const navigate = useNavigate();
-  const [levels, setLevels] = useState<{ id: string; value: string }[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [videos, setVideos] = useState<TeacherVideo[]>([]);
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterLevel, setFilterLevel] = useState<string>("all");
+  const [filterClass, setFilterClass] = useState<string>("all");
   const [filterTeacher, setFilterTeacher] = useState<string>("all");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   
@@ -43,7 +53,7 @@ const VideoManagement = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
-  const [uploadLevel, setUploadLevel] = useState("");
+  const [uploadClassId, setUploadClassId] = useState("");
   const [uploadTeacherId, setUploadTeacherId] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -51,17 +61,16 @@ const VideoManagement = () => {
   useEffect(() => {
     fetchVideos();
     fetchTeachers();
-    fetchLevels();
+    fetchClasses();
   }, []);
 
-  const fetchLevels = async () => {
+  const fetchClasses = async () => {
     const { data } = await supabase
-      .from("form_configurations")
-      .select("id, config_value")
-      .eq("config_type", "level")
-      .eq("is_active", true)
-      .order("display_order");
-    setLevels((data || []).map(l => ({ id: l.id, value: l.config_value })));
+      .from("classes")
+      .select("id, class_name, timing, levels, courses, teacher_id")
+      .eq("status", "active")
+      .order("class_name");
+    setClasses(data || []);
   };
 
   const fetchVideos = async () => {
@@ -70,7 +79,8 @@ const VideoManagement = () => {
       .from("teacher_videos")
       .select(`
         *,
-        teacher:teachers(full_name)
+        teacher:teachers(full_name),
+        class:classes(id, class_name, timing, levels, courses, teacher_id)
       `)
       .order("created_at", { ascending: false });
 
@@ -91,8 +101,13 @@ const VideoManagement = () => {
     setTeachers(data || []);
   };
 
+  // Get classes for selected teacher
+  const teacherClasses = uploadTeacherId 
+    ? classes.filter(c => c.teacher_id === uploadTeacherId)
+    : [];
+
   const handleUpload = async () => {
-    if (!uploadTitle || !uploadLevel || !uploadTeacherId || !uploadFile) {
+    if (!uploadTitle || !uploadClassId || !uploadTeacherId || !uploadFile) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -119,10 +134,10 @@ const VideoManagement = () => {
         .from("teacher_videos")
         .insert({
           teacher_id: uploadTeacherId,
+          class_id: uploadClassId,
           title: uploadTitle,
           description: uploadDescription || null,
           video_url: urlData.publicUrl,
-          level: uploadLevel,
           file_name: uploadFile.name,
           file_size: uploadFile.size,
         });
@@ -144,7 +159,7 @@ const VideoManagement = () => {
   const resetUploadForm = () => {
     setUploadTitle("");
     setUploadDescription("");
-    setUploadLevel("");
+    setUploadClassId("");
     setUploadTeacherId("");
     setUploadFile(null);
   };
@@ -184,22 +199,24 @@ const VideoManagement = () => {
 
   const filteredVideos = videos.filter(video => {
     const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.teacher?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = filterLevel === "all" || video.level === filterLevel;
+      video.teacher?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      video.class?.class_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesClass = filterClass === "all" || video.class_id === filterClass;
     const matchesTeacher = filterTeacher === "all" || video.teacher_id === filterTeacher;
-    return matchesSearch && matchesLevel && matchesTeacher;
+    return matchesSearch && matchesClass && matchesTeacher;
   });
 
-  // Group videos by teacher and level for centralized view
+  // Group videos by teacher and class for centralized view
   const groupedByTeacher = filteredVideos.reduce((acc, video) => {
     const teacherName = video.teacher?.full_name || "Unknown";
     if (!acc[teacherName]) {
       acc[teacherName] = {};
     }
-    if (!acc[teacherName][video.level]) {
-      acc[teacherName][video.level] = [];
+    const className = video.class?.class_name || "Unknown Class";
+    if (!acc[teacherName][className]) {
+      acc[teacherName][className] = [];
     }
-    acc[teacherName][video.level].push(video);
+    acc[teacherName][className].push(video);
     return acc;
   }, {} as Record<string, Record<string, TeacherVideo[]>>);
 
@@ -231,7 +248,10 @@ const VideoManagement = () => {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Teacher *</Label>
-                  <Select value={uploadTeacherId} onValueChange={setUploadTeacherId}>
+                  <Select value={uploadTeacherId} onValueChange={(v) => {
+                    setUploadTeacherId(v);
+                    setUploadClassId(""); // Reset class when teacher changes
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select teacher" />
                     </SelectTrigger>
@@ -243,17 +263,29 @@ const VideoManagement = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Level *</Label>
-                  <Select value={uploadLevel} onValueChange={setUploadLevel}>
+                  <Label>Class *</Label>
+                  <Select 
+                    value={uploadClassId} 
+                    onValueChange={setUploadClassId}
+                    disabled={!uploadTeacherId}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
+                      <SelectValue placeholder={uploadTeacherId ? "Select class" : "Select a teacher first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {levels.map(l => (
-                        <SelectItem key={l.id} value={l.value}>{l.value}</SelectItem>
+                      {teacherClasses.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.class_name} - {c.timing}
+                          {c.levels && c.levels.length > 0 && ` (${c.levels.join(", ")})`}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {uploadTeacherId && teacherClasses.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      This teacher has no assigned classes.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Title *</Label>
@@ -287,7 +319,7 @@ const VideoManagement = () => {
                 <Button 
                   onClick={handleUpload} 
                   className="w-full" 
-                  disabled={uploading}
+                  disabled={uploading || !uploadTeacherId || !uploadClassId}
                 >
                   {uploading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Upload Video
@@ -304,7 +336,7 @@ const VideoManagement = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by title or teacher..."
+                  placeholder="Search by title, teacher, or class..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -313,14 +345,14 @@ const VideoManagement = () => {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
-              <Select value={filterLevel} onValueChange={setFilterLevel}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Filter by level" />
+              <Select value={filterClass} onValueChange={setFilterClass}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by class" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  {levels.map(l => (
-                    <SelectItem key={l.id} value={l.value}>{l.value}</SelectItem>
+                  <SelectItem value="all">All Classes</SelectItem>
+                  {classes.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.class_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -378,20 +410,25 @@ const VideoManagement = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedByTeacher).map(([teacherName, levelVideos]) => (
+            {Object.entries(groupedByTeacher).map(([teacherName, classVideos]) => (
               <Card key={teacherName} className="p-6">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Video className="w-5 h-5 text-primary" />
                   {teacherName}
                 </h2>
                 <div className="space-y-4">
-                  {Object.entries(levelVideos).map(([level, vids]) => (
-                    <div key={level} className="border rounded-lg p-4">
+                  {Object.entries(classVideos).map(([className, vids]) => (
+                    <div key={className} className="border rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="secondary" className="text-sm">{level}</Badge>
+                        <Badge variant="secondary" className="text-sm">{className}</Badge>
                         <span className="text-sm text-muted-foreground">
                           {vids.length} video{vids.length !== 1 ? 's' : ''}
                         </span>
+                        {vids[0]?.class?.levels && vids[0].class.levels.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {vids[0].class.levels.join(", ")}
+                          </Badge>
+                        )}
                       </div>
                       <Table>
                         <TableHeader>
