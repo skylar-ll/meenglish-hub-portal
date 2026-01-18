@@ -320,13 +320,8 @@ const CoursePage = () => {
           <MyClasses />
         </Card>
 
-        {/* Course Curriculum - Videos & Lessons */}
-        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "75ms" }}>
-          <CourseCurriculum onProgressChange={handleProgressChange} />
-        </Card>
-
         {/* Progress Card */}
-        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
+        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "75ms" }}>
           <div className="flex items-center gap-3 mb-4">
             <BookOpen className="w-6 h-6 text-primary" />
             <h3 className="text-xl font-semibold">{t('student.courseProgress')}</h3>
@@ -349,15 +344,10 @@ const CoursePage = () => {
           </p>
         </Card>
 
-        {/* Course Curriculum - Empty for now */}
-        <div className="space-y-4">
-          <h3 className="text-2xl font-semibold mb-4">{t('student.curriculum')}</h3>
-          <Card className="p-6">
-            <p className="text-center text-muted-foreground">
-              Course curriculum will be available soon.
-            </p>
-          </Card>
-        </div>
+        {/* Course - Videos & Lessons */}
+        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
+          <CourseCurriculum onProgressChange={handleProgressChange} />
+        </Card>
       </div>
     </div>
   );
