@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { X, Upload, FileText, Trash2, Video, Loader2 } from "lucide-react";
+import { X, Upload, Trash2, Video, Loader2, FileText, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,14 +25,17 @@ interface TeacherClass {
   courses: string[] | null;
 }
 
-interface TeacherVideo {
+interface TeacherLesson {
   id: string;
   title: string;
   description: string | null;
-  video_url: string;
+  video_url: string | null;
+  text_content: string | null;
+  lesson_type: string;
   class_id: string;
   file_name: string | null;
   created_at: string;
+  lesson_order: number;
   class?: TeacherClass;
 }
 
@@ -39,49 +44,49 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
   const { t } = useLanguage();
   const [lessonTitle, setLessonTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [textContent, setTextContent] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
+  const [lessonType, setLessonType] = useState<"video" | "text" | "mixed">("video");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [classes, setClasses] = useState<TeacherClass[]>([]);
-  const [videos, setVideos] = useState<TeacherVideo[]>([]);
+  const [lessons, setLessons] = useState<TeacherLesson[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
-      fetchClassesAndVideos();
+      fetchClassesAndLessons();
     }
   }, [isOpen]);
 
-  const fetchClassesAndVideos = async () => {
+  const fetchClassesAndLessons = async () => {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Fetch teacher's classes
     const { data: classesData } = await supabase
       .from("classes")
       .select("id, class_name, timing, levels, courses")
       .eq("teacher_id", session.user.id);
 
-    if (classesData) {
-      setClasses(classesData);
-    }
+    if (classesData) setClasses(classesData);
 
-    // Fetch teacher's videos
-    const { data: videosData } = await supabase
+    const { data: lessonsData } = await supabase
       .from("teacher_videos")
-      .select("id, title, description, video_url, class_id, file_name, created_at")
+      .select("id, title, description, video_url, text_content, lesson_type, class_id, file_name, created_at, lesson_order")
       .eq("teacher_id", session.user.id)
+      .order("lesson_order", { ascending: true })
       .order("created_at", { ascending: false });
 
-    if (videosData && classesData) {
-      // Map class info to videos
+    if (lessonsData && classesData) {
       const classMap = new Map(classesData.map(c => [c.id, c]));
-      const transformed = videosData.map((v: any) => ({
-        ...v,
-        class: classMap.get(v.class_id) || null
+      const transformed = lessonsData.map((l: any) => ({
+        ...l,
+        lesson_type: l.lesson_type || 'video',
+        lesson_order: l.lesson_order || 0,
+        class: classMap.get(l.class_id) || null
       }));
-      setVideos(transformed);
+      setLessons(transformed);
     }
 
     setLoading(false);
@@ -94,12 +99,23 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
   };
 
   const handleUpload = async () => {
-    if (!lessonTitle || !file || !selectedClassId) {
-      toast({
-        title: t('teacher.error'),
-        description: "Please fill in title, select a class, and choose a video file",
-        variant: "destructive",
-      });
+    if (!lessonTitle || !selectedClassId) {
+      toast({ title: t('teacher.error'), description: "Please fill in title and select a class", variant: "destructive" });
+      return;
+    }
+
+    if (lessonType === "video" && !file) {
+      toast({ title: t('teacher.error'), description: "Please select a video file", variant: "destructive" });
+      return;
+    }
+
+    if (lessonType === "text" && !textContent.trim()) {
+      toast({ title: t('teacher.error'), description: "Please enter text content", variant: "destructive" });
+      return;
+    }
+
+    if (lessonType === "mixed" && (!file || !textContent.trim())) {
+      toast({ title: t('teacher.error'), description: "Please provide both video and text content", variant: "destructive" });
       return;
     }
 
@@ -109,22 +125,31 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      // Upload video to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
+      let videoUrl: string | null = null;
 
-      const { error: uploadError } = await supabase.storage
-        .from("teacher-videos")
-        .upload(fileName, file);
+      if (file && (lessonType === "video" || lessonType === "mixed")) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from("teacher-videos")
+          .upload(fileName, file);
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("teacher-videos")
-        .getPublicUrl(fileName);
+        if (uploadError) throw uploadError;
 
-      // Insert video record
+        const { data: urlData } = supabase.storage
+          .from("teacher-videos")
+          .getPublicUrl(fileName);
+
+        videoUrl = urlData.publicUrl;
+      }
+
+      // Get next lesson order
+      const existingLessons = lessons.filter(l => l.class_id === selectedClassId);
+      const nextOrder = existingLessons.length > 0 
+        ? Math.max(...existingLessons.map(l => l.lesson_order)) + 1 
+        : 1;
+
       const { error: insertError } = await supabase
         .from("teacher_videos")
         .insert({
@@ -132,66 +157,56 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
           class_id: selectedClassId,
           title: lessonTitle,
           description: description || null,
-          video_url: urlData.publicUrl,
-          file_name: file.name,
-          file_size: file.size,
+          video_url: videoUrl,
+          text_content: lessonType !== "video" ? textContent : null,
+          lesson_type: lessonType,
+          file_name: file?.name || null,
+          file_size: file?.size || null,
+          lesson_order: nextOrder,
         });
 
       if (insertError) throw insertError;
 
-      toast({
-        title: t('teacher.lessonUploaded'),
-        description: `Video "${lessonTitle}" uploaded successfully!`,
-      });
+      toast({ title: t('teacher.lessonUploaded'), description: `Lesson "${lessonTitle}" created successfully!` });
 
-      // Reset form and refresh
+      // Reset form
       setLessonTitle("");
       setDescription("");
+      setTextContent("");
       setSelectedClassId("");
+      setLessonType("video");
       setFile(null);
-      fetchClassesAndVideos();
+      fetchClassesAndLessons();
 
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload video",
-        variant: "destructive",
-      });
+      toast({ title: "Upload Failed", description: error.message || "Failed to create lesson", variant: "destructive" });
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (videoId: string, videoUrl: string) => {
+  const handleDelete = async (lessonId: string, videoUrl: string | null) => {
     try {
-      // Extract file path from URL
-      const urlParts = videoUrl.split("/teacher-videos/");
-      if (urlParts.length > 1) {
-        const filePath = urlParts[1];
-        await supabase.storage.from("teacher-videos").remove([filePath]);
+      if (videoUrl) {
+        const urlParts = videoUrl.split("/teacher-videos/");
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          await supabase.storage.from("teacher-videos").remove([filePath]);
+        }
       }
 
-      // Delete record
       const { error } = await supabase
         .from("teacher_videos")
         .delete()
-        .eq("id", videoId);
+        .eq("id", lessonId);
 
       if (error) throw error;
 
-      toast({
-        title: "Video Deleted",
-        description: "Video has been removed successfully",
-      });
-
-      fetchClassesAndVideos();
+      toast({ title: "Lesson Deleted", description: "Lesson has been removed successfully" });
+      fetchClassesAndLessons();
     } catch (error: any) {
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete video",
-        variant: "destructive",
-      });
+      toast({ title: "Delete Failed", description: error.message || "Failed to delete lesson", variant: "destructive" });
     }
   };
 
@@ -208,10 +223,75 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
         </div>
 
         <div className="space-y-6">
-          {/* Upload Form */}
+          {/* Create Lesson Form */}
           <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="font-semibold">Upload New Video</h3>
+            <h3 className="font-semibold">Create New Lesson</h3>
             
+            {/* Lesson Type Tabs */}
+            <Tabs value={lessonType} onValueChange={(v) => setLessonType(v as any)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="video">
+                  <Video className="w-4 h-4 mr-2" />
+                  Video
+                </TabsTrigger>
+                <TabsTrigger value="text">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Text
+                </TabsTrigger>
+                <TabsTrigger value="mixed">
+                  <Video className="w-4 h-4 mr-2" />
+                  Mixed
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="video" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="fileUpload">{t('teacher.selectFile')}</Label>
+                  <Input id="fileUpload" type="file" onChange={handleFileChange} accept="video/*" />
+                  {file && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t('teacher.selectedFile')}: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="text" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="textContent">Lesson Content</Label>
+                  <Textarea
+                    id="textContent"
+                    value={textContent}
+                    onChange={(e) => setTextContent(e.target.value)}
+                    placeholder="Enter your lesson content here..."
+                    rows={8}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="mixed" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="fileUploadMixed">{t('teacher.selectFile')}</Label>
+                  <Input id="fileUploadMixed" type="file" onChange={handleFileChange} accept="video/*" />
+                  {file && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t('teacher.selectedFile')}: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="textContentMixed">Additional Notes / Text Content</Label>
+                  <Textarea
+                    id="textContentMixed"
+                    value={textContent}
+                    onChange={(e) => setTextContent(e.target.value)}
+                    placeholder="Add notes or additional content below the video..."
+                    rows={4}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
             <div>
               <Label htmlFor="lessonTitle">{t('teacher.lessonTitle')}</Label>
               <Input
@@ -228,7 +308,7 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter a description for this video..."
+                placeholder="Enter a brief description..."
                 rows={2}
               />
             </div>
@@ -237,7 +317,7 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
               <Label htmlFor="classSelect">Select Class</Label>
               <Select value={selectedClassId} onValueChange={setSelectedClassId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose which class this video is for..." />
+                  <SelectValue placeholder="Choose which class this lesson is for..." />
                 </SelectTrigger>
                 <SelectContent>
                   {classes.map((cls) => (
@@ -255,36 +335,15 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
               )}
             </div>
 
-            <div>
-              <Label htmlFor="fileUpload">{t('teacher.selectFile')}</Label>
-              <Input
-                id="fileUpload"
-                type="file"
-                onChange={handleFileChange}
-                accept="video/*"
-              />
-              {file && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {t('teacher.selectedFile')}: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
-              )}
-            </div>
-
             <Button 
               onClick={handleUpload} 
               className="w-full" 
-              disabled={uploading || !lessonTitle || !file || !selectedClassId}
+              disabled={uploading || !lessonTitle || !selectedClassId}
             >
               {uploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
               ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {t('teacher.uploadLesson')}
-                </>
+                <><Upload className="w-4 h-4 mr-2" /> Create Lesson</>
               )}
             </Button>
           </div>
@@ -297,47 +356,49 @@ export const UploadLessonModal = ({ isOpen, onClose }: UploadLessonModalProps) =
               <div className="flex justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />
               </div>
-            ) : videos.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
-                No videos uploaded yet
-              </p>
+            ) : lessons.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">No lessons created yet</p>
             ) : (
               <div className="space-y-3">
-                {videos.map((video) => (
-                  <Card key={video.id} className="p-4">
+                {lessons.map((lesson) => (
+                  <Card key={lesson.id} className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
-                        <Video className="w-8 h-8 text-primary mt-1" />
+                        <GripVertical className="w-5 h-5 text-muted-foreground mt-1 cursor-grab" />
+                        {lesson.lesson_type === 'text' ? (
+                          <FileText className="w-8 h-8 text-secondary mt-1" />
+                        ) : (
+                          <Video className="w-8 h-8 text-primary mt-1" />
+                        )}
                         <div className="flex-1">
-                          <h4 className="font-medium">{video.title}</h4>
-                          {video.description && (
-                            <p className="text-sm text-muted-foreground">{video.description}</p>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{lesson.title}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {lesson.lesson_type === 'video' ? 'Video' : lesson.lesson_type === 'text' ? 'Text' : 'Mixed'}
+                            </Badge>
+                          </div>
+                          {lesson.description && (
+                            <p className="text-sm text-muted-foreground">{lesson.description}</p>
                           )}
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {video.class && (
+                            {lesson.class && (
                               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                {video.class.class_name}
+                                {lesson.class.class_name}
                               </span>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {new Date(video.created_at).toLocaleDateString()}
+                              {new Date(lesson.created_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(video.video_url, '_blank')}
-                        >
-                          Play
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(video.id, video.video_url)}
-                        >
+                        {lesson.video_url && (
+                          <Button size="sm" variant="outline" onClick={() => window.open(lesson.video_url!, '_blank')}>
+                            Play
+                          </Button>
+                        )}
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(lesson.id, lesson.video_url)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

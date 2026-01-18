@@ -1548,10 +1548,13 @@ export type Database = {
           file_name: string | null
           file_size: number | null
           id: string
+          lesson_order: number | null
+          lesson_type: string | null
           teacher_id: string
+          text_content: string | null
           title: string
           updated_at: string
-          video_url: string
+          video_url: string | null
         }
         Insert: {
           class_id: string
@@ -1561,10 +1564,13 @@ export type Database = {
           file_name?: string | null
           file_size?: number | null
           id?: string
+          lesson_order?: number | null
+          lesson_type?: string | null
           teacher_id: string
+          text_content?: string | null
           title: string
           updated_at?: string
-          video_url: string
+          video_url?: string | null
         }
         Update: {
           class_id?: string
@@ -1574,10 +1580,13 @@ export type Database = {
           file_name?: string | null
           file_size?: number | null
           id?: string
+          lesson_order?: number | null
+          lesson_type?: string | null
           teacher_id?: string
+          text_content?: string | null
           title?: string
           updated_at?: string
-          video_url?: string
+          video_url?: string | null
         }
         Relationships: [
           {

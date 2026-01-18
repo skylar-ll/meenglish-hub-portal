@@ -10,6 +10,7 @@ import logo from "@/assets/logo-new.png";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MyClasses } from "@/components/student/MyClasses";
+import { CourseCurriculum } from "@/components/student/CourseCurriculum";
 
 // Course curriculum data
 const courseLessons = [
@@ -382,6 +383,11 @@ const CoursePage = () => {
         {/* My Classes Card */}
         <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "50ms" }}>
           <MyClasses />
+        </Card>
+
+        {/* Course Curriculum - Videos & Lessons */}
+        <Card className="p-6 mb-6 animate-slide-up" style={{ animationDelay: "75ms" }}>
+          <CourseCurriculum />
         </Card>
 
         {/* Progress Card */}
