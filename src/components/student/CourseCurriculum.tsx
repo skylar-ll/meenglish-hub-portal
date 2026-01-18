@@ -236,7 +236,7 @@ export const CourseCurriculum = () => {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-semibold">Course Curriculum</h3>
+      <h3 className="text-xl font-semibold">Video Course</h3>
 
       {/* Video Player */}
       {playingVideo && (
