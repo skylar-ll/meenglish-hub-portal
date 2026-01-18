@@ -1021,6 +1021,45 @@ export type Database = {
           },
         ]
       }
+      student_video_progress: {
+        Row: {
+          created_at: string
+          id: string
+          student_id: string
+          video_id: string
+          watched_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          student_id: string
+          video_id: string
+          watched_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          student_id?: string
+          video_id?: string
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_video_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_video_progress_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_weekly_reports: {
         Row: {
           attendance_rating: number | null
