@@ -233,7 +233,7 @@ export const CourseCurriculum = ({ onProgressChange }: CourseCurriculumProps) =>
   if (classesWithLessons.length === 0) {
     return (
       <Card className="p-6">
-        <h3 className="text-xl font-semibold mb-4">Course Curriculum</h3>
+        <h3 className="text-xl font-semibold mb-4">Course</h3>
         <div className="text-center text-muted-foreground">
           No lessons available yet. Check back later!
         </div>
@@ -243,7 +243,7 @@ export const CourseCurriculum = ({ onProgressChange }: CourseCurriculumProps) =>
 
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-semibold">Video Course</h3>
+      <h3 className="text-xl font-semibold">Course</h3>
 
       {/* Video Player */}
       {playingVideo && (
