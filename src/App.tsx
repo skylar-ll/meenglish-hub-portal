@@ -71,6 +71,10 @@ import AdminBilling from "./pages/admin/AdminBilling";
 // Admin Offers
 import OffersManagement from "./pages/admin/OffersManagement";
 
+// Video Management
+import VideoManagement from "./pages/admin/VideoManagement";
+import StudentVideos from "./pages/student/StudentVideos";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -131,6 +135,7 @@ const App = () => (
           <Route path="/admin/create-teacher" element={<CreateTeacher />} />
           <Route path="/admin/form-fields" element={<FormFieldsEditor />} />
           <Route path="/admin/teacher-schedule" element={<TeacherScheduleManagement />} />
+          <Route path="/admin/videos" element={<VideoManagement />} />
           
           {/* Student Reports & Grades */}
           <Route path="/student/reports" element={<StudentReports />} />
@@ -140,6 +145,7 @@ const App = () => (
           <Route path="/student/membership-expired" element={<MembershipExpired />} />
           <Route path="/student/renew" element={<RenewMembership />} />
           <Route path="/student/performance" element={<StudentPerformance />} />
+          <Route path="/student/videos" element={<StudentVideos />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
