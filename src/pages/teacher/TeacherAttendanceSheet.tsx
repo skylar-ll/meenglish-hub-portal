@@ -204,15 +204,49 @@ const TeacherAttendanceSheet = () => {
             s.student_id === student.student_id ? { ...s, id: data.id } : s
           ));
           
-          // Handle status change - create certificate
-          if (student.status === 'Passed') {
-            await supabase.from("student_certificates").insert({
-              student_id: student.student_id,
-              teacher_id: teacherId,
-              attendance_sheet_id: data.id,
-              issue_date: new Date().toISOString().split('T')[0],
-              certificate_type: 'passing',
-            });
+          // Handle status change - create certificate only if grade >= 70%
+          if (student.status === 'Passed' && student.final_grades !== null && student.final_grades >= 70) {
+            // Check if certificate already exists for this attendance sheet
+            const { data: existingCert } = await supabase
+              .from("student_certificates")
+              .select("id")
+              .eq("attendance_sheet_id", data.id)
+              .single();
+
+            if (!existingCert) {
+              // Get student course info for certificate
+              const { data: studentInfo } = await supabase
+                .from("students")
+                .select("program, course_level")
+                .eq("id", student.student_id)
+                .single();
+
+              await supabase.from("student_certificates").insert({
+                student_id: student.student_id,
+                teacher_id: teacherId,
+                attendance_sheet_id: data.id,
+                issue_date: new Date().toISOString().split('T')[0],
+                certificate_type: 'passing',
+                final_grade: student.final_grades,
+                grade_letter: student.equivalent,
+                course_name: studentInfo?.program || null,
+                level: studentInfo?.course_level || null,
+              });
+
+              // Update student's completed_levels count
+              const { data: currentStudent } = await supabase
+                .from("students")
+                .select("completed_levels")
+                .eq("id", student.student_id)
+                .single();
+
+              await supabase
+                .from("students")
+                .update({ 
+                  completed_levels: (currentStudent?.completed_levels || 0) + 1 
+                })
+                .eq("id", student.student_id);
+            }
           }
         }
       }

@@ -906,6 +906,8 @@ export type Database = {
           certificate_type: string
           course_name: string | null
           created_at: string
+          final_grade: number | null
+          grade_letter: string | null
           id: string
           issue_date: string
           level: string | null
@@ -917,6 +919,8 @@ export type Database = {
           certificate_type?: string
           course_name?: string | null
           created_at?: string
+          final_grade?: number | null
+          grade_letter?: string | null
           id?: string
           issue_date?: string
           level?: string | null
@@ -928,6 +932,8 @@ export type Database = {
           certificate_type?: string
           course_name?: string | null
           created_at?: string
+          final_grade?: number | null
+          grade_letter?: string | null
           id?: string
           issue_date?: string
           level?: string | null
@@ -1185,9 +1191,11 @@ export type Database = {
           branch: string
           branch_id: string | null
           class_type: string
+          completed_levels: number | null
           course_duration_months: number | null
           course_level: string | null
           created_at: string
+          date_of_birth: string | null
           discount_percentage: number | null
           email: string
           expiration_date: string | null
@@ -1196,6 +1204,7 @@ export type Database = {
           gender: string | null
           id: string
           national_id: string
+          nationality: string | null
           next_payment_date: string | null
           payment_method: string
           phone1: string
@@ -1210,6 +1219,7 @@ export type Database = {
           timing: string | null
           total_course_fee: number | null
           total_grade: number | null
+          total_levels: number | null
           updated_at: string
         }
         Insert: {
@@ -1219,9 +1229,11 @@ export type Database = {
           branch: string
           branch_id?: string | null
           class_type: string
+          completed_levels?: number | null
           course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
+          date_of_birth?: string | null
           discount_percentage?: number | null
           email: string
           expiration_date?: string | null
@@ -1230,6 +1242,7 @@ export type Database = {
           gender?: string | null
           id?: string
           national_id: string
+          nationality?: string | null
           next_payment_date?: string | null
           payment_method: string
           phone1: string
@@ -1244,6 +1257,7 @@ export type Database = {
           timing?: string | null
           total_course_fee?: number | null
           total_grade?: number | null
+          total_levels?: number | null
           updated_at?: string
         }
         Update: {
@@ -1253,9 +1267,11 @@ export type Database = {
           branch?: string
           branch_id?: string | null
           class_type?: string
+          completed_levels?: number | null
           course_duration_months?: number | null
           course_level?: string | null
           created_at?: string
+          date_of_birth?: string | null
           discount_percentage?: number | null
           email?: string
           expiration_date?: string | null
@@ -1264,6 +1280,7 @@ export type Database = {
           gender?: string | null
           id?: string
           national_id?: string
+          nationality?: string | null
           next_payment_date?: string | null
           payment_method?: string
           phone1?: string
@@ -1278,6 +1295,7 @@ export type Database = {
           timing?: string | null
           total_course_fee?: number | null
           total_grade?: number | null
+          total_levels?: number | null
           updated_at?: string
         }
         Relationships: [
