@@ -7,6 +7,30 @@
 import { jsPDF } from 'jspdf';
 import { loadArabicFont } from '@/lib/arabicFontLoader';
 import { formatPdfNumber } from '@/lib/pdfFormat';
+import logoImage from '@/assets/logo-new.png';
+
+// Convert image to base64 for embedding in PDF
+const getLogoBase64 = async (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/png');
+        resolve(dataURL);
+      } else {
+        reject(new Error('Could not get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = logoImage;
+  });
+};
 
 export interface CertificateData {
   studentNameEn: string;
@@ -131,6 +155,19 @@ export const generateCertificatePDF = async (data: CertificateData): Promise<Blo
   // Bottom right red triangle
   doc.setFillColor(180, 35, 45);
   doc.triangle(pageWidth - 55, pageHeight, pageWidth, pageHeight - 70, pageWidth, pageHeight, 'F');
+
+  // === LOGO - Center top ===
+  try {
+    const logoBase64 = await getLogoBase64();
+    // Add logo centered at top - adjust size to match reference (approximately 35mm wide)
+    const logoWidth = 35;
+    const logoHeight = 25; // Adjust aspect ratio as needed
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = 8;
+    doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+  } catch (logoError) {
+    console.warn('Logo loading failed:', logoError);
+  }
 
   // === HEADER - Right side (Arabic) ===
   doc.setFontSize(10);
