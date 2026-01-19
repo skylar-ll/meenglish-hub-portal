@@ -62,7 +62,7 @@ const StudentCertificates = () => {
       const studentEmail = sessionStorage.getItem('studentEmail');
       if (!studentEmail) {
         toast.error('Please login first');
-        navigate('/student-login');
+        navigate('/student/login');
         return;
       }
 
