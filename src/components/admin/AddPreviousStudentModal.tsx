@@ -262,6 +262,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
     customDurationUnit: "months",
     countryCode1: "+966",
     countryCode2: "+966",
+    dateOfBirth: "",
+    nationality: "Saudi",
   });
 
   // Compute allowed timings based on selected levels/courses
@@ -649,6 +651,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
           registration_date: registrationDate,
           next_payment_date: paymentDeadline, // Auto-generated deadline
           registered_by_employee: registeredByEmployee || null,
+          date_of_birth: formData.dateOfBirth || null,
+          nationality: formData.nationality || "Saudi",
         })
         .select()
         .single();
@@ -814,6 +818,8 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
         customDurationUnit: "months",
         countryCode1: "+966",
         countryCode2: "+966",
+        dateOfBirth: "",
+        nationality: "Saudi",
       });
       setStep(1);
       setSignature(null);
@@ -976,6 +982,42 @@ export const AddPreviousStudentModal = ({ open, onOpenChange, onStudentAdded }: 
                 <div className="space-y-2">
                   <Label>National ID *</Label>
                   <Input value={formData.id} onChange={(e) => handleInputChange("id", e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nationality">Nationality *</Label>
+                    <Select value={formData.nationality} onValueChange={(value) => handleInputChange("nationality", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select nationality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Saudi">Saudi</SelectItem>
+                        <SelectItem value="Emirati">Emirati</SelectItem>
+                        <SelectItem value="Kuwaiti">Kuwaiti</SelectItem>
+                        <SelectItem value="Bahraini">Bahraini</SelectItem>
+                        <SelectItem value="Qatari">Qatari</SelectItem>
+                        <SelectItem value="Omani">Omani</SelectItem>
+                        <SelectItem value="Egyptian">Egyptian</SelectItem>
+                        <SelectItem value="Jordanian">Jordanian</SelectItem>
+                        <SelectItem value="Lebanese">Lebanese</SelectItem>
+                        <SelectItem value="Syrian">Syrian</SelectItem>
+                        <SelectItem value="Palestinian">Palestinian</SelectItem>
+                        <SelectItem value="Yemeni">Yemeni</SelectItem>
+                        <SelectItem value="Iraqi">Iraqi</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Password *</Label>
