@@ -944,7 +944,7 @@ export type Database = {
           {
             foreignKeyName: "student_certificates_attendance_sheet_id_fkey"
             columns: ["attendance_sheet_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "teacher_attendance_sheets"
             referencedColumns: ["id"]
           },
@@ -1723,6 +1723,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_grade_letter: { Args: { p_grade: number }; Returns: string }
       generate_student_id: { Args: never; Returns: string }
       has_role: {
         Args: {
