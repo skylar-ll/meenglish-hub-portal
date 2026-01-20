@@ -24,6 +24,7 @@ interface BillingData {
   second_payment: number;
   signature_url?: string;
   student_id_code?: string;
+  date_of_birth?: string | null;
 }
 
 export const generateBillingPDF = async (billingData: BillingData): Promise<Blob> => {
