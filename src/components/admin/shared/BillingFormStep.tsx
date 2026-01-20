@@ -33,6 +33,7 @@ type UiText = {
   branch: string;
   registrationDate: string;
   courseStartDate: string;
+   dateOfBirth: string;
   billingDetails: string;
   coursePackage: string;
   timeSlot: string;
@@ -76,6 +77,7 @@ const EN_UI: UiText = {
   branch: "Branch",
   registrationDate: "Registration Date",
   courseStartDate: "Course Start Date",
+  dateOfBirth: "Date of Birth",
   billingDetails: "Billing Details",
   coursePackage: "Course Package",
   timeSlot: "Class Time Slot",
@@ -119,6 +121,7 @@ const AR_UI: UiText = {
   branch: "الفرع",
   registrationDate: "تاريخ التسجيل",
   courseStartDate: "تاريخ بدء الدورة",
+  dateOfBirth: "تاريخ الميلاد",
   billingDetails: "تفاصيل الفاتورة",
   coursePackage: "الباقة",
   timeSlot: "موعد الحصة ضمن باقة الدورة",
@@ -200,6 +203,12 @@ export const BillingFormStep = ({
   const ksaDate = toZonedTime(now, ksaTimezone);
   const registrationDate = format(ksaDate, "MM/dd/yyyy");
   const courseStartDate = format(addDays(ksaDate, 1), "MM/dd/yyyy");
+  const dateOfBirthDisplay = useMemo(() => {
+    const raw = formData?.dateOfBirth;
+    if (!raw) return "";
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? String(raw) : format(d, "MM/dd/yyyy");
+  }, [formData?.dateOfBirth]);
 
   const rawCoursePackage = useMemo(() => {
     const value = Array.isArray(formData.courses) ? formData.courses.join(", ") : formData.courses;
@@ -252,6 +261,7 @@ export const BillingFormStep = ({
         time_slot: displayTimeSlot,
         registration_date: format(ksaDate, "yyyy-MM-dd"),
         course_start_date: format(addDays(ksaDate, 1), "yyyy-MM-dd"),
+        date_of_birth: formData?.dateOfBirth || null,
         level_count: durationMonths,
         total_fee: totalFee,
         discount_percentage: discountPercent,
@@ -320,6 +330,10 @@ export const BillingFormStep = ({
             <div>
               <p className="font-semibold text-muted-foreground">{ui.courseStartDate}</p>
               <p className="text-lg">{courseStartDate}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-muted-foreground">{ui.dateOfBirth}</p>
+              <p className="text-lg">{dateOfBirthDisplay || ui.notSelected}</p>
             </div>
             {/* Courses */}
             {displayCoursePackage && (
