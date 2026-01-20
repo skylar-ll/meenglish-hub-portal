@@ -168,6 +168,7 @@ const BillingForm = () => {
         phone2: registrationData.phone2 || "",
         teachers: teacherDetails,
         activeOffer: activeOffer,
+        dateOfBirth: registrationData.dateOfBirth || null,
       };
 
       setBillData(billingData);
@@ -335,6 +336,7 @@ const BillingForm = () => {
         language: 'en',
         first_payment: billData.firstPayment,
         second_payment: billData.secondPayment,
+        date_of_birth: billData.dateOfBirth || null,
       };
 
       // Only add payment dates if they exist
@@ -377,6 +379,7 @@ const BillingForm = () => {
             first_payment: billData.firstPayment,
             second_payment: billData.secondPayment,
             signature_url: signatureStoragePath,
+            date_of_birth: billData.dateOfBirth,
           });
         } else {
           pdfBlob = await generateBillingPDF({
@@ -397,6 +400,7 @@ const BillingForm = () => {
             first_payment: billData.firstPayment,
             second_payment: billData.secondPayment,
             signature_url: signatureStoragePath,
+            date_of_birth: billData.dateOfBirth,
           });
         }
 
@@ -447,6 +451,8 @@ const BillingForm = () => {
           addDays(toZonedTime(new Date(), ksaTimezone), billData.levelCount * 30),
           "yyyy-MM-dd"
         ),
+        date_of_birth: billData.dateOfBirth || null,
+        nationality: registration.nationality || null,
       };
 
       if (existingStudent?.id) {
@@ -619,6 +625,7 @@ const BillingForm = () => {
             selectedLevels: JSON.parse(sessionStorage.getItem("studentRegistration") || "{}").selectedLevels || [],
             courseDuration: String(billData.levelCount || 1),
             discountPercent: billData.discountPercent,
+            dateOfBirth: billData.dateOfBirth,
           }}
           onSignatureSave={handleSignatureSave}
           signature={signature}
