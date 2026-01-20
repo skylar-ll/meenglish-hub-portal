@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Trash2, Calendar } from "lucide-react";
+import { ArrowLeft, Trash2, Calendar, Award, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InlineStudentField } from "@/components/admin/InlineStudentField";
@@ -38,6 +38,7 @@ interface Student {
   registered_by_employee: string | null;
   teachers?: Teacher[];
   billing?: Billing;
+  hasCertificate?: boolean;
 }
 
 const StudentManagement = () => {
@@ -85,7 +86,7 @@ const StudentManagement = () => {
 
       if (error) throw error;
 
-      // Fetch teachers and billing for each student
+      // Fetch teachers, billing, and certificate status for each student
       const studentsWithData = await Promise.all(
         (data || []).map(async (student) => {
           const { data: teacherLinks } = await supabase
@@ -109,10 +110,17 @@ const StudentManagement = () => {
             .limit(1)
             .maybeSingle();
 
+          // Check if student has any certificate
+          const { count: certCount } = await supabase
+            .from("student_certificates")
+            .select("id", { count: "exact", head: true })
+            .eq("student_id", student.id);
+
           return {
             ...student,
             teachers: teacherData || [],
-            billing: billingData
+            billing: billingData,
+            hasCertificate: (certCount ?? 0) > 0
           };
         })
       );
@@ -292,6 +300,7 @@ const StudentManagement = () => {
                     <th className="text-left p-3 font-semibold">Paid</th>
                     <th className="text-left p-3 font-semibold">Remaining</th>
                     <th className="text-left p-3 font-semibold">Discount</th>
+                    <th className="text-center p-3 font-semibold">Certificate</th>
                     <th className="text-left p-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -376,6 +385,13 @@ const StudentManagement = () => {
                         <span className="font-medium">
                           {student.billing?.discount_percentage || student.discount_percentage || 0}%
                         </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        {student.hasCertificate ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="p-3">
                         <Button

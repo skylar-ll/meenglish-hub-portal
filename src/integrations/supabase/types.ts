@@ -62,6 +62,7 @@ export type Database = {
           course_package: string
           course_start_date: string
           created_at: string
+          date_of_birth: string | null
           discount_percentage: number
           fee_after_discount: number
           first_payment: number | null
@@ -92,6 +93,7 @@ export type Database = {
           course_package: string
           course_start_date: string
           created_at?: string
+          date_of_birth?: string | null
           discount_percentage?: number
           fee_after_discount?: number
           first_payment?: number | null
@@ -122,6 +124,7 @@ export type Database = {
           course_package?: string
           course_start_date?: string
           created_at?: string
+          date_of_birth?: string | null
           discount_percentage?: number
           fee_after_discount?: number
           first_payment?: number | null
