@@ -35,7 +35,7 @@ const StudentLogin = () => {
 
       if (error) throw error;
 
-      // Verify student role
+      // Verify student role - user must have 'student' role to login here
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -43,17 +43,11 @@ const StudentLogin = () => {
         .eq("role", "student")
         .maybeSingle();
 
-      // Disallow teacher accounts from using student login
-      const { data: teacherRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "teacher")
-        .maybeSingle();
-
-      if (!roleData || teacherRole) {
+      // User must have a student role to use this portal
+      // Note: Users can have both student and teacher roles (e.g., staff taking courses)
+      if (!roleData) {
         await supabase.auth.signOut();
-        toast.error("Invalid student account");
+        toast.error("This account does not have student access. Please use the teacher login.");
         return;
       }
 
