@@ -52,10 +52,58 @@ const StudentCertificates = () => {
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [hasRepeatStatus, setHasRepeatStatus] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
     fetchStudentDataAndCertificates();
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const buildPreview = async () => {
+      if (!selectedCert || !studentData) {
+        setPreviewPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+        return;
+      }
+
+      setIsPreviewLoading(true);
+      try {
+        const certificateData = await buildCertificateData(selectedCert);
+        const pdfBlob = await generateCertificatePDF(certificateData);
+        const url = URL.createObjectURL(pdfBlob);
+
+        if (!isMounted) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        setPreviewPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } catch (e) {
+        console.error('Failed to build certificate preview:', e);
+        setPreviewPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+      } finally {
+        if (isMounted) setIsPreviewLoading(false);
+      }
+    };
+
+    buildPreview();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCert, studentData]);
 
   const fetchStudentDataAndCertificates = async () => {
     try {
@@ -135,6 +183,57 @@ const StudentCertificates = () => {
     }
   };
 
+  const buildCertificateData = async (cert: Certificate): Promise<CertificateData> => {
+    if (!studentData) throw new Error('Student data not available');
+
+    // Get the grade from attendance sheet if not on certificate
+    let finalGrade = cert.final_grade || 0;
+    let gradeLetter = cert.grade_letter || '';
+
+    if (cert.attendance_sheet_id) {
+      const { data: sheet } = await supabase
+        .from('teacher_attendance_sheets')
+        .select('final_grades, equivalent')
+        .eq('id', cert.attendance_sheet_id)
+        .single();
+
+      if (sheet) {
+        finalGrade = sheet.final_grades || finalGrade;
+        gradeLetter = sheet.equivalent || gradeLetter;
+      }
+    }
+
+    // Only generate certificate if grade is ≥70%
+    if (finalGrade < 70) {
+      throw new Error('Certificate not available for grades below 70%');
+    }
+
+    const gradeLetters = getGradeLetter(finalGrade);
+
+    return {
+      studentNameEn: studentData.full_name_en,
+      studentNameAr: studentData.full_name_ar,
+      nationalId: studentData.national_id,
+      nationality: studentData.nationality || 'Saudi',
+      dateOfBirth: studentData.date_of_birth
+        ? format(new Date(studentData.date_of_birth), 'dd/MM/yyyy')
+        : 'N/A',
+      courseName: cert.course_name || studentData.program || 'English Language',
+      levelsCompleted: cert.level || '1 to 6',
+      totalHours: 240, // Default hours per the reference
+      finalGrade,
+      gradeLetterEn: gradeLetter || gradeLetters.en,
+      gradeLetterAr: gradeLetters.ar,
+      issueDate: format(new Date(cert.issue_date), 'dd/MM/yyyy'),
+      issueDateHijri: new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date(cert.issue_date)),
+      gender: (studentData.gender === 'male' ? 'male' : 'female') as 'male' | 'female',
+    };
+  };
+
   const handleDownloadCertificate = async (cert: Certificate) => {
     if (!studentData) {
       toast.error('Student data not available');
@@ -143,63 +242,15 @@ const StudentCertificates = () => {
 
     setIsDownloading(true);
     try {
-      // Get the grade from attendance sheet if not on certificate
-      let finalGrade = cert.final_grade || 0;
-      let gradeLetter = cert.grade_letter || '';
-
-      if (cert.attendance_sheet_id) {
-        const { data: sheet } = await supabase
-          .from('teacher_attendance_sheets')
-          .select('final_grades, equivalent')
-          .eq('id', cert.attendance_sheet_id)
-          .single();
-
-        if (sheet) {
-          finalGrade = sheet.final_grades || finalGrade;
-          gradeLetter = sheet.equivalent || gradeLetter;
-        }
-      }
-
-      // Only generate certificate if grade is ≥70%
-      if (finalGrade < 70) {
-        toast.error('Certificate not available for grades below 70%');
-        return;
-      }
-
-      const gradeLetters = getGradeLetter(finalGrade);
-      
-      // Prepare certificate data
-      const certificateData: CertificateData = {
-        studentNameEn: studentData.full_name_en,
-        studentNameAr: studentData.full_name_ar,
-        nationalId: studentData.national_id,
-        nationality: studentData.nationality || 'Saudi',
-        dateOfBirth: studentData.date_of_birth 
-          ? format(new Date(studentData.date_of_birth), 'dd/MM/yyyy')
-          : 'N/A',
-        courseName: cert.course_name || studentData.program || 'English Language',
-        levelsCompleted: cert.level || '1 to 6',
-        totalHours: 240, // Default hours per the reference
-        finalGrade: finalGrade,
-        gradeLetterEn: gradeLetter || gradeLetters.en,
-        gradeLetterAr: gradeLetters.ar,
-        issueDate: format(new Date(cert.issue_date), 'dd/MM/yyyy'),
-        issueDateHijri: new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        }).format(new Date(cert.issue_date)),
-        gender: (studentData.gender === 'male' ? 'male' : 'female') as 'male' | 'female',
-      };
-
+      const certificateData = await buildCertificateData(cert);
       const pdfBlob = await generateCertificatePDF(certificateData);
       const fileName = `${studentData.full_name_en.replace(/\s+/g, '_')}_Certificate.pdf`;
       downloadPdfBlob(pdfBlob, fileName);
-      
+
       toast.success('Certificate downloaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating certificate:', error);
-      toast.error('Failed to generate certificate');
+      toast.error(error?.message || 'Failed to generate certificate');
     } finally {
       setIsDownloading(false);
     }

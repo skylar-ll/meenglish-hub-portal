@@ -1,7 +1,7 @@
 /**
  * Certificate PDF Generator
- * Generates bilingual (English/Arabic) certificate matching the official Modern Education Institute design
- * EXACTLY as per the reference certificate provided
+ * Generates bilingual (English/Arabic) certificate matching the EXACT official 
+ * Modern Education Institute design with decorative corners, seal, and signature
  */
 
 import { jsPDF } from 'jspdf';
@@ -64,7 +64,6 @@ export const getGradeLetter = (grade: number): { en: string; ar: string } => {
 
 // Convert levels to Arabic text
 const getLevelsArabic = (levels: string): string => {
-  // Map numbers to Arabic ordinals
   const arabicOrdinals: Record<string, string> = {
     '1': 'الأول',
     '2': 'الثاني',
@@ -80,7 +79,6 @@ const getLevelsArabic = (levels: string): string => {
     '12': 'الثاني عشر',
   };
   
-  // Check if it's a range like "1 to 6"
   const rangeMatch = levels.match(/(\d+)\s*to\s*(\d+)/i);
   if (rangeMatch) {
     const from = arabicOrdinals[rangeMatch[1]] || rangeMatch[1];
@@ -88,7 +86,6 @@ const getLevelsArabic = (levels: string): string => {
     return `(${from} إلى ${to})`;
   }
   
-  // Single level
   const singleMatch = levels.match(/(\d+)/);
   if (singleMatch) {
     return arabicOrdinals[singleMatch[1]] || singleMatch[1];
@@ -149,215 +146,222 @@ export const generateCertificatePDF = async (data: CertificateData): Promise<Blo
     console.warn('Arabic font loading failed:', fontError);
   }
 
-  // === DECORATIVE CORNER TRIANGLES ===
-  // Top-left dark blue triangle
-  doc.setFillColor(26, 54, 93); // Navy blue
-  doc.triangle(0, 0, 50, 0, 0, 40, 'F');
+  // === DECORATIVE CORNER TRIANGLES (Exactly as reference) ===
+  // Top-left: Dark navy triangle
+  doc.setFillColor(26, 54, 93); // Navy blue #1A365D
+  doc.triangle(0, 0, 55, 0, 0, 45, 'F');
 
-  // Bottom-left: Two triangles (navy + red)
-  doc.setFillColor(26, 54, 93); // Navy blue
-  doc.triangle(0, pageHeight - 60, 0, pageHeight, 50, pageHeight, 'F');
+  // Bottom-left: Navy + Red triangles
+  doc.setFillColor(26, 54, 93); // Navy
+  doc.triangle(0, pageHeight - 65, 0, pageHeight, 55, pageHeight, 'F');
+  doc.setFillColor(178, 34, 52); // Red #B22234
+  doc.triangle(0, pageHeight - 38, 0, pageHeight, 32, pageHeight, 'F');
+
+  // Bottom-right: Navy + Red triangles
+  doc.setFillColor(26, 54, 93); // Navy
+  doc.triangle(pageWidth, pageHeight - 80, pageWidth, pageHeight, pageWidth - 70, pageHeight, 'F');
   doc.setFillColor(178, 34, 52); // Red
-  doc.triangle(0, pageHeight - 35, 0, pageHeight, 30, pageHeight, 'F');
+  doc.triangle(pageWidth, pageHeight - 48, pageWidth, pageHeight, pageWidth - 42, pageHeight, 'F');
 
-  // Bottom-right: Two triangles (navy + red)
-  doc.setFillColor(26, 54, 93); // Navy blue
-  doc.triangle(pageWidth, pageHeight - 75, pageWidth, pageHeight, pageWidth - 65, pageHeight, 'F');
-  doc.setFillColor(178, 34, 52); // Red
-  doc.triangle(pageWidth, pageHeight - 45, pageWidth, pageHeight, pageWidth - 40, pageHeight, 'F');
-
-  // === LOGO - Top center with "EDUCATION" text ===
+  // === LOGO - Top center ===
   try {
     const logoBase64 = await getLogoBase64();
-    const logoWidth = 28;
-    const logoHeight = 22;
+    const logoWidth = 32;
+    const logoHeight = 26;
     const logoX = (pageWidth - logoWidth) / 2;
-    const logoY = 8;
+    const logoY = 6;
     doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
   } catch (logoError) {
     console.warn('Logo loading failed:', logoError);
   }
 
-  // === TOP-RIGHT HEADER (Arabic - Saudi Arabia info) ===
+  // === TOP-RIGHT HEADER (Arabic - Saudi Arabia) ===
   if (hasArabicFont) {
     doc.setFont('Amiri', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
-    doc.text('المملكة العربية السعودية', pageWidth - 12, 12, { align: 'right' });
-    doc.setFontSize(7);
-    doc.text('تحت إشراف المؤسسة العامة للتدريب التقني والمهني', pageWidth - 12, 17, { align: 'right' });
-    doc.text('معهد التعليم الحديث', pageWidth - 12, 22, { align: 'right' });
-    doc.text('ترخيص رقم: 19187872660000', pageWidth - 12, 27, { align: 'right' });
+    doc.text('المملكة العربية السعودية', pageWidth - 15, 14, { align: 'right' });
+    doc.setFontSize(8);
+    doc.text('تحت إشراف المؤسسة العامة للتدريب التقني والمهني', pageWidth - 15, 20, { align: 'right' });
+    doc.text('معهد التعليم الحديث', pageWidth - 15, 26, { align: 'right' });
+    doc.text('ترخيص رقم: 19187872660000', pageWidth - 15, 32, { align: 'right' });
   }
 
-  // === ARABIC SUBTITLE (Gold/Brown color) ===
-  doc.setTextColor(139, 90, 43); // Golden brown
+  // === ARABIC TITLE (Golden brown) ===
   if (hasArabicFont) {
+    doc.setTextColor(139, 90, 43); // Golden brown #8B5A2B
     doc.setFont('Amiri', 'normal');
-    doc.setFontSize(18);
-    doc.text('شهادة إجتياز دورة في اللغة الإنجليزية', pageWidth / 2, 48, { align: 'center' });
+    doc.setFontSize(20);
+    doc.text('شهادة إجتياز دورة في اللغة الإنجليزية', pageWidth / 2, 50, { align: 'center' });
   }
 
-  // === MAIN TITLE - "CERTIFICATE" ===
+  // === MAIN TITLE - "CERTIFICATE" (Large, italic, golden) ===
   doc.setTextColor(139, 90, 43); // Golden brown
   doc.setFont('times', 'bolditalic');
-  doc.setFontSize(56);
+  doc.setFontSize(52);
   doc.text('CERTIFICATE', pageWidth / 2, 72, { align: 'center' });
 
   // "of Completion" subtitle
   doc.setFont('times', 'italic');
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setTextColor(80, 80, 80);
-  doc.text('of Completion', pageWidth / 2, 83, { align: 'center' });
+  doc.text('of Completion', pageWidth / 2, 82, { align: 'center' });
 
   // === CERTIFICATE BODY - Two columns ===
-  const leftColX = 22;
-  const rightColX = pageWidth - 22;
+  const leftX = 20;
+  const rightX = pageWidth - 20;
   let y = 100;
   const lineHeight = 7;
 
-  // Gender-specific titles
-  const genderTitleEn = data.gender === 'male' ? 'Mr.' : 'Ms.';
-  const genderTitleAr = data.gender === 'male' ? 'بأن المتدرب :' : 'بأن المتدربة :';
+  // Gender prefix
+  const genderEn = data.gender === 'male' ? 'Mr.' : 'Ms.';
+  const genderAr = data.gender === 'male' ? 'بأن المتدرب :' : 'بأن المتدربة :';
   const nationalityAr = getNationalityArabic(data.nationality);
   const levelsAr = getLevelsArabic(data.levelsCompleted);
 
-  // Line 1: Institute certification
+  // === LEFT COLUMN (English) ===
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(50, 50, 50);
-  doc.text('Modern Education Institute certifies that', leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.text('يشهد معهد التعليم الحديث', rightColX, y, { align: 'right' });
-  }
-
+  
+  // Line 1
+  doc.text('Modern Education Institute certifies that', leftX, y);
+  
+  // Line 2 - Student name (bold)
   y += lineHeight;
-  // Line 2: Student name (bold)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text(`${genderTitleEn} ${data.studentNameEn}.`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.setFontSize(12);
-    doc.text(`${genderTitleAr} ${data.studentNameAr}.`, rightColX, y, { align: 'right' });
-  }
-
+  doc.text(`${genderEn} ${data.studentNameEn}.`, leftX, y);
+  
+  // Line 3 - Nationality and ID
   y += lineHeight;
-  // Line 3: Nationality and ID
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.text(`${data.nationality} nationality. ID No. ${data.nationalId}.`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.text(`${nationalityAr} الجنسية بموجب هوية رقم/ ${data.nationalId}.`, rightColX, y, { align: 'right' });
-  }
-
+  doc.text(`${data.nationality} nationality. ID No. ${data.nationalId}.`, leftX, y);
+  
+  // Line 4 - DOB
   y += lineHeight;
-  // Line 4: Date of birth
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Date of birth: ${data.dateOfBirth}.`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.text(`تاريخ ميلاد: ${data.dateOfBirth}.`, rightColX, y, { align: 'right' });
-  }
-
+  doc.text(`Date of birth: ${data.dateOfBirth}.`, leftX, y);
+  
+  // Line 5 - Program
   y += lineHeight;
-  // Line 5: Program completion
-  doc.text(`Has completed a ${formatPdfNumber(data.totalHours)}-hour English Language program`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.text(`قد أكملت دورة اللغة الإنجليزية للمستويات ${levelsAr}`, rightColX, y, { align: 'right' });
-  }
-
+  doc.text(`Has completed a ${formatPdfNumber(data.totalHours)}-hour English Language program`, leftX, y);
+  
+  // Line 6 - Levels
   y += lineHeight;
-  // Line 6: Levels
-  doc.text(`for levels (${data.levelsCompleted})`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.text(`بواقع ${formatPdfNumber(data.totalHours)} ساعة`, rightColX, y, { align: 'right' });
-  }
-
+  doc.text(`for levels (${data.levelsCompleted})`, leftX, y);
+  
+  // Line 7 - Grade (RED and bold)
   y += lineHeight;
-  // Line 7: Grade (highlighted)
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(178, 34, 52); // Red for emphasis
-  doc.text(`And achieved a percentage of ${formatPdfNumber(data.finalGrade)}% and a grade of ${data.gradeLetterEn}.`, leftColX, y);
-  if (hasArabicFont) {
-    doc.setFont('Amiri', 'normal');
-    doc.setTextColor(178, 34, 52);
-    doc.text(`بتقدير ${data.gradeLetterAr} ونسبة ${formatPdfNumber(data.finalGrade)}%.`, rightColX, y, { align: 'right' });
-  }
+  doc.setTextColor(178, 34, 52); // Red
+  doc.text(`And achieved a percentage of ${formatPdfNumber(data.finalGrade)}% and a grade of ${data.gradeLetterEn}.`, leftX, y);
 
-  // === ISSUE DATE (Arabic side - right) ===
-  y += lineHeight * 2;
-  doc.setTextColor(50, 50, 50);
+  // === RIGHT COLUMN (Arabic) ===
   if (hasArabicFont) {
+    let yAr = 100;
+    
     doc.setFont('Amiri', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(50, 50, 50);
+    
+    // Line 1
+    doc.text('يشهد معهد التعليم الحديث', rightX, yAr, { align: 'right' });
+    
+    // Line 2 - Student name
+    yAr += lineHeight;
+    doc.setFontSize(12);
+    doc.text(`${genderAr} ${data.studentNameAr}.`, rightX, yAr, { align: 'right' });
+    
+    // Line 3 - Nationality and ID
+    yAr += lineHeight;
+    doc.setFontSize(11);
+    doc.text(`${nationalityAr} الجنسية بموجب هوية رقم/ ${data.nationalId}.`, rightX, yAr, { align: 'right' });
+    
+    // Line 4 - DOB
+    yAr += lineHeight;
+    doc.text(`تاريخ ميلاد: ${data.dateOfBirth}.`, rightX, yAr, { align: 'right' });
+    
+    // Line 5 - Program
+    yAr += lineHeight;
+    doc.text(`قد أكملت دورة اللغة الإنجليزية للمستويات ${levelsAr}`, rightX, yAr, { align: 'right' });
+    
+    // Line 6 - Hours
+    yAr += lineHeight;
+    doc.text(`بواقع ${formatPdfNumber(data.totalHours)} ساعة`, rightX, yAr, { align: 'right' });
+    
+    // Line 7 - Grade (RED)
+    yAr += lineHeight;
+    doc.setTextColor(178, 34, 52); // Red
+    doc.text(`بتقدير ${data.gradeLetterAr} ونسبة ${formatPdfNumber(data.finalGrade)}%.`, rightX, yAr, { align: 'right' });
+    
+    // === DATE (Arabic side) ===
+    yAr += lineHeight * 2;
+    doc.setTextColor(50, 50, 50);
     doc.setFontSize(10);
-    // Format: م 2022/3/200 الموافق 02/04/1447
-    doc.text(`م ${data.issueDate} الموافق ${data.issueDateHijri}`, rightColX, y, { align: 'right' });
+    // Format: م YYYY/MM/DD الموافق Hijri date
+    doc.text(`م ${data.issueDate} الموافق ${data.issueDateHijri}`, rightX, yAr, { align: 'right' });
   }
 
-  // === INSTITUTE SEAL (bottom left) ===
-  const sealCenterX = 75;
-  const sealCenterY = pageHeight - 40;
-  const sealRadius = 22;
+  // === INSTITUTE SEAL (Bottom left area) ===
+  const sealX = 75;
+  const sealY = pageHeight - 42;
+  const sealRadius = 24;
 
   // Outer circle
   doc.setDrawColor(100, 100, 100);
-  doc.setLineWidth(1);
-  doc.circle(sealCenterX, sealCenterY, sealRadius, 'S');
-
+  doc.setLineWidth(1.2);
+  doc.circle(sealX, sealY, sealRadius, 'S');
+  
   // Inner circle
-  doc.setLineWidth(0.5);
-  doc.circle(sealCenterX, sealCenterY, sealRadius - 4, 'S');
+  doc.setLineWidth(0.6);
+  doc.circle(sealX, sealY, sealRadius - 5, 'S');
 
   // Seal text
   doc.setTextColor(80, 80, 80);
+  
+  // Top curve - "MODERN EDUCATION"
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6);
-  
-  // Top arc text "MODERN EDUCATION"
-  doc.text('M O D E R N', sealCenterX - 10, sealCenterY - 16);
-  doc.text('E D U C A T I O N', sealCenterX - 12, sealCenterY - 12);
+  doc.text('M O D E R N   E D U C A T I O N', sealX, sealY - 14, { align: 'center' });
   
   if (hasArabicFont) {
     doc.setFont('Amiri', 'normal');
-    doc.setFontSize(8);
-    doc.text('اعتماد', sealCenterX, sealCenterY - 5, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text('اعتماد', sealX, sealY - 5, { align: 'center' });
     doc.setFontSize(7);
-    doc.text('معهد التعليم الحديث للغات', sealCenterX, sealCenterY + 2, { align: 'center' });
-    doc.text('المؤسسة العامة للتدريب', sealCenterX, sealCenterY + 8, { align: 'center' });
+    doc.text('معهد التعليم الحديث للغات', sealX, sealY + 2, { align: 'center' });
+    doc.text('المؤسسة العامة للتدريب', sealX, sealY + 8, { align: 'center' });
   }
   
+  // TVTC registration
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(5);
-  doc.text('316722343201620', sealCenterX, sealCenterY + 14, { align: 'center' });
-  doc.text('T  V  T  C', sealCenterX, sealCenterY + 18, { align: 'center' });
+  doc.text('316722343201620', sealX, sealY + 14, { align: 'center' });
+  doc.setFontSize(6);
+  doc.text('T  V  T  C', sealX, sealY + 18, { align: 'center' });
 
-  // === SIGNATURE (bottom right) ===
-  const signX = pageWidth - 60;
-  const signY = pageHeight - 35;
+  // === SIGNATURE (Bottom right) ===
+  const sigX = pageWidth - 55;
+  const sigY = pageHeight - 40;
 
-  // Signature line (wavy/cursive style simulation)
-  doc.setDrawColor(60, 60, 60);
-  doc.setLineWidth(0.3);
-  
-  // Simple signature line
-  doc.line(signX - 25, signY, signX + 25, signY);
+  // Signature line (simulated cursive)
+  doc.setDrawColor(70, 70, 70);
+  doc.setLineWidth(0.4);
+  // Simple curved line to simulate signature
+  doc.line(sigX - 22, sigY - 2, sigX + 22, sigY - 2);
 
-  // Signatory name
+  // Name "AHMED ALI"
   doc.setFont('times', 'bolditalic');
-  doc.setFontSize(14);
+  doc.setFontSize(15);
   doc.setTextColor(50, 50, 50);
-  doc.text('AHMED ALI', signX, signY + 8, { align: 'center' });
+  doc.text('AHMED ALI', sigX, sigY + 6, { align: 'center' });
 
-  // Title
+  // Title "Associate Director" in red
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(178, 34, 52); // Red
-  doc.text('Associate Director', signX, signY + 15, { align: 'center' });
+  doc.text('Associate Director', sigX, sigY + 13, { align: 'center' });
 
   // Return as blob
   return doc.output('blob');
