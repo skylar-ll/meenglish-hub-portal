@@ -112,10 +112,26 @@ const TeacherLogin = () => {
 
       if (error) throw error;
 
-      // Ensure teacher role exists for this user (idempotent)
-      await supabase
+      // Verify teacher role (and make sure this isn't a student account)
+      const { data: teacherRole } = await supabase
         .from("user_roles")
-        .upsert({ user_id: data.user.id, role: "teacher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "teacher")
+        .maybeSingle();
+
+      const { data: studentRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (!teacherRole || studentRole) {
+        await supabase.auth.signOut();
+        toast.error("Invalid teacher account");
+        return;
+      }
 
       toast.success(t('teacher.loginSuccess'));
       navigate("/teacher/dashboard");

@@ -43,7 +43,15 @@ const StudentLogin = () => {
         .eq("role", "student")
         .maybeSingle();
 
-      if (!roleData) {
+      // Disallow teacher accounts from using student login
+      const { data: teacherRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "teacher")
+        .maybeSingle();
+
+      if (!roleData || teacherRole) {
         await supabase.auth.signOut();
         toast.error("Invalid student account");
         return;
