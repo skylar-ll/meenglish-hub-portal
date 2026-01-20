@@ -59,7 +59,23 @@ const StudentCertificates = () => {
 
   const fetchStudentDataAndCertificates = async () => {
     try {
-      const studentEmail = sessionStorage.getItem('studentEmail');
+      // Prefer authenticated session email; fall back to cached studentRegistration.
+      const { data: { session } } = await supabase.auth.getSession();
+      const sessionEmail = session?.user?.email ?? null;
+
+      let studentEmail = sessionEmail;
+      if (!studentEmail) {
+        const cached = sessionStorage.getItem("studentRegistration");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            studentEmail = parsed?.email ?? null;
+          } catch {
+            // ignore cache parse errors
+          }
+        }
+      }
+
       if (!studentEmail) {
         toast.error('Please login first');
         navigate('/student/login');
