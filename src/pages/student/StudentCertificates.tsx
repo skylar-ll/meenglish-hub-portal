@@ -518,66 +518,35 @@ const StudentCertificates = () => {
           </div>
         )}
 
-        {/* Certificate Detail Modal */}
+        {/* Certificate Detail Modal - Shows actual PDF preview */}
         <Dialog open={!!selectedCert} onOpenChange={() => setSelectedCert(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle className="text-center">Certificate of Completion</DialogTitle>
+              <DialogTitle className="text-center">Certificate Preview</DialogTitle>
             </DialogHeader>
             
             {selectedCert && (
-              <div className="space-y-6">
-                {/* Certificate Preview */}
-                <div className="relative p-8 bg-gradient-to-br from-card via-background to-muted rounded-lg border-4 border-double border-primary/30">
-                  {/* Decorative corners */}
-                  <div className="absolute top-0 left-0 w-16 h-16 bg-primary/10 rounded-br-full" />
-                  <div className="absolute bottom-0 right-0 w-16 h-16 bg-destructive/10 rounded-tl-full" />
-                  
-                  <div className="text-center relative z-10">
-                    <p className="text-sm text-muted-foreground mb-2">Modern Education Institute</p>
-                    
-                    <h2 className="text-3xl font-serif font-bold text-primary mb-2">
-                      CERTIFICATE
-                    </h2>
-                    <p className="text-lg text-muted-foreground mb-6">of Completion</p>
-                    
-                    <p className="text-muted-foreground mb-2">This is to certify that</p>
-                    
-                    <h3 className="text-2xl font-bold mb-1">
-                      {studentData?.full_name_en}
-                    </h3>
-                    <p className="text-lg text-muted-foreground mb-4" dir="rtl">
-                      {studentData?.full_name_ar}
-                    </p>
-                    
-                    <p className="text-muted-foreground mb-2">
-                      has successfully completed
-                    </p>
-                    
-                    {selectedCert.course_name && (
-                      <p className="text-xl font-semibold text-primary mb-1">
-                        {selectedCert.course_name}
-                      </p>
-                    )}
-                    
-                    {selectedCert.level && (
-                      <p className="text-lg mb-4">
-                        Level: {selectedCert.level}
-                      </p>
-                    )}
-                    
-                    {selectedCert.final_grade && (
-                      <p className="text-xl font-bold text-success mb-4">
-                        Grade: {selectedCert.final_grade}% ({selectedCert.grade_letter || getGradeLetter(selectedCert.final_grade).en})
-                      </p>
-                    )}
-                    
-                    <div className="pt-6 border-t border-border">
-                      <p className="text-sm text-muted-foreground">
-                        Date of Issue: {format(new Date(selectedCert.issue_date), 'MMMM dd, yyyy')}
-                      </p>
+              <div className="flex flex-col flex-1 min-h-0 space-y-4">
+                {/* PDF Preview - actual PDF render */}
+                <div className="flex-1 min-h-[500px] bg-muted rounded-lg overflow-hidden relative">
+                  {isPreviewLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Generating preview...</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : previewPdfUrl ? (
+                    <iframe
+                      src={previewPdfUrl}
+                      className="w-full h-full border-0"
+                      title="Certificate Preview"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <p className="text-muted-foreground">Unable to load preview</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Download Button */}
