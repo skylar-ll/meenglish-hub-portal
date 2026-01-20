@@ -245,7 +245,8 @@ export const generateCertificatePDF = async (data: CertificateData): Promise<Blo
   
   // Line 5 - Program
   y += lineHeight;
-  doc.text(`Has completed a ${formatPdfNumber(data.totalHours)}-hour English Language program`, leftX, y);
+  const courseNameEn = (data.courseName || 'English Language').trim();
+  doc.text(`Has completed a ${formatPdfNumber(data.totalHours)}-hour ${courseNameEn} program`, leftX, y);
   
   // Line 6 - Levels
   y += lineHeight;
@@ -284,7 +285,8 @@ export const generateCertificatePDF = async (data: CertificateData): Promise<Blo
     
     // Line 5 - Program
     yAr += lineHeight;
-    doc.text(`قد أكملت دورة اللغة الإنجليزية للمستويات ${levelsAr}`, rightX, yAr, { align: 'right' });
+    const courseNameAr = /[\u0600-\u06FF]/.test(data.courseName) ? data.courseName : 'اللغة الإنجليزية';
+    doc.text(`قد أكملت دورة ${courseNameAr} للمستويات ${levelsAr}`, rightX, yAr, { align: 'right' });
     
     // Line 6 - Hours
     yAr += lineHeight;
