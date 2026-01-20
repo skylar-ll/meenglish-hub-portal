@@ -21,7 +21,7 @@ export default function PdfCanvasPreview({ blob, className }: Props) {
   const renderTokenRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
-  const blobKey = useMemo(() => `${blob.size}-${blob.type}-${blob.lastModified ?? ""}`, [blob]);
+  const blobKey = useMemo(() => `${blob.size}-${blob.type}`, [blob]);
 
   useEffect(() => {
     let isActive = true;
@@ -57,7 +57,7 @@ export default function PdfCanvasPreview({ blob, className }: Props) {
         canvas.style.height = `${Math.floor(viewport.height)}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
       } catch (e: any) {
         console.error("PDF preview render error:", e);
         if (!isActive) return;
