@@ -180,6 +180,9 @@ export const generateBillingPDFArabic = async (billingData: BillingData): Promis
   // Course Start Date
   addLabelValue('تاريخ بدء الدورة', format(new Date(billingData.course_start_date), 'MM/dd/yyyy'));
 
+  // Date of Birth
+  addLabelValue('تاريخ الميلاد', billingData.date_of_birth ? format(new Date(billingData.date_of_birth), 'MM/dd/yyyy') : 'غير متوفر');
+
   yPos += 10;
 
   // Financial Details Header
