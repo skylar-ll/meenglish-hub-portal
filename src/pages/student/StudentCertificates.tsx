@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Award, ArrowLeft, Download, AlertTriangle, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { generateCertificatePDF, getGradeLetter, CertificateData } from "@/components/certificate/CertificatePDFGenerator";
 import { downloadPdfBlob } from "@/lib/pdfDownload";
+import PdfCanvasPreview from "@/components/shared/PdfCanvasPreview";
 import { toast } from "sonner";
 
 interface Certificate {
@@ -131,7 +132,7 @@ const StudentCertificates = () => {
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [hasRepeatStatus, setHasRepeatStatus] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState<Blob | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
@@ -143,10 +144,7 @@ const StudentCertificates = () => {
 
     const buildPreview = async () => {
       if (!selectedCert || !studentData) {
-        setPreviewPdfUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return null;
-        });
+        setPreviewPdfBlob(null);
         return;
       }
 
@@ -154,23 +152,11 @@ const StudentCertificates = () => {
       try {
         const certificateData = await buildCertificateData(selectedCert);
         const pdfBlob = await generateCertificatePDF(certificateData);
-        const url = URL.createObjectURL(pdfBlob);
-
-        if (!isMounted) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-
-        setPreviewPdfUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
+         if (!isMounted) return;
+         setPreviewPdfBlob(pdfBlob);
       } catch (e) {
         console.error('Failed to build certificate preview:', e);
-        setPreviewPdfUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return null;
-        });
+         setPreviewPdfBlob(null);
       } finally {
         if (isMounted) setIsPreviewLoading(false);
       }
@@ -518,16 +504,18 @@ const StudentCertificates = () => {
           </div>
         )}
 
-        {/* Certificate Detail Modal - Shows actual PDF preview */}
+        {/* Certificate Detail Modal - PDF preview rendered via PDF.js (works on all browsers) */}
         <Dialog open={!!selectedCert} onOpenChange={() => setSelectedCert(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-center">Certificate Preview</DialogTitle>
+              <DialogDescription className="sr-only">
+                Preview the certificate PDF and download it.
+              </DialogDescription>
             </DialogHeader>
-            
+
             {selectedCert && (
               <div className="flex flex-col flex-1 min-h-0 space-y-4">
-                {/* PDF Preview - actual PDF render */}
                 <div className="flex-1 min-h-[500px] bg-muted rounded-lg overflow-hidden relative">
                   {isPreviewLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -536,12 +524,10 @@ const StudentCertificates = () => {
                         <p className="text-sm text-muted-foreground">Generating preview...</p>
                       </div>
                     </div>
-                  ) : previewPdfUrl ? (
-                    <iframe
-                      src={previewPdfUrl}
-                      className="w-full h-full border-0"
-                      title="Certificate Preview"
-                    />
+                  ) : previewPdfBlob ? (
+                    <div className="absolute inset-0 overflow-auto">
+                      <PdfCanvasPreview blob={previewPdfBlob} className="w-full" />
+                    </div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <p className="text-muted-foreground">Unable to load preview</p>
@@ -549,9 +535,8 @@ const StudentCertificates = () => {
                   )}
                 </div>
 
-                {/* Download Button */}
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="lg"
                   onClick={() => handleDownloadCertificate(selectedCert)}
                   disabled={isDownloading}
