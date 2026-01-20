@@ -201,6 +201,18 @@ export const generateBillingPDF = async (billingData: BillingData): Promise<Blob
   doc.setFont('helvetica', 'bold');
   doc.text(format(new Date(billingData.course_start_date), 'MM/dd/yyyy'), rightCol, yPos + 18);
 
+  yPos += lineHeight;
+
+  // Date of Birth
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Date of Birth', leftCol, yPos);
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.text(billingData.date_of_birth ? format(new Date(billingData.date_of_birth), 'MM/dd/yyyy') : 'N/A', leftCol, yPos + 18);
+
   yPos += 60;
 
   // Financial Details Section

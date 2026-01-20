@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, BookOpen, CalendarRange, Video } from "lucide-react";
+import { ArrowLeft, Users, GraduationCap, CreditCard, TrendingUp, LogOut, UserCheck, UserPlus, Calendar, FileText, Download, BookOpen, CalendarRange, Video, RefreshCw, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ const AdminDashboard = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [refreshingCertificates, setRefreshingCertificates] = useState(false);
   const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
 
   const fetchData = async () => {
@@ -151,6 +152,80 @@ const AdminDashboard = () => {
     const { supabase } = await import("@/integrations/supabase/client");
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleRefreshCertificates = async () => {
+    setRefreshingCertificates(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      // Fetch all attendance sheets with status 'Passed' and grade >= 70
+      const { data: sheets, error: sheetsError } = await supabase
+        .from("teacher_attendance_sheets")
+        .select("id, student_id, teacher_id, final_grades, equivalent, status")
+        .ilike("status", "Passed")
+        .gte("final_grades", 70);
+
+      if (sheetsError) throw sheetsError;
+
+      let updated = 0;
+      let removed = 0;
+
+      for (const sheet of sheets || []) {
+        // Get student info
+        const { data: student } = await supabase
+          .from("students")
+          .select("program, course_level")
+          .eq("id", sheet.student_id)
+          .maybeSingle();
+
+        if (student) {
+          // Upsert certificate
+          const { error: upsertError } = await supabase
+            .from("student_certificates")
+            .upsert({
+              student_id: sheet.student_id,
+              teacher_id: sheet.teacher_id,
+              attendance_sheet_id: sheet.id,
+              course_name: student.program,
+              level: student.course_level,
+              issue_date: new Date().toISOString().split('T')[0],
+              certificate_type: 'passing',
+              final_grade: sheet.final_grades,
+              grade_letter: sheet.equivalent || null
+            }, { onConflict: 'attendance_sheet_id' });
+
+          if (!upsertError) updated++;
+        }
+      }
+
+      // Remove certificates for sheets that no longer qualify
+      const { data: allCerts } = await supabase
+        .from("student_certificates")
+        .select("id, attendance_sheet_id");
+
+      for (const cert of allCerts || []) {
+        if (cert.attendance_sheet_id) {
+          const { data: sheet } = await supabase
+            .from("teacher_attendance_sheets")
+            .select("status, final_grades")
+            .eq("id", cert.attendance_sheet_id)
+            .maybeSingle();
+
+          if (!sheet || sheet.status?.toLowerCase() !== 'passed' || (sheet.final_grades || 0) < 70) {
+            await supabase.from("student_certificates").delete().eq("id", cert.id);
+            removed++;
+          }
+        }
+      }
+
+      toast.success(`Certificates refreshed: ${updated} updated, ${removed} removed`);
+    } catch (error) {
+      console.error("Error refreshing certificates:", error);
+      toast.error("Failed to refresh certificates");
+    } finally {
+      setRefreshingCertificates(false);
+    }
   };
 
   const stats = [
@@ -321,6 +396,20 @@ const AdminDashboard = () => {
             >
               <Video className="w-5 h-5" />
               Course Management
+            </Button>
+            <Button 
+              onClick={handleRefreshCertificates}
+              variant="outline"
+              className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
+              size="lg"
+              disabled={refreshingCertificates}
+            >
+              {refreshingCertificates ? (
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              ) : (
+                <Award className="w-5 h-5" />
+              )}
+              Refresh Certificates
             </Button>
           </div>
         </Card>
