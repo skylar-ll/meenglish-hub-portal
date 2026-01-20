@@ -208,6 +208,59 @@ const StudentCertificates = () => {
       throw new Error('Certificate not available for grades below 70%');
     }
 
+    // Fetch billing data for dynamic hours and course info
+    // Priority: 1) Billing table, 2) Student table, 3) Defaults
+    let levelCount = 6; // Default
+    let courseName = 'English Language';
+    let levelsCompleted = '1 to 6';
+
+    // Try to get billing data first (most accurate from registration)
+    if (studentData.id) {
+      const { data: billingData } = await supabase
+        .from('billing')
+        .select('level_count, course_package, time_slot')
+        .eq('student_id', studentData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (billingData) {
+        // Priority 1: Billing data
+        levelCount = billingData.level_count || levelCount;
+        courseName = billingData.course_package || courseName;
+      }
+    }
+
+    // Priority 2: Student data (fallback if billing doesn't have it)
+    if (courseName === 'English Language') {
+      courseName = studentData.program || courseName;
+    }
+
+    // Priority 3: Certificate data (override if specifically set)
+    courseName = cert.course_name || courseName;
+
+    // Calculate levels range from student's course_level or certificate level
+    if (cert.level) {
+      levelsCompleted = cert.level;
+    } else if (studentData.course_level) {
+      // Parse course_level to determine range
+      const levelMatch = studentData.course_level.match(/level[- ]?(\d+)/i);
+      if (levelMatch) {
+        const currentLevel = parseInt(levelMatch[1], 10);
+        levelsCompleted = currentLevel > 1 ? `1 to ${currentLevel}` : '1';
+      } else {
+        levelsCompleted = studentData.course_level;
+      }
+    }
+
+    // If we have level_count, use it to calculate proper levels range
+    if (levelCount && levelCount > 0) {
+      levelsCompleted = levelCount > 1 ? `1 to ${levelCount}` : '1';
+    }
+
+    // Calculate total hours: 40 hours per level (standard)
+    const totalHours = levelCount * 40;
+
     const gradeLetters = getGradeLetter(finalGrade);
 
     return {
@@ -218,9 +271,9 @@ const StudentCertificates = () => {
       dateOfBirth: studentData.date_of_birth
         ? format(new Date(studentData.date_of_birth), 'dd/MM/yyyy')
         : 'N/A',
-      courseName: cert.course_name || studentData.program || 'English Language',
-      levelsCompleted: cert.level || '1 to 6',
-      totalHours: 240, // Default hours per the reference
+      courseName,
+      levelsCompleted,
+      totalHours,
       finalGrade,
       gradeLetterEn: gradeLetter || gradeLetters.en,
       gradeLetterAr: gradeLetters.ar,
