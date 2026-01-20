@@ -44,10 +44,89 @@ interface AttendanceSheet {
   equivalent: string | null;
 }
 
+interface BillingInfo {
+  level_count: number | null;
+  course_package: string;
+}
+
+const extractLevelNumbersFromText = (text?: string | null): number[] => {
+  if (!text) return [];
+  const nums: number[] = [];
+  const re = /level[-\s]?(\d+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const n = Number.parseInt(m[1], 10);
+    if (!Number.isNaN(n)) nums.push(n);
+  }
+  return nums;
+};
+
+const extractFirstNumber = (text?: string | null): number | null => {
+  if (!text) return null;
+  const m = text.match(/(\d+)/);
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 10);
+  return Number.isNaN(n) ? null : n;
+};
+
+const computeCertificateProgramDetails = (args: {
+  billing: BillingInfo | null;
+  student: StudentData;
+  cert: Certificate;
+}) => {
+  const { billing, student, cert } = args;
+
+  const billingCourse = billing?.course_package?.trim() ?? '';
+  const billingLevelCount = billing?.level_count ?? null;
+
+  const levelNums = extractLevelNumbersFromText(billingCourse);
+  const hasExplicitLevelsInBilling = levelNums.length > 0;
+
+  let fromLevel: number | null = null;
+  let toLevel: number | null = null;
+
+  if (hasExplicitLevelsInBilling) {
+    fromLevel = Math.min(...levelNums);
+    toLevel = Math.max(...levelNums);
+  } else {
+    const start = extractFirstNumber(student.course_level) ?? extractFirstNumber(cert.level);
+    if (start && billingLevelCount) {
+      fromLevel = start;
+      toLevel = start + billingLevelCount - 1;
+    } else if (billingLevelCount) {
+      fromLevel = 1;
+      toLevel = billingLevelCount;
+    }
+  }
+
+  const levelsCompleted =
+    fromLevel && toLevel
+      ? fromLevel === toLevel
+        ? `${fromLevel}`
+        : `${fromLevel} to ${toLevel}`
+      : cert.level || student.course_level || '1 to 6';
+
+  const totalLevelsForHours =
+    fromLevel && toLevel
+      ? toLevel - fromLevel + 1
+      : billingLevelCount || student.total_levels || 6;
+
+  const totalHours = totalLevelsForHours * 40;
+
+  const isBillingCourseJustLevelList = /level[-\s]?\d+/i.test(billingCourse);
+  const courseName =
+    (!isBillingCourseJustLevelList && billingCourse)
+      ? billingCourse
+      : (student.program || cert.course_name || 'English Language');
+
+  return { courseName, levelsCompleted, totalHours };
+};
+
 const StudentCertificates = () => {
   const navigate = useNavigate();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [hasRepeatStatus, setHasRepeatStatus] = useState(false);
