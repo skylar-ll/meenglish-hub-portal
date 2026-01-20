@@ -43,40 +43,9 @@ const TeacherLogin = () => {
     );
   };
 
-  // Check if already logged in as a teacher (not admin)
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Check if user is an admin - if so, don't redirect (they might be viewing the page)
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-
-        // If user is admin, don't auto-redirect - let them stay on this page
-        if (adminRole) {
-          return;
-        }
-
-        // Check if user has teacher role
-        const { data: teacherRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "teacher")
-          .maybeSingle();
-
-        // Only redirect to dashboard if they're a teacher (not admin)
-        if (teacherRole) {
-          navigate("/teacher/dashboard");
-        }
-      }
-    };
-    checkSession();
-  }, [navigate]);
+  // Intentionally no auto-redirect here.
+  // If a teacher is already logged in and wants to switch accounts,
+  // they should be able to stay on this page and log in again.
 
   // Auto-translate Arabic name to English
   useEffect(() => {
