@@ -158,13 +158,15 @@ serve(async (req) => {
       }
     }
 
+    // SECURITY: Never return passwords in API responses
+    // Admin should communicate credentials through a secure channel
     return new Response(
       JSON.stringify({
         success: true,
         teacher: {
           id: newUser.user.id,
           email: email,
-          password: password,
+          // Password intentionally omitted for security
         }
       }),
       {

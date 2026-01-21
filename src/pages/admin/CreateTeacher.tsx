@@ -24,7 +24,6 @@ export default function CreateTeacher() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [createdTeacher, setCreatedTeacher] = useState<{
     email: string;
-    password: string;
     id: string;
   } | null>(null);
 
@@ -126,7 +125,6 @@ export default function CreateTeacher() {
 
       setCreatedTeacher({
         email: result.teacher.email,
-        password: result.teacher.password,
         id: result.teacher.id,
       });
       setShowPasswordModal(true);
@@ -238,7 +236,7 @@ export default function CreateTeacher() {
             <DialogHeader>
               <DialogTitle>Teacher Account Created Successfully</DialogTitle>
               <DialogDescription>
-                Save these credentials now. You will only see this once.
+                The teacher account has been created. Share the login credentials securely with the teacher.
               </DialogDescription>
             </DialogHeader>
             
@@ -250,19 +248,21 @@ export default function CreateTeacher() {
                 </div>
                 <div>
                   <p className="font-semibold">Password:</p>
-                  <p className="font-mono text-sm">{createdTeacher?.password}</p>
+                  <p className="font-mono text-sm text-muted-foreground">
+                    (The password you entered in the form)
+                  </p>
                 </div>
               </AlertDescription>
             </Alert>
 
-            <Alert className="bg-yellow-50 border-yellow-200">
-              <AlertDescription className="text-yellow-800">
-                ⚠️ IMPORTANT: You will only be shown this once. Please save these credentials now.
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-blue-800">
+                💡 For security, please share the password with the teacher through a secure channel (in-person, secure messaging, etc.)
               </AlertDescription>
             </Alert>
 
             <Button onClick={handleModalClose} className="w-full">
-              I've Saved It
+              Continue to Teacher Profile
             </Button>
           </DialogContent>
         </Dialog>
