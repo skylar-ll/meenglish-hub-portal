@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-setup-secret',
 }
 
 Deno.serve(async (req) => {
@@ -20,6 +20,36 @@ Deno.serve(async (req) => {
       }
     )
 
+    // SECURITY: Check if any admin already exists - if so, block endpoint entirely
+    const { count: existingAdminCount, error: countError } = await supabaseAdmin
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'admin')
+
+    if (countError) {
+      console.error('Error checking admin count:', countError.message)
+    }
+
+    if (existingAdminCount && existingAdminCount > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Admin setup is disabled. An admin account already exists.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      )
+    }
+
+    // SECURITY: Require setup secret for initial admin creation
+    const setupSecret = Deno.env.get('ADMIN_SETUP_SECRET')
+    const providedSecret = req.headers.get('x-setup-secret')
+
+    if (setupSecret && setupSecret.length > 0) {
+      if (!providedSecret || providedSecret !== setupSecret) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized. Invalid or missing setup secret.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        )
+      }
+    }
+
     // Get admin credentials from request body
     let email, password;
     try {
@@ -27,7 +57,6 @@ Deno.serve(async (req) => {
       email = body.email;
       password = body.password;
     } catch (jsonError) {
-      console.error('Failed to parse request body:', jsonError);
       return new Response(
         JSON.stringify({ error: 'Invalid request body. Expected JSON with email and password.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -49,9 +78,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if admin already exists by email
+    // Check if user already exists by email
     const { data: usersList, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
-    if (listErr) console.log('listUsers error:', listErr.message)
+    if (listErr) {
+      // Don't log detailed error info
+    }
     const adminUser = usersList?.users?.find((u) => u.email === email)
 
     const userId = adminUser?.id
@@ -64,7 +95,6 @@ Deno.serve(async (req) => {
         .eq('user_id', userId)
         .eq('role', 'admin')
         .maybeSingle()
-      if (roleSelectErr) console.log('role select error:', roleSelectErr.message)
 
       if (!roleData) {
         const { error: roleInsertErr } = await supabaseAdmin
@@ -102,8 +132,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('setup-admin error:', error)
-    const msg = error instanceof Error ? error.message : 'Unknown error'
+    const msg = error instanceof Error ? error.message : 'An error occurred'
     return new Response(JSON.stringify({ error: msg }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
