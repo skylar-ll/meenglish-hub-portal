@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,8 +36,11 @@ const StudentSignUp = () => {
   });
 
   const [branches, setBranches] = useState<Array<{ id: string; name_en: string; name_ar: string }>>([]);
+  const [isGoogleAuth, setIsGoogleAuth] = useState(false);
+  const [googleUserId, setGoogleUserId] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailCheckStatus, setEmailCheckStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -56,6 +60,29 @@ const StudentSignUp = () => {
 
   const [isTranslating, setIsTranslating] = useState(false);
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check for Google OAuth data on mount
+  useEffect(() => {
+    const googleOAuthData = sessionStorage.getItem("googleOAuthData");
+    if (googleOAuthData) {
+      try {
+        const data = JSON.parse(googleOAuthData);
+        if (data.authProvider === "google") {
+          setFormData(prev => ({
+            ...prev,
+            fullNameAr: data.fullNameAr || "",
+            fullNameEn: data.fullNameEn || "",
+            email: data.email || "", // Empty for manual entry per requirements
+          }));
+          setIsGoogleAuth(true);
+          setGoogleUserId(data.userId);
+          sessionStorage.removeItem("googleOAuthData"); // Clean up
+        }
+      } catch (e) {
+        console.error("Error parsing Google OAuth data:", e);
+      }
+    }
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -89,7 +116,24 @@ const StudentSignUp = () => {
     }
   };
 
-  // Auto-translate Arabic name to English
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/student/login`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Google signup error:", error);
+      toast.error(error.message || "Failed to signup with Google");
+      setGoogleLoading(false);
+    }
+  };
+
   // Fetch branches
   useEffect(() => {
     const fetchBranches = async () => {
@@ -175,54 +219,80 @@ const StudentSignUp = () => {
         phone1: formData.countryCode1 + formData.phone1,
         phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
       };
-      
-      // Validate with zod schema
-      const validatedData = studentSignupSchema.parse(dataToValidate);
 
-      // Create user account immediately to avoid passing password through navigation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: validatedData.email,
-        password: validatedData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/student/course`,
-          data: {
-            full_name_en: validatedData.fullNameEn,
-            full_name_ar: validatedData.fullNameAr,
-          },
-        },
-      });
+      let userId: string;
 
-      if (authError || !authData.user) {
-        // Check if user already exists
-        if (authError?.message?.toLowerCase().includes('already registered') || 
-            authError?.message?.toLowerCase().includes('already exists')) {
-          toast.error(
-            "This email is already registered. Please login instead or use a different email.",
-            {
-              duration: 6000,
-              action: {
-                label: "Go to Login",
-                onClick: () => navigate("/student/login")
-              }
-            }
-          );
-        } else {
-          toast.error(`Authentication error: ${authError?.message}`);
+      if (isGoogleAuth && googleUserId) {
+        // For Google auth, user is already authenticated - skip password validation
+        userId = googleUserId;
+
+        // Validate other fields (excluding password for Google auth)
+        if (!formData.fullNameAr || !formData.fullNameEn || !formData.gender || 
+            !formData.phone1 || !formData.email || !formData.id || 
+            !formData.dateOfBirth || !formData.nationality || !formData.branch) {
+          toast.error("Please fill in all required fields");
+          return;
         }
-        return;
-      }
 
-      // Assign student role immediately
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: authData.user.id,
-          role: "student",
+        // Assign student role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: userId,
+            role: "student",
+          });
+
+        if (roleError && !roleError.message.includes("duplicate") && !roleError.message.includes("unique")) {
+          toast.error("Failed to assign student role");
+          return;
+        }
+      } else {
+        // Validate with zod schema for email signup
+        const validatedData = studentSignupSchema.parse(dataToValidate);
+
+        // Create user account immediately
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: validatedData.email,
+          password: validatedData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/student/course`,
+            data: {
+              full_name_en: validatedData.fullNameEn,
+              full_name_ar: validatedData.fullNameAr,
+            },
+          },
         });
 
-      if (roleError) {
-        // Only fail if it's not a duplicate role error
-        if (!roleError.message.includes("duplicate") && !roleError.message.includes("unique")) {
+        if (authError || !authData.user) {
+          if (authError?.message?.toLowerCase().includes('already registered') || 
+              authError?.message?.toLowerCase().includes('already exists')) {
+            toast.error(
+              "This email is already registered. Please login instead or use a different email.",
+              {
+                duration: 6000,
+                action: {
+                  label: "Go to Login",
+                  onClick: () => navigate("/student/login")
+                }
+              }
+            );
+          } else {
+            toast.error(`Authentication error: ${authError?.message}`);
+          }
+          return;
+        }
+
+        userId = authData.user.id;
+
+        // Assign student role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: userId,
+            role: "student",
+          });
+
+        if (roleError && !roleError.message.includes("duplicate") && !roleError.message.includes("unique")) {
           toast.error("Failed to assign student role");
           return;
         }
@@ -242,19 +312,22 @@ const StudentSignUp = () => {
       }
 
       // Store registration data WITHOUT password in sessionStorage
-      const { password, ...dataWithoutPassword } = validatedData;
+      const { password, ...dataWithoutPassword } = formData;
       sessionStorage.setItem("studentRegistration", JSON.stringify({
         ...dataWithoutPassword,
+        phone1: formData.countryCode1 + formData.phone1,
+        phone2: formData.phone2 ? formData.countryCode2 + formData.phone2 : "",
         branch: formData.branch,
-        branch_id: selectedBranch.id, // Save branch_id for filtering
-        userId: authData.user.id, // Store user ID for later use
+        branch_id: selectedBranch.id,
+        userId: userId,
         dateOfBirth: formData.dateOfBirth,
         nationality: formData.nationality,
+        authProvider: isGoogleAuth ? "google" : "email",
       }));
       
       toast.success("Account created successfully! Please complete your registration.");
       
-      // Navigate to course selection (skip separate branch step)
+      // Navigate to course selection
       navigate("/student/course-selection");
     } catch (error: any) {
       if (error.errors) {
@@ -294,6 +367,47 @@ const StudentSignUp = () => {
             <div className="text-center py-8">Loading...</div>
           ) : (
             <div className="space-y-6">
+              {!isGoogleAuth && (
+                <>
+                  {/* Google OAuth Button */}
+                  <Button
+                    onClick={handleGoogleSignup}
+                    disabled={googleLoading || isSubmitting}
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-2"
+                    size="lg"
+                  >
+                    {googleLoading ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    )}
+                    Continue with Google
+                  </Button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator className="w-full" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {isGoogleAuth && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
+                  <p className="text-sm text-green-800">
+                    ✓ Signed in with Google. Please complete your information below.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="fullNameAr">{getFieldLabel('full_name_ar')} *</Label>
               <Input
@@ -483,25 +597,27 @@ const StudentSignUp = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">{getFieldLabel('password')} *</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder={t('placeholder.enterPassword')}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {!isGoogleAuth && (
+              <div className="space-y-2">
+                <Label htmlFor="password">{getFieldLabel('password')} *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder={t('placeholder.enterPassword')}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="branch">{getFieldLabel('branch')} / الفرع *</Label>
